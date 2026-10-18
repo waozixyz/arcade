@@ -1,0 +1,8 @@
+[Desktop Entry]
+Type=Application
+Name=Pushy
+Comment=Logic puzzles with Pushy
+Exec=pushy
+Icon=applications-games
+Terminal=false
+Categories=Game;LogicGame;

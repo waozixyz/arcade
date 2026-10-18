@@ -13,7 +13,7 @@ from chess_import_flow import check_import
 ROOT = Path(__file__).resolve().parents[1]
 assert int(os.environ["DISPLAY"].split(":")[-1].split(".")[0]) >= 400
 assert os.environ["YUE_DESKTOP_RECOVERY"] == "0"
-inbe = Path(subprocess.check_output(["ziran", "pkg", "path", "inbe"], cwd=ROOT, text=True).strip())
+inbe = Path(os.environ["INBE_SOURCE"]) if "INBE_SOURCE" in os.environ else Path(subprocess.check_output(["ziran", "pkg", "path", "inbe"], cwd=ROOT, text=True).strip())
 sys.path.insert(0, str(inbe / "tests"))
 from ui_driver import UiDriver
 
@@ -81,8 +81,8 @@ with tempfile.TemporaryDirectory(prefix="profile-", dir=OUTPUT) as directory:
     with application(profile, "play") as child:
         driver.wait(label="Arcade", role="text")
         card = driver.find(label="Chess", role="button", visible=True)[0]
-        preview = driver.find(key=300, role="image", visible=True)[0]
-        assert card['visible_width'] > 150 and card['visible_height'] > 180
+        preview = driver.find(label="Chess", role="image", visible=True)[0]
+        assert card['visible_width'] > 150 and card['visible_height'] >= 160
         assert preview['visible_width'] > 150 and preview['visible_height'] > 100
         capture(child, "library")
         driver.press(label="Chess", role="button")

@@ -1,0 +1,13 @@
+// Classic and Island keep independent verified identities and campaigns.
+#import "kryon/app_context"
+#import "kryon/app_protocol"
+
+#program_export
+Main :: () -> s32 {
+    if AppMode() == APP_IDENTIFY {
+        AppIdentity("pushy")
+        AppDescribe("Pushy", "")
+        return APP_PROTOCOL
+    }
+    return 0
+}

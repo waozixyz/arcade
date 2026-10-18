@@ -14,18 +14,21 @@ if ledger_path.exists():
     ledger = json.loads(ledger_path.read_text())
     # New games get their initial version from their numeric changelog,
     # through the same synchronizer as subsequent game releases.
-    for registration in json.loads(Path('games.json').read_text())['games']:
+    registrations = json.loads(Path('games.json').read_text())['games']
+    changelogs = {}
+    for registration in registrations:
         game = json.loads(Path(registration['manifest']).read_text())
+        changelogs[game['name']] = Path(registration['manifest']).parent / 'CHANGELOG.md'
         if game['name'] not in ledger['node_apps']:
             entry = re.search(r'^## \[(\d+\.\d+\.\d+)\] - \d{4}-\d{2}-\d{2}$',
-                              Path('apps', game['name'], 'CHANGELOG.md').read_text(), re.M)
+                              changelogs[game['name']].read_text(), re.M)
             if entry is None:
                 raise SystemExit(f'{game["name"]} needs a numeric changelog entry')
             ledger['node_apps'][game['name']] = dict(
                 id=game['id'], title=game['title'], version=entry[1], sequence=1, host_api=game['host_api'])
     for name, component in ledger['node_apps'].items():
         entry = re.search(r'^## \[(\d+\.\d+\.\d+)\] - \d{4}-\d{2}-\d{2}$',
-                          Path('apps', name, 'CHANGELOG.md').read_text(), re.M)
+                          changelogs[name].read_text(), re.M)
         if entry is None:
             raise SystemExit(f'{name} needs a numeric changelog entry')
         if component['version'] != entry[1]:

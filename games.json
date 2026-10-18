@@ -1,6 +1,16 @@
 {
   "games": [
-    {"package": "self", "manifest": "apps/chess/catalog.json"},
-    {"package": "self", "manifest": "apps/pushy/catalog.json"}
+    {
+      "package": "self",
+      "manifest": "apps/chess/catalog.json"
+    },
+    {
+      "package": "self",
+      "manifest": "apps/pushy/catalog.json"
+    },
+    {
+      "package": "self",
+      "manifest": "apps/pushy/island/catalog.json"
+    }
   ]
 }

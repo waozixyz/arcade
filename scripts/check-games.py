@@ -21,7 +21,7 @@ def check():
         assert set(game['harnesses']) <= {'arcade', 'inbe'}
         assert game['save_schema'] == 1
         assert (ROOT / game['source']).is_file() and (ROOT / game['preview']).is_file()
-        changelog = (ROOT / 'apps' / game['name'] / 'CHANGELOG.md').read_text()
+        changelog = (ROOT / registration['manifest']).with_name('CHANGELOG.md').read_text()
         version = re.search(r'^## \[(\d+\.\d+\.\d+)\] - \d{4}-\d{2}-\d{2}$', changelog, re.M)
         assert version and version[1] == component['version'], 'Run ./update_version.sh'
         assert component['sequence'] > 0
@@ -29,7 +29,7 @@ def check():
         for file in (ROOT / game['locales']).glob('*.txt'):
             locales[file.stem] = {match[1] for match in re.finditer(r'^\[([^\]]+)\]$', file.read_text(), re.M)}
         required = set()
-        for file in (ROOT / 'apps' / game['name']).glob('*.zi'):
+        for file in (ROOT / registration['manifest']).parent.glob('*.zi'):
             required.update(re.findall(r'"(' + re.escape(game['locale_prefix']) + r'[a-z0-9_]+)"', file.read_text()))
         assert len(locales) >= 12
         for language, keys in locales.items():

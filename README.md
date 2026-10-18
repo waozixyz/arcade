@@ -1,7 +1,10 @@
 # Arcade
 
 Games and entertainment, alongside Werkzeug for practical tools and Inner
-Breeze for personal growth. The library includes Chess and Pushy.
+Breeze for personal growth. The library includes Chess and Pushy. Pushy opens
+an edition chooser for Classic and Island, and also runs as its own desktop app.
+Each edition has a separate save and earned unlocks. Unlocked puzzles show
+their whole board; locked puzzles keep their lock until earned.
 
 Open Chess from the home screen, choose a side and one of four computer
 levels, and play. The library uses preview cards in a responsive grid; the
@@ -24,7 +27,20 @@ stay available while switching tabs during the same session.
 Clocked games, puzzles, lessons, public matchmaking and automated full-game
 review are not implemented.
 
-## One Chess app, two harnesses
+## Shared Apps library
+
+Arcade embeds the shared `apps.zib` controller and exact game bundles in a
+verified collection. Pushy's edition collection is both the standalone payload
+and the same nested child inside Arcade. Preview cards open directly; their
+vertical options menu can mark an app installed or favorite without deleting
+its saves. The local player does not offer node updates or OS actions it
+cannot perform. Inbe supplies its own account and package policy.
+
+Island includes all 175 original boards and names with the original layered
+sprites. Original animation timing/audio and complete campaign solution
+verification remain incomplete; it is not claimed to be an exact replica.
+
+## One Chess game
 
 Chess remains an installable app in Inner Breeze, where it also fits thoughtful
 play and personal growth. Arcade owns its rules, computer opponent, screens,
@@ -49,14 +65,23 @@ wrapper uses the resolved compiler for both bundles and the host runtime.
 Local development uses ignored `ziran.local.toml` overrides pointing to the
 real source repositories. Without that file, package resolution uses the lock.
 
+Apps currently has no public dependency source. Local integration builds need
+the reviewed Apps checkout, its exact controller digest, and retained compiler:
+
 ```sh
-make
+make APPS_SOURCE=/path/to/apps TOOLCHAIN_SOURCE=/path/to/retained/toolchain \
+  APPS_SHA256="$(cat /path/to/reviewed/apps.sha256)"
 ./build/arcade
 ./build/arcade --app chess
 ./build/arcade --app pushy
 ./build/arcade --list
-make install
+./build/pushy
 ```
+
+Pass the same handoff variables to `make test`, `make install` and the UI
+targets. `make install` installs both commands and desktop entries. This local
+source mapping leaves production manifests and locks unchanged and is not a
+published dependency graph.
 
 Desktop builds need SDL2, Cairo, FreeType, Fontconfig and Pango development
 packages, a C compiler, Python 3 and Ziran. `make install` installs the command
@@ -82,6 +107,8 @@ filesystem access. `ARCADE_DATA` chooses a disposable profile for tests.
 make test
 make ui-test
 make pushy-ui-test
+make standalone-ui-test
+make collection-ui-test
 make inbe-ui-test INBE_BINARY=/absolute/path/to/intended/inbe
 make compatibility-test INBE_BINARY=/absolute/path/to/intended/inbe
 ```

@@ -7,10 +7,11 @@ Game :: struct {
     preview: string
 }
 
-GameCount :: 2
+GameCount :: 3
 
 GameAt :: (index: s32) -> Game {
     if index == 0 { return Game.{.id = "inbe.chess", .name = "chess", .title = "Chess", .bundle = "chess.zib", .preview = "chess-preview.png"} }
     if index == 1 { return Game.{.id = "arcade.pushy", .name = "pushy", .title = "Pushy", .bundle = "pushy.zib", .preview = "pushy-preview.png"} }
+    if index == 2 { return Game.{.id = "arcade.pushy-island", .name = "pushy-island", .title = "Pushy Island", .bundle = "pushy-island.zib", .preview = "pushy-island-preview.png"} }
     return Game.{}
 }

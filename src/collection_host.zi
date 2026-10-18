@@ -1,0 +1,429 @@
+// Arcade's native provider for the shared Apps runtime. Children retain
+// their original game record directories; the library belongs to apps.zib.
+#import "std/file"
+#import "std/bundle_host"
+#import "std/vec"
+#import "std/option"
+#import "std/c_string"
+#import "std/json_scan"
+#import "std/text_buffer"
+#import "std/byte_text_linux"
+#import "std/date_time_linux"
+#import "std/timer_linux"
+#import "kryon/session"
+#import "kryon/geometry"
+#import "kryon/drawing_props"
+#import "kryon/control_props"
+#import "kryon/box_widget"
+#import "kryon/box_props"
+#import "kryon/text_widget"
+#import "kryon/text_props"
+#import "kryon/button_widget"
+#import "kryon/button_props"
+#import "kryon/hosted_values"
+#import "kryon/widget_host"
+#import "kryon/app_files"
+#import "kryon/app_protocol"
+#import "kryon/app_context_host"
+#import "apps/host"
+#import "apps/tree"
+#import "apps/catalog"
+#import "apps/protocol"
+Rules :: #import "apps/protocol";
+Node :: #import "apps/node_types";
+Codec :: #import "apps/node_codec";
+#import "platform"
+
+using HostValueKind;
+
+CollectionRecords :: struct {
+    id: string
+    root: string
+    files: AppFiles
+    text: string
+    next: *CollectionRecords
+}
+
+CollectionImage :: struct {
+    packed: string
+    absolute: string
+    next: *CollectionImage
+}
+
+collection_host: AppHost;
+collection_records: *CollectionRecords;
+collection_directory: string;
+collection_resources: AppFiles;
+collection_resource_root: string;
+collection_images: *CollectionImage;
+collection_frame_paths: Vec(string);
+collection_widget_node: *AppNode;
+collection_person_codec: Codec.WidgetAppPersonCodec;
+collection_shared_codec: Codec.WidgetAppSharedCodec;
+collection_item_codec: Codec.WidgetAppSharedItemCodec;
+collection_invitation_codec: Codec.WidgetAppInvitationCodec;
+collection_ready: bool;
+
+CollectionRecordsFor :: (id: string) -> *CollectionRecords {
+    saved := collection_records
+    while saved != null {
+        if saved.id == id { return saved }
+        saved = saved.next
+    }
+    saved = New(CollectionRecords)
+    if saved == null { return null }
+    id_bytes: Vec(u8)
+    BuilderPrint(*id_bytes, "%", id)
+    saved.id = BuilderFinish(id_bytes)
+    games := Join(collection_directory, "games")
+    game := Join(games, id)
+    saved.root = Join(game, "records")
+    AppFileFree(games)
+    AppFileFree(game)
+    opened := AppFilesOpen(*saved.files, saved.root)
+    if !opened {
+        AppFileFree(saved.root)
+        AppFileFree(saved.id)
+        CollectionFree(cast(*void)saved)
+        return null
+    }
+    saved.next = collection_records
+    collection_records = saved
+    return saved
+}
+
+CollectionAllows :: (context: *void, node: *AppNode, name: string) -> bool {
+    return name == "AppRecordHost" || name == "SaveAppRecordHost" ||
+    name == "AppFriendHost" || name == "AppSharedHost" || name == "AppSharedItemHost" ||
+    name == "AppInvitationHost" || name == "RefreshAppSharedHost" || name == "SendAppSharedHost" ||
+    name == "SmoothFramesHost" || name == "AppLocaleHost"
+}
+
+CollectionCall :: (context: *void, node: *AppNode, module: *u8, function: *u8,
+    arguments: *HostValue, count: s32, result: *HostValue) -> s32 {
+    name := TextFromCString(function)
+    if name == "AppRecordHost" && count == 1 &&
+    HostScalarValid(arguments[0], "string", cast(s32)HostString) {
+        record := AppArgumentText(arguments[0])
+        saved := CollectionRecordsFor(TextUntilNul(node.identity.id[:]))
+        if saved == null || !AppFileNameValid(record) || record.count >= 64 { return 0 }
+        AppFileFree(saved.text)
+        saved.text = AppFileRead(*saved.files, record)
+        if saved.files.status == -1 || saved.text.count >= 65536 { return 0 }
+        result.* = AppHostText(saved.text)
+        return 1
+    }
+    if name == "SaveAppRecordHost" && count == 2 &&
+    HostScalarValid(arguments[0], "string", cast(s32)HostString) &&
+    HostScalarValid(arguments[1], "string", cast(s32)HostString) {
+        record := AppArgumentText(arguments[0])
+        text := AppArgumentText(arguments[1])
+        saved := CollectionRecordsFor(TextUntilNul(node.identity.id[:]))
+        ok := saved != null && AppFileNameValid(record) && record.count < 64 &&
+        text.count < 65536 && AppFileWrite(*saved.files, record, text)
+        result.* = HostScalar("bool", ifx ok then 1 else 0)
+        return 1
+    }
+    if name == "SmoothFramesHost" && count == 1 {
+        result.* = HostScalar("bool", 1)
+        return 1
+    }
+    if name == "AppLocaleHost" && count == 1 {
+        result.* = AppHostText(AppArgumentText(arguments[0]))
+        return 1
+    }
+    if name == "AppFriendHost" && count == 1 {
+        result.* = Codec.WidgetEncodeAppPerson(Node.AppPerson.{}, *collection_person_codec)
+        return 1
+    }
+    if name == "AppSharedHost" && count == 1 {
+        result.* = Codec.WidgetEncodeAppShared(Node.AppShared.{}, *collection_shared_codec)
+        return 1
+    }
+    if name == "AppSharedItemHost" && count == 2 {
+        result.* = Codec.WidgetEncodeAppSharedItem(Node.AppSharedItem.{}, *collection_item_codec)
+        return 1
+    }
+    if name == "AppInvitationHost" && count == 1 {
+        result.* = Codec.WidgetEncodeAppInvitation(Node.AppInvitation.{}, *collection_invitation_codec)
+        return 1
+    }
+    if (name == "RefreshAppSharedHost" && count == 0) ||
+    (name == "SendAppSharedHost" && count == 2) {
+        result.* = HostScalar("bool", 0)
+        return 1
+    }
+    return 0
+}
+
+CollectionAssetAllowed :: (path: string) -> bool {
+    return path == "" || (collection_widget_node != null && AppHostAsset(collection_widget_node, path).found)
+}
+
+CollectionAssetPath :: (path: string) -> string {
+    if path == "" { return "" }
+    if collection_widget_node == null { return "" }
+    asset := AppHostAsset(collection_widget_node, path)
+    if !asset.found { return "" }
+    relative := Join(TextUntilNul(collection_widget_node.entry.sha256[:]), path)
+    defer { AppFileFree(relative) }
+    cached := collection_images
+    while cached != null {
+        if cached.packed == relative { break }
+        cached = cached.next
+    }
+    if cached == null {
+        cached = New(CollectionImage)
+        if cached == null { return "" }
+        if !AppFileWrite(*collection_resources, relative, asset.data) {
+            CollectionFree(cast(*void)cached)
+            return ""
+        }
+        copy: Vec(u8)
+        BuilderPrint(*copy, "%", relative)
+        cached.packed = BuilderFinish(copy)
+        cached.next = collection_images
+        collection_images = cached
+    }
+    // Own this queued path through paint, independently of mutable cache links.
+    absolute := Join(collection_resources.root, relative)
+    if !VecPush(collection_frame_paths, absolute) { AppFileFree(absolute); return "" }
+    return absolute
+}
+
+CollectionWidgets :: (context: *void, node: *AppNode, module: *u8, function: *u8,
+    arguments: *HostValue, count: s32, result: *HostValue) -> s32 {
+    collection_widget_node = node
+    return WidgetHostCall(context, module, function, arguments, count, result)
+}
+
+CollectionSave :: (context: *void, node: *AppNode) -> bool {
+    saved := collection_records
+    while saved != null {
+        if saved.files.status == -1 { return false }
+        saved = saved.next
+    }
+    return true
+}
+
+CollectionState :: (context: *void, account: string, identity: *AppIdentity, state: *AppState) -> bool {
+    if account != "local" || TextUntilNul(identity.authority[:]) != "arcade.local" ||
+    !Rules.AppIdValid(TextUntilNul(identity.id[:])) { return false }
+    // Native control records live outside every guest's game-record root and
+    // outside the digest-prefixed image cache. Bundled bytes/saves are retained.
+    path := CollectionStatePath(identity)
+    defer { AppFileFree(path) }
+    text := AppFileRead(*collection_resources, path)
+    defer { AppFileFree(text) }
+    state.* = AppState.{.installed = true, .actions_known = true,
+        .actions = (cast(u64)1 << APPS_OPEN) | (cast(u64)1 << APPS_INSTALL) |
+        (cast(u64)1 << APPS_UNINSTALL) | (cast(u64)1 << APPS_PIN) | (cast(u64)1 << APPS_UNPIN)}
+    if text == "" { return true }
+    fields: [3]string = .["v", "installed", "favorite"]
+    installed := ReadNumber(text, FieldAt(text, 0, "installed"))
+    favorite := ReadNumber(text, FieldAt(text, 0, "favorite"))
+    if !AppsObjectValid(text, 0, fields[:]) || Space(text, ValueEnd(text, 0, 0)) != text.count ||
+    ReadNumber(text, FieldAt(text, 0, "v")).value != 1.0 ||
+    !installed.valid || !favorite.valid ||
+    (installed.value != 0.0 && installed.value != 1.0) ||
+    (favorite.value != 0.0 && favorite.value != 1.0) ||
+    (favorite.value == 1.0 && installed.value != 1.0) { return false }
+    state.installed = installed.value == 1.0
+    state.favorite = favorite.value == 1.0
+    return true
+}
+
+CollectionStatePath :: (identity: *AppIdentity) -> string {
+    bytes: Vec(u8)
+    BuilderPrint(*bytes, "state/%.json", TextUntilNul(identity.id[:]))
+    return BuilderFinish(bytes)
+}
+
+CollectionEffect :: (context: *void, account: string, locator: *AppLocator,
+    operation: s32, reply: *AppsReply) -> bool {
+    state: AppState
+    if !CollectionState(context, account, *locator.identity, *state) { return false }
+    if operation == APPS_INSTALL { state.installed = true }
+    else if operation == APPS_UNINSTALL { state.installed = false; state.favorite = false }
+    else if operation == APPS_PIN && state.installed { state.favorite = true }
+    else if operation == APPS_UNPIN { state.favorite = false }
+    else { return false }
+    path := CollectionStatePath(*locator.identity)
+    defer { AppFileFree(path) }
+    bytes: Vec(u8)
+    BuilderPrint(*bytes, "{\"v\":1,\"installed\":%,\"favorite\":%}",
+        ifx state.installed then 1 else 0, ifx state.favorite then 1 else 0)
+    text := BuilderFinish(bytes)
+    defer { AppFileFree(text) }
+    if !AppFileWrite(*collection_resources, path, text) { return false }
+    reply.status = APPS_APPLIED
+    return true
+}
+
+CollectionOpen :: (bundle: string, digest: string, harness_digest: string,
+    data: string, locale: string) -> bool {
+    if collection_ready { return false }
+    collection_directory = data
+    collection_resource_root = Join(data, "resources")
+    opened := AppFilesOpen(*collection_resources, collection_resource_root)
+    if !opened { return false }
+    platform := AppPlatform.{.allows = CollectionAllows, .call = CollectionCall,
+        .widgets = CollectionWidgets, .save = CollectionSave, .state = CollectionState,
+        .effect = CollectionEffect}
+    collection_ready = AppHostStart(*collection_host, bundle, "arcade.local", "inbe.arcade",
+        "arcade", digest, "local", platform, harness_digest, locale)
+    return collection_ready
+}
+
+CollectionOpenFiles :: (directory: string, data: string) -> bool {
+    bundle_path := Join(directory, "arcade.zib")
+    metadata_path := Join(directory, "arcade.json")
+    defer { AppFileFree(bundle_path); AppFileFree(metadata_path) }
+    bytes, found := ReadEntireFile(bundle_path)
+    defer { AppFileFree(bytes) }
+    metadata, metadata_found := ReadEntireFile(metadata_path)
+    defer { AppFileFree(metadata) }
+    if !found || !metadata_found || bytes.count > 67108864 || metadata.count > 65536 { return false }
+    id: [128]u8
+    digest: [65]u8
+    harness: [65]u8
+    if !AppsReadText(metadata, 0, "id", id[:]) || TextUntilNul(id[:]) != "inbe.arcade" ||
+    !AppsReadText(metadata, 0, "sha256", digest[:]) ||
+    !AppsReadText(metadata, 0, "apps_sha256", harness[:]) { return false }
+    locale := EnvironmentText("LANG")
+    language := ifx locale.count >= 2 then locale[:2] else "en"
+    return CollectionOpen(bytes, TextUntilNul(digest[:]), TextUntilNul(harness[:]), data, language)
+}
+
+// The standalone player needs only Pushy's own payload and metadata. Its
+// stable identity and existing record directory are shared with Arcade.
+CollectionOpenPushy :: (directory: string, data: string) -> bool {
+    if collection_ready { return false }
+    payload_path := Join(directory, "pushy.zib")
+    metadata_path := Join(directory, "pushy.json")
+    defer { AppFileFree(payload_path); AppFileFree(metadata_path) }
+    bytes, found := ReadEntireFile(payload_path)
+    metadata, metadata_found := ReadEntireFile(metadata_path)
+    defer { AppFileFree(bytes); AppFileFree(metadata) }
+    id: [128]u8
+    digest: [65]u8
+    harness: [65]u8
+    if !found || !metadata_found || bytes.count > 67108864 || metadata.count > 65536 ||
+    !AppsReadText(metadata, 0, "id", id[:]) || TextUntilNul(id[:]) != "arcade.pushy-player" ||
+    !AppsReadText(metadata, 0, "sha256", digest[:]) ||
+    !AppsReadText(metadata, 0, "apps_sha256", harness[:]) { return false }
+    collection_directory = data
+    collection_resource_root = Join(data, "resources")
+    if !AppFilesOpen(*collection_resources, collection_resource_root) { return false }
+    locale := EnvironmentText("LANG")
+    language := ifx locale.count >= 2 then locale[:2] else "en"
+    platform := AppPlatform.{.allows = CollectionAllows, .call = CollectionCall,
+        .widgets = CollectionWidgets, .save = CollectionSave, .state = CollectionState,
+        .effect = CollectionEffect}
+    collection_ready = AppHostStart(*collection_host, bytes, "arcade.local", "arcade.pushy-player",
+        "pushy", TextUntilNul(digest[:]), "local", platform, TextUntilNul(harness[:]), language)
+    return collection_ready
+}
+
+CollectionCollect :: () {
+    AppHostCollect(*collection_host)
+    for path: collection_frame_paths { AppFileFree(path) }
+    while collection_frame_paths.count > 0 { unused VecPop(collection_frame_paths) }
+    collection_widget_node = null
+}
+
+CollectionClose :: () -> bool {
+    if collection_ready && !AppHostStop(*collection_host) { return false }
+    collection_ready = false
+    CollectionCollect()
+    VecFree(collection_frame_paths)
+    while collection_images != null {
+        image := collection_images
+        collection_images = image.next
+        AppFileFree(image.packed)
+        AppFileFree(image.absolute)
+        CollectionFree(cast(*void)image)
+    }
+    while collection_records != null {
+        saved := collection_records
+        collection_records = saved.next
+        AppFilesClose(*saved.files)
+        AppFileFree(saved.root)
+        AppFileFree(saved.text)
+        AppFileFree(saved.id)
+        CollectionFree(cast(*void)saved)
+    }
+    AppFilesClose(*collection_resources)
+    AppFileFree(collection_resource_root)
+    collection_resource_root = ""
+    return true
+}
+
+CollectionOpenGame :: (id: string) -> bool {
+    root := AppTreeNode(*collection_host.tree, collection_host.tree.active)
+    if root == null || !root.collection { return false }
+    if AppCatalogFind(*root.catalog, id) < 0 &&
+    (id == "arcade.pushy" || id == "arcade.pushy-island") {
+        if !CollectionOpenChild("arcade.pushy-player") { return false }
+    }
+    return CollectionOpenChild(id)
+}
+
+CollectionOpenChild :: (id: string) -> bool {
+    root := AppTreeNode(*collection_host.tree, collection_host.tree.active)
+    if root == null || !root.collection { return false }
+    request: AppsRequest
+    request.operation = APPS_OPEN
+    if !CopyCString(id, request.id[:]) { return false }
+    queued := AppTreeQueue(*collection_host.tree, collection_host.tree.active, request)
+    if queued.status != APPS_QUEUED || !AppTreeDrain(*collection_host.tree) { return false }
+    runtime := AppHostActiveRuntime(*collection_host)
+    return runtime != null && TextUntilNul(runtime.node.identity.id[:]) == id &&
+    AppHostRoute(*collection_host)
+}
+
+CollectionFrame :: (session: Session, viewport: Rectangle, key: s32, modifiers: s32) -> bool {
+    runtime := AppHostActiveRuntime(*collection_host)
+    if runtime == null { return false }
+    nested := runtime.node.parent.generation != 0 && !runtime.node.collection
+    top: s32 = ifx nested then 56 else 0
+    now := cast(float64)MonotonicMilliseconds() / 1000.0
+    runtime.app.session = session
+    runtime.app.bounds = Rectangle.{0.0, cast(float32)top, viewport.width, viewport.height - cast(float32)top}
+    runtime.app.scale = 1.0
+    runtime.app.font = 16
+    runtime.app.key = key
+    runtime.app.modifiers = modifiers
+    if runtime.protocol == APPS_NODE_PROTOCOL {
+        runtime.legacy.message = Node.AppMessage.{.locale = TextUntilNul(collection_host.locale[:]),
+            .shared_status = Node.APP_SHARED_UNAVAILABLE, .time = UnixNow()}
+        runtime.legacy.frame = Node.AppUiFrame.{.session = session,
+            .width = cast(s32)viewport.width, .height = cast(s32)viewport.height, .top = top,
+            .scale = 1.0, .font = 16, .now = now}
+    }
+    Box(session, BoxProps.{.key = cast(u64)2, .bounds = viewport, .fill = Color.{239, 246, 244, 255}})
+    WidgetHostBegin(session, CollectionAssetAllowed, CollectionAssetPath)
+    drawn := AppHostRun(*collection_host, APP_FRAME)
+    WidgetHostEnd()
+    if !drawn { return false }
+    if nested {
+        title_bytes: Vec(u8)
+        BuilderPrint(*title_bytes, "%", TextUntilNul(runtime.node.entry.title[:]))
+        title := BuilderFinish(title_bytes)
+        if !VecPush(collection_frame_paths, title) { AppFileFree(title); return false }
+        Box(session, BoxProps.{.key = cast(u64)6, .bounds = Rectangle.{0.0, 0.0, viewport.width, 56.0},
+                .fill = Color.{221, 233, 229, 255}})
+        if Button(session, ButtonProps.{.key = cast(u64)7, .id = 7, .label = "Back",
+                .bounds = Rectangle.{8.0, 6.0, 76.0, 44.0},
+                .tone = ButtonTone.ButtonToneNeutral, .emphasis = ButtonEmphasis.ButtonEmphasisSoft}) != 0 {
+            unused AppHostBack(*collection_host)
+        }
+        Text(session, TextProps.{.key = cast(u64)8,
+                .text = title, .font = 20,
+                .bounds = Rectangle.{100.0, 12.0, viewport.width - 116.0, 36.0}})
+    }
+    return true
+}
+
+c :: #system_library "c";
+CollectionFree :: (memory: *void) #foreign c "free";

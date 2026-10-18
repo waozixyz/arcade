@@ -1,5 +1,12 @@
 # Arcade changelog
 
+## 0.4.0
+
+- Choose Pushy Classic or Pushy Island from Pushy, including the standalone desktop app.
+- View whole-board previews for unlocked puzzles, with clear lock and completion icons.
+- Open games through the shared Apps preview cards and vertical options menu.
+- Keep existing Chess and Classic saves while moving between the library and games.
+
 ## 0.3.1
 
 - Pushy automatically continues after a win and starts selected puzzles from the beginning.
