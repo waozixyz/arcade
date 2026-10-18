@@ -1,5 +1,10 @@
 # Arcade changelog
 
+## 0.2.1
+
+- Pushy adds Continue and a level selector with completion marks.
+- Completing a Pushy puzzle unlocks the next one and keeps progress across restarts.
+
 ## 0.2.0
 
 - Chess adds hints, turn takebacks, an Expert opponent, board coordinates and flipping.

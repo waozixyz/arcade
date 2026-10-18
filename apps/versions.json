@@ -13,8 +13,8 @@
     "pushy": {
       "id": "arcade.pushy",
       "title": "Pushy",
-      "version": "0.1.0",
-      "sequence": 1,
+      "version": "0.2.0",
+      "sequence": 2,
       "host_api": 12
     }
   }
