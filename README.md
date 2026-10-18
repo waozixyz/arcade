@@ -115,9 +115,10 @@ the on-screen arrows. Restart with R, open the illustrated guide with H,
 and throw a collected projectile with Space. The same position survives
 returning to the library or restarting Arcade.
 
-The set contains 174 puzzles and the original ENDE finale at 175. The two
-shadow puzzles, 165–166, show their layouts but remain paused until their
-original rules can be verified. Some later interactions still need comparison
+The set contains 174 puzzles and the original ENDE finale at 175. Winning
+automatically starts the next puzzle. Choosing a level starts it from the
+beginning; Continue resumes unfinished play or advances past a completed save.
+The two shadow puzzles, 165–166, use the original mirrored movement. Some later interactions still need comparison
 with the original game; complete layout coverage does not establish exact
 gameplay equivalence. See [Pushy research and limitations](docs/PUSHY.md).
 Pushy currently runs in Arcade; it does not change or require an Inbe release.

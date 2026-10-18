@@ -1,5 +1,11 @@
 # Arcade changelog
 
+## 0.3.1
+
+- Pushy automatically continues after a win and starts selected puzzles from the beginning.
+- Continue recovers saves left at a completed puzzle.
+- Pushy shadow puzzles and several original board interactions now work correctly.
+
 ## 0.3.0
 
 - Import a PGN game or FEN position into Chess study, with player details and the correct starting move number.
