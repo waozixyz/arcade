@@ -1,7 +1,7 @@
 # Arcade
 
 Games and entertainment, alongside Werkzeug for practical tools and Inner
-Breeze for personal growth. The first game is Chess.
+Breeze for personal growth. The library includes Chess and Pushy.
 
 Open Chess from the home screen, choose a side and one of three computer
 levels, and play. The library uses preview cards in a responsive grid; the
@@ -37,6 +37,7 @@ real source repositories. Without that file, package resolution uses the lock.
 make
 ./build/arcade
 ./build/arcade --app chess
+./build/arcade --app pushy
 ./build/arcade --list
 make install
 ```
@@ -64,6 +65,7 @@ filesystem access. `ARCADE_DATA` chooses a disposable profile for tests.
 ```sh
 make test
 make ui-test
+make pushy-ui-test
 make compatibility-test INBE_BINARY=/absolute/path/to/intended/inbe
 ```
 
@@ -79,3 +81,18 @@ independent game versions, save compatibility and existing signed node
 publisher. Both hosts must support the compiler's VM format. Local overrides
 may use a newer format than released Inbe; their output must pass the
 intended host before publication. Building or installing never publishes.
+
+## Pushy Classic
+
+Pushy is Arcade's second game, with new graphics and the original 175
+numbered Classic layouts from Lernwerkstatt. Move with arrow keys, WASD or
+the on-screen arrows. Restart with R, open the illustrated guide with H,
+and throw a collected projectile with Space. The same position survives
+returning to the library or restarting Arcade.
+
+The set contains 174 puzzles and the original ENDE finale at 175. The two
+shadow puzzles, 165–166, show their layouts but remain paused until their
+original rules can be verified. Some later interactions still need comparison
+with the original game; complete layout coverage does not establish exact
+gameplay equivalence. See [Pushy research and limitations](docs/PUSHY.md).
+Pushy currently runs in Arcade; it does not change or require an Inbe release.

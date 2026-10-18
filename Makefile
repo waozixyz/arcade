@@ -10,7 +10,7 @@ BIN_DIR ?= $(HOME)/.local/bin
 LIB_DIR ?= $(HOME)/.local/lib/arcade
 DATA_DIR ?= $(if $(XDG_DATA_HOME),$(XDG_DATA_HOME),$(HOME)/.local/share)
 
-.PHONY: all games run test chess-engine-test chess-app-test ui-test compatibility-test install
+.PHONY: all games run test chess-engine-test chess-app-test pushy-engine-test pushy-ui-test ui-test compatibility-test install
 all: build/arcade games
 
 games:
@@ -40,12 +40,23 @@ test: all
 	./build/arcade --list
 	sh tests/chess_engine_zi_test.sh '$(ZIRAN)'
 	sh tests/chess_app_test.sh '$(ZIRAN)'
+	$(ZIRAN) fmt --check apps/pushy/*.zi tests/pushy_engine_behavior.zi
+	python3 tests/pushy_levels_test.py
+	sh tests/pushy_engine_test.sh '$(ZIRAN)'
 
 chess-engine-test:
 	sh tests/chess_engine_zi_test.sh '$(ZIRAN)'
 
 chess-app-test: all
 	sh tests/chess_app_test.sh '$(ZIRAN)'
+
+pushy-engine-test:
+	sh tests/pushy_engine_test.sh '$(ZIRAN)'
+
+pushy-ui-test: all
+	env -u DISPLAY -u WAYLAND_DISPLAY -u XAUTHORITY -u DBUS_SESSION_BUS_ADDRESS \
+		-u SESSION_MANAGER -u GDK_DISPLAY YUE_DESKTOP_RECOVERY=0 SDL_AUDIODRIVER=dummy \
+		timeout 180s xvfb-run -a -n 400 -s '-screen 0 1280x1000x24' python3 tests/pushy_ui_test.py
 
 ui-test: all
 	env -u DISPLAY -u WAYLAND_DISPLAY -u XAUTHORITY -u DBUS_SESSION_BUS_ADDRESS \

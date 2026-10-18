@@ -17,7 +17,8 @@ def check():
             assert game[field] == standard[field], f'{game["name"]}: incompatible {field}'
         component = ledger['node_apps'][game['name']]
         assert game['id'] == component['id'] and game['host_api'] == component['host_api']
-        assert game['kind'] == 'game' and set(game['harnesses']) == {'arcade', 'inbe'}
+        assert game['kind'] == 'game' and 'arcade' in game['harnesses']
+        assert set(game['harnesses']) <= {'arcade', 'inbe'}
         assert game['save_schema'] == 1
         assert (ROOT / game['source']).is_file() and (ROOT / game['preview']).is_file()
         changelog = (ROOT / 'apps' / game['name'] / 'CHANGELOG.md').read_text()
@@ -29,7 +30,7 @@ def check():
             locales[file.stem] = {match[1] for match in re.finditer(r'^\[([^\]]+)\]$', file.read_text(), re.M)}
         required = set()
         for file in (ROOT / 'apps' / game['name']).glob('*.zi'):
-            required.update(re.findall(r'"(chess_[a-z0-9_]+)"', file.read_text()))
+            required.update(re.findall(r'"(' + re.escape(game['locale_prefix']) + r'[a-z0-9_]+)"', file.read_text()))
         assert len(locales) >= 12
         for language, keys in locales.items():
             assert required <= keys, f'{language}: missing {sorted(required - keys)}'

@@ -1,5 +1,5 @@
-// Runs the same Chess bundle as Inbe. The host owns files and input;
-// the game owns its rules, screens and computer opponent.
+// Runs the registered game bundles. The host owns files and input;
+// each game owns its rules and screens. Chess also runs in Inbe.
 #import "std/file"
 #import "std/bundle_host"
 #import "std/byte_text_linux"
@@ -11,6 +11,7 @@
 #import "kryon/hosted_values"
 #import "kryon/widget_host"
 #import "kryon/app_files"
+#import "kryon/tree_input"
 #import "inbe/node_app_types"
 #import "inbe/node_app_codec"
 #import "inbe/module_types"
@@ -65,7 +66,7 @@ GameCapability :: (name: string) -> bool {
     name == "AppLocaleHost" || name == "AppRecordHost" || name == "SaveAppRecordHost" ||
     name == "AppFriendHost" || name == "AppSharedHost" || name == "AppSharedItemHost" ||
     name == "AppInvitationHost" || name == "SendAppSharedHost" ||
-    name == "RefreshAppSharedHost" || name == "SmoothFramesHost"
+    name == "RefreshAppSharedHost" || name == "SmoothFramesHost" || name == "AppKeyHost"
 }
 
 GameAllows :: (context: *void, module: string, name: string) -> bool {
@@ -210,6 +211,10 @@ GameCall :: (context: *void, module: *u8, function: *u8,
         return 1
     }
     if !host.drawing { return 0 }
+    if name == "AppKeyHost" && count == 0 {
+        result.* = HostScalar("s32", cast(s64)KeyboardTake(host.frame.session))
+        return 1
+    }
     return WidgetHostCall(context, module, function, arguments, count, result)
 }
 

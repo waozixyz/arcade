@@ -1,5 +1,13 @@
 # Arcade changelog
 
+## 0.1.2
+
+- Open Pushy from the game library with the original Classic layouts, new
+  graphics, keyboard and on-screen controls, restart, and an object guide.
+- Continue the same Pushy position after leaving the game or restarting.
+- The two shadow puzzles at 165–166 can be viewed but remain paused while
+  their original rules are being verified.
+
 ## 0.1.1
 
 - Choose games from a grid of cards with real game previews.
