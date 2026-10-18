@@ -79,9 +79,15 @@ with tempfile.TemporaryDirectory(prefix="profile-", dir=OUTPUT) as directory:
     record = profile / "games/inbe.chess/records/computer"
     with application(profile, "play") as child:
         driver.wait(label="Arcade", role="text")
+        card = driver.find(label="Chess", role="button", visible=True)[0]
+        preview = driver.find(key=300, role="image", visible=True)[0]
+        assert card['visible_width'] > 150 and card['visible_height'] > 180
+        assert preview['visible_width'] > 150 and preview['visible_height'] > 100
         capture(child, "library")
         driver.press(label="Chess", role="button")
         driver.wait(label="Easy", role="button")
+        back = driver.find(label="Back", role="button", visible=True)[0]
+        assert UiDriver.center(back)[1] < 56, "Back must stay in the top navigation"
         driver.press(label="Easy", role="button")
         driver.press(label="Play White", role="button")
         driver.press(label="Start", role="button")
@@ -113,7 +119,7 @@ with tempfile.TemporaryDirectory(prefix="profile-", dir=OUTPUT) as directory:
             assert any(all(abs(channel - target) < 15 for channel, target in zip(pixel, (246, 241, 231)))
                        for pixel in pixels), "The pawn's image did not render"
         saved = record.read_bytes()
-        driver.press(label="Arcade", role="button")
+        driver.press(label="Back", role="button")
         driver.wait(label="Chess", role="button")
         driver.press(label="Chess", role="button")
         driver.wait(label="Your move")

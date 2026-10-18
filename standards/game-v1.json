@@ -1,0 +1,18 @@
+{
+  "name": "kryon-node-app",
+  "contract_version": 1,
+  "module_api": 2,
+  "host_api": 12,
+  "identity": "Stable signed package ID; moving source must not rename installed games",
+  "frames": {
+    "matching": "Fields match by name",
+    "top": "Optional reserved space; missing means zero",
+    "bottom": "Reserved space below the game",
+    "input": "Only the supervised game receives its frame and input"
+  },
+  "required_host_calls": ["ReadAppHost", "WriteAppHost", "ReadAppUiHost", "AppLocaleHost", "AppRecordHost", "SaveAppRecordHost"],
+  "optional_features": {"friends": "Explicitly unavailable without a connected account; never report an unsent action as sent"},
+  "resources": {"root": "assets/<game>/", "locales": "assets/<game>/locales/<locale>.txt", "preview": "Required real game preview; no host files or texture handles"},
+  "records": {"scope": "Game and account", "name_bytes_less_than": 64, "value_bytes_less_than": 65536, "save_schema": "Versioned by the game; upgrades preserve older saves"},
+  "updates": {"signature": "Existing Ed25519 publisher", "identity": "Preserve package ID and publisher pins", "order": "Increasing version and sequence; immutable payload hashes", "gate": "Check the exact bundle in Arcade and an intended Inbe host, including its VM format, before node publication"}
+}

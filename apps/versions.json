@@ -1,0 +1,14 @@
+{
+  "host_api": 12,
+  "oldest_host_api": 12,
+  "module_api": 2,
+  "node_apps": {
+    "chess": {
+      "id": "inbe.chess",
+      "title": "Chess",
+      "version": "1.0.2",
+      "sequence": 3,
+      "host_api": 12
+    }
+  }
+}

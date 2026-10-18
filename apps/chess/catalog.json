@@ -1,0 +1,17 @@
+{
+  "id": "inbe.chess",
+  "name": "chess",
+  "title": "Chess",
+  "kind": "game",
+  "contract_version": 1,
+  "module_api": 2,
+  "host_api": 12,
+  "save_schema": 1,
+  "harnesses": ["arcade", "inbe"],
+  "entry": "chess:Main",
+  "source": "apps/chess/chess.zi",
+  "assets": "assets/chess",
+  "locales": "apps/chess/locales",
+  "locale_prefix": "chess_",
+  "preview": "assets/chess/preview.png"
+}

@@ -19,6 +19,9 @@
 
 using HostValueKind;
 
+GAME_CONTRACT_VERSION :: 1
+GAME_HOST_API :: 12
+
 GameHost :: struct {
     app: HostedApp
     bytes: string
@@ -232,7 +235,27 @@ GameAssetsValid :: () -> bool {
     AppFileFree(manifest_path)
     if !manifest.found { return false }
     id := ReadString(manifest.data, FieldAt(manifest.data, 0, "id"))
-    return id.valid && manifest.data[id.start:id.end] == GameAt(host.index).id
+    contract := ReadNumber(manifest.data, FieldAt(manifest.data, 0, "contract_version"))
+    module_api := ReadNumber(manifest.data, FieldAt(manifest.data, 0, "module_api"))
+    host_api := ReadNumber(manifest.data, FieldAt(manifest.data, 0, "host_api"))
+    save_schema := ReadNumber(manifest.data, FieldAt(manifest.data, 0, "save_schema"))
+    if !id.valid || manifest.data[id.start:id.end] != GameAt(host.index).id ||
+    !contract.valid || contract.value != GAME_CONTRACT_VERSION ||
+    !module_api.valid || module_api.value != MODULE_ABI ||
+    !host_api.valid || host_api.value < 1 || host_api.value > GAME_HOST_API ||
+    !save_schema.valid || save_schema.value < 1 { return false }
+    read: bool
+    write: bool
+    frame: bool
+    capabilities := BundleCapabilities(host.app.bundle)
+    if capabilities < cast(u64)3 || capabilities > cast(u64)HOSTED_APP_CAPABILITY_LIMIT { return false }
+    for capability: cast(u64)0..capabilities - 1 {
+        name := TextFromCString(BundleCapabilityFunctionName(host.app.bundle, capability))
+        read = read || name == "ReadAppHost"
+        write = write || name == "WriteAppHost"
+        frame = frame || name == "ReadAppUiHost"
+    }
+    return read && write && frame
 }
 
 GameClose :: () {

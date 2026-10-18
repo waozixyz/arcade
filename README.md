@@ -4,15 +4,16 @@ Games and entertainment, alongside Werkzeug for practical tools and Inner
 Breeze for personal growth. The first game is Chess.
 
 Open Chess from the home screen, choose a side and one of three computer
-levels, and play. The Arcade button returns to the library. A local game
+levels, and play. The library uses preview cards in a responsive grid; the
+top Back button returns from a game. A local game
 survives returning to the library and restarting the app.
 
 ## One Chess app, two harnesses
 
 Chess remains an installable app in Inner Breeze, where it also fits thoughtful
-play and personal growth. Its rules, computer opponent and screens stay in
-the owning Inbe package at `apps/chess/`; Arcade contains no copied game
-implementation. Both harnesses recognize the stable identity `inbe.chess`.
+play and personal growth. Arcade owns its rules, computer opponent, screens,
+assets, translations and release ledger at `apps/chess/`. Inbe consumes the
+same signed package from its node. Both harnesses recognize `inbe.chess`.
 The game's `catalog.json` declares its membership in both harnesses.
 
 Arcade builds that source into a `.zib` and runs it through the same bounded
@@ -48,7 +49,8 @@ desktop version.
 
 Games are registered in `games.json`, which points to the owning package's
 game descriptor. `scripts/build-games.py` generates the catalog and bundles
-the game without modifying the dependency or copying its source into Arcade.
+the owned game. Inbe remains a dependency for the existing shared interface
+and signed publisher, rather than for the Chess implementation.
 
 ## Saved games
 
@@ -62,6 +64,7 @@ filesystem access. `ARCADE_DATA` chooses a disposable profile for tests.
 ```sh
 make test
 make ui-test
+make compatibility-test INBE_BINARY=/absolute/path/to/intended/inbe
 ```
 
 The UI test scrubs the inherited desktop and runs on its own Xvfb display.
@@ -70,7 +73,9 @@ the rendered piece, returns through the library, restarts and verifies the
 saved position. It also checks private file permissions and refuses a second
 writer. Test screenshots and outputs stay in `build/ui-test/`.
 
-To check the same bundle in a current Inbe build, run Inbe's existing
-`tests/chess_ui_test.sh` with that host binary and Arcade's
-`build/games/chess.zib`. Both hosts need a runtime that supports the compiler's
-bundle format.
+The compatibility gate checks the exact bundle in both harnesses. See
+[Game compatibility](docs/GAME_COMPATIBILITY.md) for the checked contract,
+independent game versions, save compatibility and existing signed node
+publisher. Both hosts must support the compiler's VM format. Local overrides
+may use a newer format than released Inbe; their output must pass the
+intended host before publication. Building or installing never publishes.

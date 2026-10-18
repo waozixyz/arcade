@@ -1,5 +1,5 @@
 {
   "games": [
-    {"package": "inbe", "manifest": "apps/chess/catalog.json"}
+    {"package": "self", "manifest": "apps/chess/catalog.json"}
   ]
 }

@@ -5,12 +5,15 @@
 #import "games"
 #import "catalog"
 #import "inbe/node_app_types"
+#import "platform"
 
 open_game: s32 = -1;
 game_failed: bool;
 bundle_directory: string;
 data_directory: string;
 BAR_HEIGHT :: 56.0
+library_scroll: s32;
+preview_paths: [16]string;
 
 Label :: (session: Session, key: u64, text: string, bounds: Rectangle, font: s32) {
     Text(session, TextProps.{.key = key, .bounds = bounds, .text = text, .font = font,
@@ -28,53 +31,78 @@ OpenGame :: (index: s32) -> bool {
     return true
 }
 
+GameCard :: (session: Session, index: s32, bounds: Rectangle, now: float64) {
+    game := GameAt(index)
+    if preview_paths[index] == "" {
+        preview_paths[index] = Join(bundle_directory, game.preview)
+    }
+    press := Press(session, PressProps.{.key = cast(u64)(100 + index), .id = 100 + index,
+            .bounds = bounds, .label = game.title, .now = now})
+    surface := ifx press.down then Color.{221, 233, 229, 255} else Color.{250, 253, 251, 255}
+    Box(session, BoxProps.{.key = cast(u64)(200 + index), .bounds = bounds,
+            .fill = surface, .border = Color.{190, 212, 204, 255}, .radius = 12.0})
+    Image(session, ImageProps.{.key = cast(u64)(300 + index), .asset_path = preview_paths[index],
+            .alt_text = game.title, .bounds = Rectangle.{bounds.x + 8.0, bounds.y + 8.0,
+                bounds.width - 16.0, bounds.height - 60.0}, .fit = ImageFit.ImageFitCover, .smooth = true})
+    Label(session, cast(u64)(400 + index), game.title,
+        Rectangle.{bounds.x + 16.0, bounds.y + bounds.height - 42.0, bounds.width - 32.0, 28.0}, 19)
+    if press.clicked { unused OpenGame(index) }
+}
+
 ArcadeFrame :: (session: Session, viewport: Rectangle) -> bool {
+    now := cast(float64)MonotonicMilliseconds() / 1000.0
     pointer := PointerSample(session)
     BeginScrollFrame(session, Vector2.{pointer.x, pointer.y}, pointer.pressed, pointer.down,
-        pointer.released, PointerWheelTake(session, viewport),
-        cast(float64)MonotonicMilliseconds() / 1000.0)
+        pointer.released, PointerWheelTake(session, viewport), now)
     Box(session, BoxProps.{.key = cast(u64)2, .bounds = viewport,
             .fill = Color.{239, 246, 244, 255}})
     if open_game < 0 {
         Label(session, cast(u64)3, "Arcade", Rectangle.{20.0, 20.0, viewport.width - 40.0, 40.0}, 26)
         Label(session, cast(u64)4, "Games and entertainment",
             Rectangle.{20.0, 64.0, viewport.width - 40.0, 32.0}, 16)
-        for index: cast(s32)0..GameCount - 1 {
-            game := GameAt(index)
-            button := ButtonProps.{.key = cast(u64)(100 + index), .id = 100 + index,
-                .label = game.title,
-                .bounds = Rectangle.{20.0, 120.0 + cast(float32)index * 80.0, viewport.width - 40.0, 64.0},
-                .tone = ButtonTone.ButtonToneAccent,
-                .emphasis = ButtonEmphasis.ButtonEmphasisSoft}
-            if Button(session, button) != 0 { unused OpenGame(index) }
+        width := viewport.width - 40.0
+        columns := cast(s32)((width + 16.0) / 220.0)
+        if columns < 1 { columns = 1 }
+        rows := (GameCount + columns - 1) / columns
+        card_height: float32 = 208.0
+        scroll := Scroll(session, ScrollProps.{.key = cast(u64)20,
+                .bounds = Rectangle.{20.0, 112.0, width, viewport.height - 124.0},
+                .content_height = cast(s32)(cast(float32)rows * (card_height + 16.0)),
+                .scroll_offset = library_scroll})
+        library_scroll = scroll.scroll_offset
+        if scroll.opened {
+            card_width := (scroll.content.width - cast(float32)(columns - 1) * 16.0) / cast(float32)columns
+            for index: cast(s32)0..GameCount - 1 {
+                x := scroll.content.x + cast(float32)(index % columns) * (card_width + 16.0)
+                y := scroll.content.y + cast(float32)(index / columns) * (card_height + 16.0)
+                GameCard(session, index, Rectangle.{x, y, card_width, card_height}, now)
+            }
+            End(session)
         }
         if game_failed {
             Label(session, cast(u64)5, "This game could not open. Select it to retry.",
-                Rectangle.{20.0, 120.0 + cast(float32)GameCount * 80.0, viewport.width - 40.0, 48.0}, 16)
+                Rectangle.{20.0, viewport.height - 64.0, viewport.width - 40.0, 48.0}, 16)
         }
         return true
     }
     frame := AppUiFrame.{.session = session, .width = cast(s32)viewport.width,
-        .height = cast(s32)viewport.height, .bottom = cast(s32)BAR_HEIGHT,
-        .scale = 1.0, .font = 16,
-        .now = cast(float64)MonotonicMilliseconds() / 1000.0}
+        .height = cast(s32)viewport.height, .top = cast(s32)BAR_HEIGHT,
+        .scale = 1.0, .font = 16, .now = now}
     if !GameFrame(frame) {
         open_game = -1
         game_failed = true
         GameClose()
         return true
     }
-    // A footer keeps the original game's coordinate system intact and
-    // reserves its height in the generic frame sent to the game.
-    bar := Rectangle.{0.0, viewport.height - BAR_HEIGHT, viewport.width, BAR_HEIGHT}
+    bar := Rectangle.{0.0, 0.0, viewport.width, BAR_HEIGHT}
     Box(session, BoxProps.{.key = cast(u64)6, .bounds = bar, .fill = Color.{221, 233, 229, 255}})
-    if Button(session, ButtonProps.{.key = cast(u64)7, .id = 7, .label = "Arcade",
-            .bounds = Rectangle.{8.0, bar.y + 6.0, 104.0, 44.0},
+    if Button(session, ButtonProps.{.key = cast(u64)7, .id = 7, .label = "Back",
+            .bounds = Rectangle.{8.0, 6.0, 76.0, 44.0},
             .tone = ButtonTone.ButtonToneNeutral,
             .emphasis = ButtonEmphasis.ButtonEmphasisSoft}) != 0 {
         open_game = -1
     }
     Label(session, cast(u64)8, GameAt(host.index).title,
-        Rectangle.{124.0, bar.y + 8.0, viewport.width - 136.0, 40.0}, 18)
+        Rectangle.{100.0, 12.0, viewport.width - 116.0, 36.0}, 20)
     return true
 }
