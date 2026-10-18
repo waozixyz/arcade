@@ -1,0 +1,80 @@
+#import "kryon/Widgets"
+#import "kryon/key_input"
+#import "kryon/ScrollDevice"
+#import "std/timer_linux"
+#import "games"
+#import "catalog"
+#import "inbe/node_app_types"
+
+open_game: s32 = -1;
+game_failed: bool;
+bundle_directory: string;
+data_directory: string;
+BAR_HEIGHT :: 56.0
+
+Label :: (session: Session, key: u64, text: string, bounds: Rectangle, font: s32) {
+    Text(session, TextProps.{.key = key, .bounds = bounds, .text = text, .font = font,
+            .wrap = TextWrap.TextWrapEllipsis})
+}
+
+OpenGame :: (index: s32) -> bool {
+    if !GameOpen(index, bundle_directory, data_directory) {
+        GameClose()
+        game_failed = true
+        return false
+    }
+    open_game = index
+    game_failed = false
+    return true
+}
+
+ArcadeFrame :: (session: Session, viewport: Rectangle) -> bool {
+    pointer := PointerSample(session)
+    BeginScrollFrame(session, Vector2.{pointer.x, pointer.y}, pointer.pressed, pointer.down,
+        pointer.released, PointerWheelTake(session, viewport),
+        cast(float64)MonotonicMilliseconds() / 1000.0)
+    Box(session, BoxProps.{.key = cast(u64)2, .bounds = viewport,
+            .fill = Color.{239, 246, 244, 255}})
+    if open_game < 0 {
+        Label(session, cast(u64)3, "Arcade", Rectangle.{20.0, 20.0, viewport.width - 40.0, 40.0}, 26)
+        Label(session, cast(u64)4, "Games and entertainment",
+            Rectangle.{20.0, 64.0, viewport.width - 40.0, 32.0}, 16)
+        for index: cast(s32)0..GameCount - 1 {
+            game := GameAt(index)
+            button := ButtonProps.{.key = cast(u64)(100 + index), .id = 100 + index,
+                .label = game.title,
+                .bounds = Rectangle.{20.0, 120.0 + cast(float32)index * 80.0, viewport.width - 40.0, 64.0},
+                .tone = ButtonTone.ButtonToneAccent,
+                .emphasis = ButtonEmphasis.ButtonEmphasisSoft}
+            if Button(session, button) != 0 { unused OpenGame(index) }
+        }
+        if game_failed {
+            Label(session, cast(u64)5, "This game could not open. Select it to retry.",
+                Rectangle.{20.0, 120.0 + cast(float32)GameCount * 80.0, viewport.width - 40.0, 48.0}, 16)
+        }
+        return true
+    }
+    frame := AppUiFrame.{.session = session, .width = cast(s32)viewport.width,
+        .height = cast(s32)viewport.height, .bottom = cast(s32)BAR_HEIGHT,
+        .scale = 1.0, .font = 16,
+        .now = cast(float64)MonotonicMilliseconds() / 1000.0}
+    if !GameFrame(frame) {
+        open_game = -1
+        game_failed = true
+        GameClose()
+        return true
+    }
+    // A footer keeps the original game's coordinate system intact and
+    // reserves its height in the generic frame sent to the game.
+    bar := Rectangle.{0.0, viewport.height - BAR_HEIGHT, viewport.width, BAR_HEIGHT}
+    Box(session, BoxProps.{.key = cast(u64)6, .bounds = bar, .fill = Color.{221, 233, 229, 255}})
+    if Button(session, ButtonProps.{.key = cast(u64)7, .id = 7, .label = "Arcade",
+            .bounds = Rectangle.{8.0, bar.y + 6.0, 104.0, 44.0},
+            .tone = ButtonTone.ButtonToneNeutral,
+            .emphasis = ButtonEmphasis.ButtonEmphasisSoft}) != 0 {
+        open_game = -1
+    }
+    Label(session, cast(u64)8, GameAt(host.index).title,
+        Rectangle.{124.0, bar.y + 8.0, viewport.width - 136.0, 40.0}, 18)
+    return true
+}

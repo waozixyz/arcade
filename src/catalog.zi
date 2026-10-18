@@ -1,0 +1,14 @@
+// Generated from games.json and the owning packages' game catalogs.
+Game :: struct {
+    id: string
+    name: string
+    title: string
+    bundle: string
+}
+
+GameCount :: 1
+
+GameAt :: (index: s32) -> Game {
+    if index == 0 { return Game.{.id = "inbe.chess", .name = "chess", .title = "Chess", .bundle = "chess.zib"} }
+    return Game.{}
+}

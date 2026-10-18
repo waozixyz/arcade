@@ -1,0 +1,5 @@
+{
+  "games": [
+    {"package": "inbe", "manifest": "apps/chess/catalog.json"}
+  ]
+}

@@ -1,0 +1,8 @@
+[Desktop Entry]
+Type=Application
+Name=Arcade
+Comment=Games and entertainment
+Exec=arcade
+Icon=applications-games
+Terminal=false
+Categories=Game;

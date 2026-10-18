@@ -1,0 +1,19 @@
+[package]
+name = "Arcade"
+entry = "src/desktop.zi"
+module_roots = ["src"]
+
+[toolchain]
+git = "https://github.com/ziranlang/ziran.git"
+ref = "master"
+
+[install]
+bin = "arcade"
+
+[dependencies.kryon]
+git = "https://github.com/kryonlabs/kryon.git"
+ref = "master"
+
+[dependencies.inbe]
+git = "https://github.com/waozixyz/inbe.git"
+ref = "master"

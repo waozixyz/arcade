@@ -1,0 +1,98 @@
+#import "std/c_string"
+#import "std/byte_text_linux"
+#import "kryon/Desktop"
+#import "kryon/Widgets"
+#import "kryon/Frame"
+#import "kryon/test_driver"
+#import "arcade"
+#import "platform"
+#import "games"
+#import "catalog"
+
+sdl :: #system_library "SDL2";
+SetTitle :: (window: *void, title: *u8) #foreign sdl "SDL_SetWindowTitle";
+
+Draw :: (session: Session) -> bool {
+    BeginDesktopFrame()
+    viewport := DesktopViewport()
+    pointer := TestDriverPointer(session, PollPointer())
+    TreePointerUpdate(session, pointer)
+    TreeSecondaryPointerUpdate(session, PollSecondaryPointer())
+    PointerWheelSend(session, pointer.x, pointer.y, TestDriverWheel(DesktopWheelMove()))
+    if BeginFrame(session, cast(u64)1, viewport) != FrameStatus.FrameOk { return false }
+    if !ArcadeFrame(session, viewport) {
+        TreeCancel(session)
+        return false
+    }
+    if EndFrame(session) != FrameStatus.FrameOk { return false }
+    unused DesktopCursor(session)
+    ok := EndDesktopFrame()
+    TestDriverFrame(session)
+    return ok
+}
+
+#program_export
+main :: (argc: s32, argv: **u8) -> s32 {
+    if argc == 2 && TextFromCString(argv[1]) == "--list" {
+        for index: cast(s32)0..GameCount - 1 {
+            Report(GameAt(index).id)
+            Report("\n")
+        }
+        return 0
+    }
+    first: s32 = -1
+    if argc != 1 {
+        if argc != 3 || TextFromCString(argv[1]) != "--app" {
+            Report("Usage: arcade [--list | --app chess]\n")
+            return 1
+        }
+        for index: cast(s32)0..GameCount - 1 {
+            game := GameAt(index)
+            if TextFromCString(argv[2]) == game.name || TextFromCString(argv[2]) == game.id {
+                first = index
+            }
+        }
+        if first < 0 {
+            Report("Arcade: unknown game\n")
+            return 1
+        }
+    }
+    bundle_directory = Join(ExecutableDirectory(), "games")
+    data_directory = DataDirectory()
+    if data_directory == "" {
+        Report("Arcade: no private data directory\n")
+        return 1
+    }
+    if first >= 0 && !OpenGame(first) {
+        Report("Arcade: could not open game\n")
+        return 1
+    }
+    if !OpenDesktopSized(480, 820) || !WindowInterceptCloseHost(true) {
+        GameClose()
+        CloseDesktop()
+        return 1
+    }
+    title: [16]u8
+    unused CopyCString("Arcade", title[:])
+    SetTitle(window, *title[0])
+    session := SessionOpen()
+    if !SessionValid(session) {
+        GameClose()
+        CloseDesktop()
+        return 1
+    }
+    ok := true
+    if CaptureRequested() {
+        ok = Draw(session) && Draw(session) && CaptureConfigured()
+    } else {
+        while ok && PollDesktop() {
+            ok = Draw(session)
+            if WindowTakeCloseRequestHost() { break }
+            if ok { PauseDesktop() }
+        }
+    }
+    GameClose()
+    SessionClose(session)
+    CloseDesktop()
+    return ifx ok then 0 else 1
+}

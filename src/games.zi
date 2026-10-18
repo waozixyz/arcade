@@ -1,0 +1,306 @@
+// Runs the same Chess bundle as Inbe. The host owns files and input;
+// the game owns its rules, screens and computer opponent.
+#import "std/file"
+#import "std/bundle_host"
+#import "std/byte_text_linux"
+#import "std/date_time_linux"
+#import "std/timer_linux"
+#import "std/c_string"
+#import "std/json_scan"
+#import "kryon/hosted_app"
+#import "kryon/hosted_values"
+#import "kryon/widget_host"
+#import "kryon/app_files"
+#import "inbe/node_app_types"
+#import "inbe/node_app_codec"
+#import "inbe/module_types"
+#import "platform"
+#import "catalog"
+
+using HostValueKind;
+
+GameHost :: struct {
+    app: HostedApp
+    bytes: string
+    records: AppFiles
+    resources: AppFiles
+    record_root: string
+    resource_root: string
+    index: s32
+    ready: bool
+    identifying: bool
+    drawing: bool
+    received: bool
+    succeeded: bool
+    record_failed: bool
+    record_text: string
+    frame: AppUiFrame
+    locale: string
+    translations: string
+    message_codec: WidgetAppMessageCodec
+    frame_codec: WidgetAppUiFrameCodec
+    person_codec: WidgetAppPersonCodec
+    shared_codec: WidgetAppSharedCodec
+    item_codec: WidgetAppSharedItemCodec
+    invitation_codec: WidgetAppInvitationCodec
+}
+
+host: GameHost = .{.index = -1};
+
+RecordNameValid :: (name: string) -> bool {
+    if name.count == 0 || name.count >= APP_RECORD_NAME_MAX { return false }
+    for byte: name {
+        if !((byte >= cast(u8)97 && byte <= cast(u8)122) ||
+            (byte >= cast(u8)48 && byte <= cast(u8)57) ||
+            byte == cast(u8)45 || byte == cast(u8)95) { return false }
+    }
+    return true
+}
+
+GameCapability :: (name: string) -> bool {
+    return name == "ReadAppHost" || name == "WriteAppHost" || name == "ReadAppUiHost" ||
+    name == "AppLocaleHost" || name == "AppRecordHost" || name == "SaveAppRecordHost" ||
+    name == "AppFriendHost" || name == "AppSharedHost" || name == "AppSharedItemHost" ||
+    name == "AppInvitationHost" || name == "SendAppSharedHost" ||
+    name == "RefreshAppSharedHost" || name == "SmoothFramesHost"
+}
+
+GameAllows :: (context: *void, module: string, name: string) -> bool {
+    return GameCapability(name) || WidgetHostSupports(module, name)
+}
+
+TextResult :: (value: string) -> HostValue {
+    return HostValue.{.kind = cast(s32)HostString, .type_name = HostTextData("string"),
+        .data = HostTextData(value), .length = cast(usize)value.count}
+}
+
+ArgumentText :: (value: HostValue) -> string {
+    return TextFromBytes(BytesFromPointer(value.data, cast(u64)value.length))
+}
+
+// Translations travel inside the game's own resource namespace, which Inbe
+// also accepts. No root Inbe package is needed by Arcade.
+GameTranslations :: () -> string {
+    game := GameAt(host.index)
+    filename: Vec(u8)
+    BuilderPrint(*filename, "assets/%/locales/%.txt", game.name, host.locale)
+    path := BuilderFinish(filename)
+    resource := HostedAppAsset(*host.app, path)
+    AppFileFree(path)
+    if !resource.found {
+        fallback: Vec(u8)
+        BuilderPrint(*fallback, "assets/%/locales/en.txt", game.name)
+        english := BuilderFinish(fallback)
+        resource = HostedAppAsset(*host.app, english)
+        AppFileFree(english)
+    }
+    return resource.data
+}
+
+GameLocale :: (key: string) -> string {
+    text := host.translations
+    at: s64 = 0
+    while at < text.count {
+        end := at
+        while end < text.count && text[end] != cast(u8)10 { end += 1 }
+        line := text[at:end]
+        if line.count == key.count + 2 && line[0] == cast(u8)91 &&
+        line[line.count - 1] == cast(u8)93 && line[1:line.count - 1] == key {
+            start := end + 1
+            last := start
+            while last < text.count {
+                next := last
+                while next < text.count && text[next] != cast(u8)10 { next += 1 }
+                if text[last:next] == "---" {
+                    return text[start:ifx last > start then last - 1 else last]
+                }
+                last = next + 1
+            }
+        }
+        at = end + 1
+    }
+    return key
+}
+
+GameCall :: (context: *void, module: *u8, function: *u8,
+    arguments: *HostValue, count: s32, result: *HostValue) -> s32 {
+    name := TextFromCString(function)
+    result.* = HostValue.{.kind = cast(s32)HostVoid, .type_name = HostTextData("void")}
+    if name == "ReadAppHost" && count == 0 {
+        message := AppMessage.{.abi = MODULE_ABI}
+        if !host.identifying {
+            message.action = APP_FRAME
+            message.name = GameAt(host.index).name
+            message.locale = host.locale
+            message.shared_status = APP_SHARED_UNAVAILABLE
+            message.time = UnixNow()
+        }
+        result.* = WidgetEncodeAppMessage(message, *host.message_codec)
+        return 1
+    }
+    if host.identifying { return 0 }
+    if name == "WriteAppHost" && count == 1 && WidgetValidAppMessage(arguments[0]) {
+        answer := WidgetDecodeAppMessage(arguments[0], *host.message_codec)
+        host.received = true
+        host.succeeded = answer.succeeded && answer.abi == MODULE_ABI
+        return 1
+    }
+    if name == "ReadAppUiHost" && count == 0 {
+        result.* = WidgetEncodeAppUiFrame(host.frame, *host.frame_codec)
+        return 1
+    }
+    if name == "AppLocaleHost" && count == 1 &&
+    HostScalarValid(arguments[0], "string", cast(s32)HostString) {
+        result.* = TextResult(GameLocale(ArgumentText(arguments[0])))
+        return 1
+    }
+    if name == "AppRecordHost" && count == 1 &&
+    HostScalarValid(arguments[0], "string", cast(s32)HostString) {
+        record := ArgumentText(arguments[0])
+        if !RecordNameValid(record) { return 0 }
+        AppFileFree(host.record_text)
+        host.record_text = AppFileRead(*host.records, record)
+        host.record_failed = host.record_failed || host.records.status == -1 ||
+        host.record_text.count >= APP_RECORD_TEXT_MAX
+        if host.record_failed {
+            AppFileFree(host.record_text)
+            host.record_text = ""
+        }
+        result.* = TextResult(host.record_text)
+        return 1
+    }
+    if name == "SaveAppRecordHost" && count == 2 &&
+    HostScalarValid(arguments[0], "string", cast(s32)HostString) &&
+    HostScalarValid(arguments[1], "string", cast(s32)HostString) {
+        record := ArgumentText(arguments[0])
+        text := ArgumentText(arguments[1])
+        saved := !host.record_failed && RecordNameValid(record) &&
+        text.count < APP_RECORD_TEXT_MAX && AppFileWrite(*host.records, record, text)
+        result.* = HostScalar("bool", ifx saved then 1 else 0)
+        return 1
+    }
+    if name == "SmoothFramesHost" && count == 1 &&
+    HostScalarValid(arguments[0], "s32", cast(s32)HostInteger) {
+        result.* = HostScalar("bool", 1)
+        return 1
+    }
+    // Arcade has no connected account yet. The existing game presents its
+    // signed-out Friends state, and never reports an unsent invitation as sent.
+    if name == "AppFriendHost" && count == 1 {
+        result.* = WidgetEncodeAppPerson(AppPerson.{}, *host.person_codec)
+        return 1
+    }
+    if name == "AppSharedHost" && count == 1 {
+        result.* = WidgetEncodeAppShared(AppShared.{}, *host.shared_codec)
+        return 1
+    }
+    if name == "AppSharedItemHost" && count == 2 {
+        result.* = WidgetEncodeAppSharedItem(AppSharedItem.{}, *host.item_codec)
+        return 1
+    }
+    if name == "AppInvitationHost" && count == 1 {
+        result.* = WidgetEncodeAppInvitation(AppInvitation.{}, *host.invitation_codec)
+        return 1
+    }
+    if name == "RefreshAppSharedHost" || name == "SendAppSharedHost" {
+        result.* = HostScalar("bool", 0)
+        return 1
+    }
+    if !host.drawing { return 0 }
+    return WidgetHostCall(context, module, function, arguments, count, result)
+}
+
+GameAssetsValid :: () -> bool {
+    path_bytes: Vec(u8)
+    BuilderPrint(*path_bytes, "assets/%/", GameAt(host.index).name)
+    prefix := BuilderFinish(path_bytes)
+    defer { AppFileFree(prefix) }
+    count := BundleAssets(host.app.bundle)
+    if count == cast(u64)0 || count > cast(u64)2048 { return false }
+    total: u64 = 0
+    for index: cast(u64)0..count - 1 {
+        path := TextFromCString(BundleAssetPath(host.app.bundle, index))
+        if !AppFileNameValid(path) || path.count <= prefix.count ||
+        path[:prefix.count] != prefix || BundleAssetLength(host.app.bundle, index) > cast(u64)16777216 {
+            return false
+        }
+        total += BundleAssetLength(host.app.bundle, index)
+        if total > cast(u64)67108864 { return false }
+    }
+    manifest_path := Join(prefix[:prefix.count - 1], "catalog.json")
+    manifest := HostedAppAsset(*host.app, manifest_path)
+    AppFileFree(manifest_path)
+    if !manifest.found { return false }
+    id := ReadString(manifest.data, FieldAt(manifest.data, 0, "id"))
+    return id.valid && manifest.data[id.start:id.end] == GameAt(host.index).id
+}
+
+GameClose :: () {
+    HostedAppClose(*host.app)
+    AppFilesClose(*host.records)
+    AppFilesClose(*host.resources)
+    AppFileFree(host.record_root)
+    AppFileFree(host.resource_root)
+    AppFileFree(host.record_text)
+    AppFileFree(host.bytes)
+    host = GameHost.{.index = -1}
+}
+
+GameOpen :: (index: s32, bundle_directory: string, data_directory: string) -> bool {
+    if index < 0 || index >= GameCount { return false }
+    if host.index == index && host.ready { return true }
+    GameClose()
+    host.index = index
+    host.locale = "en"
+    language := EnvironmentText("LANG")
+    if language.count >= 2 { host.locale = language[:2] }
+    game := GameAt(index)
+    path := Join(bundle_directory, game.bundle)
+    bytes, found := ReadEntireFile(path)
+    AppFileFree(path)
+    if !found { return false }
+    host.bytes = bytes
+    if !HostedAppOpen(*host.app, host.bytes) || !GameAssetsValid() { return false }
+    host.translations = GameTranslations()
+    host.identifying = true
+    answer: s64
+    identified := HostedAppStart(*host.app, GameAllows, GameCall, null) &&
+    HostedAppRun(*host.app, *answer) && answer == MODULE_NODE_APP
+    host.identifying = false
+    if !identified { return false }
+    parent := Join(data_directory, "games")
+    root := Join(parent, game.id)
+    AppFileFree(parent)
+    host.record_root = Join(root, "records")
+    host.resource_root = Join(root, "resources")
+    AppFileFree(root)
+    if !AppFilesOpen(*host.records, host.record_root) || !AppFilesOpen(*host.resources, host.resource_root) {
+        return false
+    }
+    count := BundleAssets(host.app.bundle)
+    for asset: cast(u64)0..count - 1 {
+        name := TextFromCString(BundleAssetPath(host.app.bundle, asset))
+        content := TextFromBytes(BytesFromPointer(BundleAssetBytes(host.app.bundle, asset),
+            BundleAssetLength(host.app.bundle, asset)))
+        if !AppFileWrite(*host.resources, name, content) { return false }
+    }
+    host.ready = EnterDirectory(host.resource_root)
+    return host.ready
+}
+
+GameAssetAllowed :: (path: string) -> bool {
+    return path == "" || (AppFileNameValid(path) && HostedAppAsset(*host.app, path).found)
+}
+
+GameFrame :: (frame: AppUiFrame) -> bool {
+    host.frame = frame
+    host.received = false
+    host.succeeded = false
+    host.drawing = true
+    WidgetHostBegin(frame.session, GameAssetAllowed)
+    answer: s64
+    ok := HostedAppRun(*host.app, *answer)
+    WidgetHostEnd()
+    host.drawing = false
+    return ok && answer == 0 && host.received && host.succeeded
+}
