@@ -17,6 +17,7 @@
 #import "inbe/module_types"
 #import "inbe/node_app_types"
 #import "inbe/node_app_codec"
+#import "translations"
 
 using HostValueKind;
 
@@ -158,6 +159,18 @@ Contains :: (haystack: string, needle: string) -> bool {
 
 // Whether the last frame drew `text`.
 Saw :: (player: *Player, text: string) -> bool {
+    translated := GameLocaleText("en", text)
+    if translated != "" {
+        at: s64 = 0
+        while at + 1 < translated.count {
+            if translated[at:at + 2] == "%s" {
+                return Contains(TextFromBytes(player.text[:player.text_length]), translated[:at]) &&
+                Contains(TextFromBytes(player.text[:player.text_length]), translated[at + 2:])
+            }
+            at += 1
+        }
+        text = translated
+    }
     return Contains(TextFromBytes(player.text[0:player.text_length]), text)
 }
 
@@ -593,6 +606,8 @@ Until :: (player: *Player, text: string, limit: s32) -> bool {
 }
 
 Click :: (player: *Player, label: string) -> bool {
+    translated := GameLocaleText("en", label)
+    if translated != "" { label = translated }
     Copy(label, player.click[:])
     index: s32 = 0
     while index < 4 {
@@ -657,6 +672,10 @@ ComputerChecks :: (bytes: string) -> s32 {
     if !Until(alice, "chess_your_move", 600) { return 17 }
     record = RecordText(alice, "computer")
     if !Contains(record, "moves=e2e4 ") { return 18 }
+    if !Click(alice, "chess_undo") || !Contains(RecordText(alice, "computer"), ";moves=") { return 24 }
+    if Contains(RecordText(alice, "computer"), "e2e4") { return 25 }
+    if !Move(alice, "e2e4", false) || !Until(alice, "chess_your_move", 600) { return 26 }
+    record = RecordText(alice, "computer")
     // An illegal move is refused and changes nothing.
     if !Move(alice, "e4e6", false) { return 19 }
     if RecordText(alice, "computer") != record { return 20 }

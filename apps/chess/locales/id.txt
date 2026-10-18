@@ -163,3 +163,60 @@ Kamu kalah
 [chess_result_draw]
 Seri
 ---
+[chess_analysis]
+Analisis
+---
+[chess_back_board]
+Kembali ke papan
+---
+[chess_depth]
+Kedalaman
+---
+[chess_export_help]
+Salin mengekspor permainan sebagai PGN atau posisi ini sebagai FEN.
+---
+[chess_first]
+Awal
+---
+[chess_flip]
+Balik papan
+---
+[chess_hint]
+Petunjuk
+---
+[chess_last_move]
+Langkah terakhir: %s
+---
+[chess_latest]
+Akhir
+---
+[chess_level_expert]
+Ahli
+---
+[chess_next]
+Berikutnya
+---
+[chess_notation]
+Notasi
+---
+[chess_previous]
+Sebelumnya
+---
+[chess_review]
+Tinjau
+---
+[chess_suggestion]
+Saran langkah: %s
+---
+[chess_tab_study]
+Belajar
+---
+[chess_undo]
+Urungkan
+---
+[chess_white_eval]
+Putih: %s
+---
+[chess_copy]
+Salin
+---

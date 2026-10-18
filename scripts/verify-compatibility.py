@@ -21,10 +21,12 @@ if __name__ == '__main__':
     bundle = ROOT / 'build/games/chess.zib'
     subprocess.run(['sh', str(inbe / 'tests/chess_ui_test.sh'), str(binary), str(bundle)],
                    cwd=inbe, check=True)
+    subprocess.run(['make', '-s', 'inbe-ui-test', 'INBE_BINARY=' + str(binary)], cwd=ROOT, check=True)
     oldest = args.oldest_inbe_binary.resolve(strict=True) if args.oldest_inbe_binary else None
     if oldest:
         subprocess.run(['sh', str(inbe / 'tests/chess_ui_test.sh'), str(oldest), str(bundle)],
                        cwd=inbe, check=True)
+        subprocess.run(['make', '-s', 'inbe-ui-test', 'INBE_BINARY=' + str(oldest)], cwd=ROOT, check=True)
     component = json.loads((ROOT / 'apps/versions.json').read_text())['node_apps']['chess']
     receipt = {'app_id': component['id'], 'version': component['version'],
                'sequence': component['sequence'], 'sha256': sha256(bundle.read_bytes()).hexdigest(),

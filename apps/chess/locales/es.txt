@@ -163,3 +163,60 @@ Perdiste
 [chess_result_draw]
 Tablas
 ---
+[chess_analysis]
+Análisis
+---
+[chess_back_board]
+Volver al tablero
+---
+[chess_depth]
+Profundidad
+---
+[chess_export_help]
+Copiar exporta la partida en PGN o esta posición en FEN.
+---
+[chess_first]
+Inicio
+---
+[chess_flip]
+Girar tablero
+---
+[chess_hint]
+Pista
+---
+[chess_last_move]
+Última jugada: %s
+---
+[chess_latest]
+Final
+---
+[chess_level_expert]
+Experto
+---
+[chess_next]
+Siguiente
+---
+[chess_notation]
+Notación
+---
+[chess_previous]
+Anterior
+---
+[chess_review]
+Revisar
+---
+[chess_suggestion]
+Jugada sugerida: %s
+---
+[chess_tab_study]
+Estudio
+---
+[chess_undo]
+Deshacer
+---
+[chess_white_eval]
+Blancas: %s
+---
+[chess_copy]
+Copiar
+---

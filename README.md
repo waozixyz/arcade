@@ -3,10 +3,20 @@
 Games and entertainment, alongside Werkzeug for practical tools and Inner
 Breeze for personal growth. The library includes Chess and Pushy.
 
-Open Chess from the home screen, choose a side and one of three computer
+Open Chess from the home screen, choose a side and one of four computer
 levels, and play. The library uses preview cards in a responsive grid; the
 top Back button returns from a game. A local game
-survives returning to the library and restarting the app.
+survives returning to the library and restarting the app. Ask for a hint, take
+back a complete turn, or flip the board. Expert searches more deeply without
+added evaluation noise; it has no claimed Elo rating.
+
+The Study tab keeps a separate board: step through algebraic move history,
+try a different continuation, and analyze a position with an evaluation bar,
+best move and completed search depth. Copy the game as PGN or the displayed
+position as FEN. Study never overwrites the saved computer game. Analysis and
+hints are available for computer play and study, rather than active friend
+games. Clocked games, puzzles, lessons, public matchmaking and automated
+full-game review are not implemented.
 
 ## One Chess app, two harnesses
 
@@ -66,21 +76,30 @@ filesystem access. `ARCADE_DATA` chooses a disposable profile for tests.
 make test
 make ui-test
 make pushy-ui-test
+make inbe-ui-test INBE_BINARY=/absolute/path/to/intended/inbe
 make compatibility-test INBE_BINARY=/absolute/path/to/intended/inbe
 ```
 
 The UI test scrubs the inherited desktop and runs on its own Xvfb display.
 It opens Chess, plays a move, waits for the computer's legal response, checks
 the rendered piece, returns through the library, restarts and verifies the
-saved position. It also checks private file permissions and refuses a second
-writer. Test screenshots and outputs stay in `build/ui-test/`.
+saved position. It checks hints, study variations, bounded analysis, actual
+PGN/FEN clipboard contents, board flipping, complete-turn takebacks, a Black
+opening and an Expert response. It also checks private file permissions and
+refuses a second writer. Test screenshots and outputs stay in `build/ui-test/`.
 
-The compatibility gate checks the exact bundle in both harnesses. See
+The Inbe UI check exercises hints, study, analysis, native PGN/FEN copying
+and takebacks at a narrow window size. The compatibility gate checks the
+exact bundle in both harnesses. See
 [Game compatibility](docs/GAME_COMPATIBILITY.md) for the checked contract,
 independent game versions, save compatibility and existing signed node
 publisher. Both hosts must support the compiler's VM format. Local overrides
-may use a newer format than released Inbe; their output must pass the
-intended host before publication. Building or installing never publishes.
+must preserve a compatible VM format; the toolchain is pinned to the IR55
+compiler used by the compatible Inbe hosts. Each output must pass the
+intended host before publication. A released API 12+ Inbe host is required;
+public Inbe 2.1.34 is API 11 and outside this game's supported range. The
+current dependency graph also includes local, unpublished Self source.
+Building or installing never publishes.
 
 ## Pushy Classic
 

@@ -10,7 +10,7 @@ BIN_DIR ?= $(HOME)/.local/bin
 LIB_DIR ?= $(HOME)/.local/lib/arcade
 DATA_DIR ?= $(if $(XDG_DATA_HOME),$(XDG_DATA_HOME),$(HOME)/.local/share)
 
-.PHONY: all games run test chess-engine-test chess-app-test pushy-engine-test pushy-ui-test ui-test compatibility-test install
+.PHONY: all games run test chess-engine-test chess-app-test pushy-engine-test pushy-ui-test ui-test inbe-ui-test compatibility-test install
 all: build/arcade games
 
 games:
@@ -34,7 +34,8 @@ run: all
 	./build/arcade
 
 test: all
-	$(ZIRAN) fmt --check src/*.zi
+	$(ZIRAN) fmt --check src/*.zi apps/chess/*.zi tests/chess_engine_behavior.zi tests/chess_app_behavior.zi
+	python3 tests/chess_locale_test.py
 	python3 tests/catalog_test.py
 	python3 tests/publisher_test.py
 	./build/arcade --list
@@ -62,6 +63,12 @@ ui-test: all
 	env -u DISPLAY -u WAYLAND_DISPLAY -u XAUTHORITY -u DBUS_SESSION_BUS_ADDRESS \
 		-u SESSION_MANAGER -u GDK_DISPLAY YUE_DESKTOP_RECOVERY=0 SDL_AUDIODRIVER=dummy \
 		timeout 180s xvfb-run -a -n 400 -s '-screen 0 1280x1000x24' python3 tests/arcade_ui_test.py
+
+inbe-ui-test:
+	@test -n "$(INBE_BINARY)" || { echo 'Set INBE_BINARY to the intended compatible host'; exit 2; }
+	env -u DISPLAY -u WAYLAND_DISPLAY -u XAUTHORITY -u DBUS_SESSION_BUS_ADDRESS \
+		-u SESSION_MANAGER -u GDK_DISPLAY YUE_DESKTOP_RECOVERY=0 SDL_AUDIODRIVER=dummy APP_NO_TRAY=1 \
+		timeout 240s xvfb-run -a -n 400 -s '-screen 0 1280x1000x24' python3 tests/chess_inbe_ui_test.py '$(INBE_BINARY)'
 
 compatibility-test:
 	@test -n "$(INBE_BINARY)" || { echo 'Set INBE_BINARY to the intended compatible host'; exit 2; }

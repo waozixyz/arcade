@@ -43,7 +43,10 @@ Changing source ownership is not a reason to reset or rename user data.
 
 The package includes its own translations. A current Inbe host uses those
 first, then its existing translated text for older packages. New game text
-can therefore travel in a game update without a complete Inbe release.
+can therefore travel in a game update without a complete Inbe release. The
+build also embeds the game-owned translations as a module, so legacy hosts
+that only know their root locale file can display newly added labels too.
+Unknown languages fall back to the game's English text.
 
 Arcade and Inbe still provide separate local/account storage. Sharing one
 game implementation does not silently merge or migrate their saved games.
@@ -70,7 +73,9 @@ Inbe the game claims to support. A development-host check alone cannot
 authorize an upload; the publisher requires that older-host result too.
 
 The gate checks the exact bundle in Arcade and the supplied Inbe host,
-including actual rendering, input and save restoration. It also tests Chess's
+including actual rendering, input and save restoration. The intended and
+oldest host checks also exercise study, hints, analysis, clipboard export and
+takebacks at a narrow window size. It also tests Chess's
 rules, computer play and friend-game protocol. The saved receipt is bound to
 the bundle hash, release version and sequence. The publisher refuses a
 remote upload if that receipt is missing or stale.
@@ -80,3 +85,8 @@ also understand the bundle's VM format. Test each platform and oldest host
 version a release is intended to support. An unsupported VM format requires
 a compatible build or a host update; never relabel a package to bypass it.
 Passing checks prepares a release; the owner still approves publication.
+
+Chess 1.1.0 requires host API 12. Public Inbe 2.1.34 supplies API 11 and
+predates installable Chess apps, so it is outside the declared range. The
+released-host gate waits for a released compatible API 12+ host; a current
+development candidate does not satisfy that gate.

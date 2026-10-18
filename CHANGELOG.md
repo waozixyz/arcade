@@ -1,5 +1,11 @@
 # Arcade changelog
 
+## 0.2.0
+
+- Chess adds hints, turn takebacks, an Expert opponent, board coordinates and flipping.
+- Study a game move by move, try variations, analyze positions and copy PGN or FEN.
+- Game updates retain their translated text across compatible Arcade and Inner Breeze hosts.
+
 ## 0.1.2
 
 - Open Pushy from the game library with the original Classic layouts, new

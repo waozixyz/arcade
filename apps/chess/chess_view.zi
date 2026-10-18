@@ -19,8 +19,12 @@
 #import "scroll_props"
 #import "scroll_widget"
 #import "tree"
+#import "text_input_props"
+#import "text_area_widget"
+#import "translations"
 #import, file "engine.zi";
 #import, file "game.zi";
+#import, file "notation.zi";
 #import "inbe/node_app_types"
 host_api :: #system_library "host_api";
 ReadAppUiHost :: () -> AppUiFrame #foreign host_api;
@@ -41,6 +45,7 @@ using ImageFit;
 CHESS_VIEW_COMPUTER :: 0
 CHESS_VIEW_FRIENDS :: 1
 CHESS_VIEW_FRIEND_GAME :: 2
+CHESS_VIEW_STUDY :: 3
 
 // Which game the board shows.
 CHESS_BOARD_NONE :: 0
@@ -72,6 +77,30 @@ notice_until: s64;
 friends_scroll: s32;
 hidden_loaded: bool;
 hidden: string;
+board_flipped: bool;
+hint_busy: bool;
+hint_move: s32;
+hint_text: string;
+study_line: ChessNotation;
+study_loaded: bool;
+study_busy: bool;
+study_analysis: bool;
+study_scanned: bool;
+study_move: s32;
+study_score: s32;
+study_depth: s32;
+study_summary: string;
+study_fen: string;
+study_pgn: string;
+study_scroll: s32;
+notation_open: bool;
+notation_fen: bool;
+notation_cursor: s32;
+notation_anchor: s32;
+notation_scroll: s32;
+notation_focused: bool;
+notation_selecting: bool;
+notation_copy: bool;
 
 // Board colors from the app's palette: mist and a soft jade, with the
 // light orange accent for the last move and lake blue for the selection.
@@ -87,6 +116,13 @@ Scale :: (pixels: s32) -> s32 {
     return cast(s32)(cast(float32)pixels * frame.scale)
 }
 
+// New text travels with the game, including on older hosts whose built-in
+// locale does not know it. The host remains a fallback for shared strings.
+ChessText :: (key: string) -> string {
+    translated := GameLocaleText(state.locale, key)
+    return ifx translated != "" then translated else AppLocaleHost(key)
+}
+
 Bounds :: (x: s32, y: s32, width: s32, height: s32) -> Rectangle {
     return Rectangle.{cast(float32)x, cast(float32)y,
         cast(float32)width, cast(float32)height}
@@ -94,7 +130,7 @@ Bounds :: (x: s32, y: s32, width: s32, height: s32) -> Rectangle {
 
 // A translated text with %s replaced by `value`.
 FormatLocaleText :: (key: string, value: string) -> string {
-    template := AppLocaleHost(key)
+    template := ChessText(key)
     out: Vec(u8)
     at: s64 = 0
     used := false
@@ -140,7 +176,7 @@ NoticeText :: () -> string {
     if notice.count == 0 || state.time >= notice_until {
         return ""
     }
-    return AppLocaleHost(notice)
+    return ChessText(notice)
 }
 
 ChoiceButton :: (id: s32, x: s32, y: s32, width: s32, height: s32, label: string, chosen: bool) -> bool {
@@ -179,12 +215,12 @@ PieceAsset :: (piece: s32) -> string {
 
 PieceName :: (piece: s32) -> string {
     kind := ChessKind(piece)
-    if kind == CHESS_PAWN { return AppLocaleHost("chess_piece_pawn") }
-    if kind == CHESS_KNIGHT { return AppLocaleHost("chess_piece_knight") }
-    if kind == CHESS_BISHOP { return AppLocaleHost("chess_piece_bishop") }
-    if kind == CHESS_ROOK { return AppLocaleHost("chess_piece_rook") }
-    if kind == CHESS_QUEEN { return AppLocaleHost("chess_piece_queen") }
-    return AppLocaleHost("chess_piece_king")
+    if kind == CHESS_PAWN { return ChessText("chess_piece_pawn") }
+    if kind == CHESS_KNIGHT { return ChessText("chess_piece_knight") }
+    if kind == CHESS_BISHOP { return ChessText("chess_piece_bishop") }
+    if kind == CHESS_ROOK { return ChessText("chess_piece_rook") }
+    if kind == CHESS_QUEEN { return ChessText("chess_piece_queen") }
+    return ChessText("chess_piece_king")
 }
 
 // Everything sits in one centered column, as wide as the largest board.
@@ -229,7 +265,7 @@ SquareUnder :: (x: float32, y: float32, left: s32, top: s32, cell: s32, flipped:
 // Returns a move to play, or zero. A promotion first asks for its piece.
 BoardInput :: (left: s32, top: s32, cell: s32, flipped: bool, player: s32) -> s32 {
     press := Press(frame.session, PressProps.{.key = cast(u64)8300, .id = 8300,
-            .bounds = Bounds(left, top, cell * 8, cell * 8), .label = AppLocaleHost("chess_board"),
+            .bounds = Bounds(left, top, cell * 8, cell * 8), .label = ChessText("chess_board"),
             .now = frame.now, .capture = true})
     if press.down && !press_down {
         press_down = true
@@ -317,6 +353,11 @@ DrawBoard :: (left: s32, top: s32, size: s32, flipped: bool, player: s32, intera
                 Box(frame.session, BoxProps.{.key = cast(u64)(8150 + index), .bounds = Bounds(x, y, cell, cell),
                         .fill = SELECTION})
             }
+            suggestion := ifx view == CHESS_VIEW_STUDY then study_move else ifx view == CHESS_VIEW_COMPUTER then hint_move else 0
+            if suggestion != 0 && (square == ChessMoveFrom(suggestion) || square == ChessMoveTo(suggestion)) {
+                Box(frame.session, BoxProps.{.key = cast(u64)(14000 + index),
+                        .bounds = Bounds(x, y, cell, cell), .fill = Color.{63, 111, 143, 105}})
+            }
             if square == board_check {
                 inset := cell / 10
                 Box(frame.session, BoxProps.{.key = cast(u64)(8220 + index),
@@ -354,6 +395,20 @@ DrawBoard :: (left: s32, top: s32, size: s32, flipped: bool, player: s32, intera
                             .bounds = Bounds(x, y, cell, cell), .fill = Color.{0, 0, 0, 0},
                             .border = TARGET, .radius = cast(float32)(cell / 2)})
                 }
+            }
+            // Coordinates follow the orientation and remain legible without
+            // changing the board's square keys or input geometry.
+            if row == 7 {
+                label := "abcdefgh"[ChessFile(square):ChessFile(square) + 1]
+                Text(frame.session, TextProps.{.key = cast(u64)(8470 + column),
+                        .bounds = Bounds(x + cell - Scale(13), y + cell - Scale(16), Scale(12), Scale(15)),
+                        .text = label, .font = Scale(11)})
+            }
+            if column == 0 {
+                label := "12345678"[ChessRank(square):ChessRank(square) + 1]
+                Text(frame.session, TextProps.{.key = cast(u64)(8480 + row),
+                        .bounds = Bounds(x + Scale(3), y + Scale(1), Scale(12), Scale(15)),
+                        .text = label, .font = Scale(11)})
             }
             column += 1
         }
@@ -407,31 +462,31 @@ DrawBoard :: (left: s32, top: s32, size: s32, flipped: bool, player: s32, intera
 ResultText :: (result: s32, player: s32, opponent: string) -> string {
     if result == CHESS_CHECKMATE {
         won := board_side != player
-        return AppLocaleHost(ifx won then "chess_you_won" else "chess_you_lost")
+        return ChessText(ifx won then "chess_you_won" else "chess_you_lost")
     }
     if result == CHESS_STALEMATE {
-        return AppLocaleHost("chess_stalemate")
+        return ChessText("chess_stalemate")
     }
     if result == CHESS_DRAW_FIFTY {
-        return AppLocaleHost("chess_draw_fifty")
+        return ChessText("chess_draw_fifty")
     }
     if result == CHESS_DRAW_REPETITION {
-        return AppLocaleHost("chess_draw_repetition")
+        return ChessText("chess_draw_repetition")
     }
     if result == CHESS_DRAW_MATERIAL {
-        return AppLocaleHost("chess_draw_material")
+        return ChessText("chess_draw_material")
     }
     if result == CHESS_DRAW_LENGTH {
-        return AppLocaleHost("chess_draw_length")
+        return ChessText("chess_draw_length")
     }
     resigned_side := ifx result == CHESS_WHITE_RESIGNED then CHESS_WHITE else CHESS_BLACK
     if resigned_side == player {
-        return AppLocaleHost("chess_you_resigned")
+        return ChessText("chess_you_resigned")
     }
     if opponent.count > 0 {
         return FormatLocaleText("chess_they_resigned", opponent)
     }
-    return AppLocaleHost("chess_you_won")
+    return ChessText("chess_you_won")
 }
 
 // The space the board may use under the status line and above `controls`.
@@ -443,6 +498,7 @@ BoardSize :: (top: s32, controls: s32) -> s32 {
     if size > limit {
         size = limit
     }
+    if size < 8 { size = 8 }
     return (size / 8) * 8
 }
 
@@ -459,39 +515,41 @@ BoardReady :: () {
 DrawSetup :: (x: s32, y: s32, width: s32) -> s32 {
     gap := Scale(8)
     height := Scale(40)
-    third := (width - gap * 2) / 3
-    levels: [3]string = .["chess_level_easy", "chess_level_medium", "chess_level_hard"]
+    fourth := (width - gap * 3) / 4
+    levels: [4]string = .["chess_level_easy", "chess_level_medium", "chess_level_hard", "chess_level_expert"]
     index: s32 = 0
-    while index < 3 {
-        if ChoiceButton(8700 + index, x + index * (third + gap), y, third, height,
-            AppLocaleHost(levels[index]), setup_level == index) {
+    while index < 4 {
+        if ChoiceButton(8700 + index, x + index * (fourth + gap), y, fourth, height,
+            ChessText(levels[index]), setup_level == index) {
             setup_level = index
         }
         index += 1
     }
     y += height + gap
     half := (width - gap) / 2
-    if ChoiceButton(8710, x, y, half, height, AppLocaleHost("chess_play_white"), setup_color == CHESS_WHITE) {
+    if ChoiceButton(8710, x, y, half, height, ChessText("chess_play_white"), setup_color == CHESS_WHITE) {
         setup_color = CHESS_WHITE
     }
-    if ChoiceButton(8711, x + half + gap, y, half, height, AppLocaleHost("chess_play_black"), setup_color == CHESS_BLACK) {
+    if ChoiceButton(8711, x + half + gap, y, half, height, ChessText("chess_play_black"), setup_color == CHESS_BLACK) {
         setup_color = CHESS_BLACK
     }
     y += height + gap
     cancel_width := ifx computer_started then half else 0
-    if computer_started && ActionButton(8712, x, y, half, height, AppLocaleHost("chess_cancel"), false) {
+    if computer_started && ActionButton(8712, x, y, half, height, ChessText("chess_cancel"), false) {
         setup_open = false
     }
     start_x := ifx computer_started then x + half + gap else x
     if Button(frame.session, ButtonProps.{.id = 8713, .bounds = Bounds(start_x, y,
             width - cancel_width - (ifx computer_started then gap else 0), height),
-            .label = AppLocaleHost("chess_start"), .fit_content = true,
+            .label = ChessText("chess_start"), .fit_content = true,
             .tone = cast(ButtonTone)ButtonToneAccent,
             .emphasis = cast(ButtonEmphasis)ButtonEmphasisFilled}) != 0 {
         ComputerNewGame(setup_level, setup_color, state.time)
         board_game = CHESS_BOARD_COMPUTER
         setup_open = false
         selected = -1
+        hint_move = 0
+        hint_text = ""
     }
     return y + height
 }
@@ -509,33 +567,44 @@ ComputerView :: (top: s32) {
             setup_open = true
         }
     }
-    if ComputerTurn() && !setup_open {
+    if hint_busy {
+        if ChessSearchRun(80) {
+            hint_busy = false
+            hint_move = ChessSearchMove()
+            hint_text = ifx hint_move != 0 then FormatLocaleText("chess_suggestion", ChessMoveSan(hint_move)) else ""
+        } else {
+            unused SmoothFramesHost(2)
+        }
+    }
+    if ComputerTurn() && !setup_open && !hint_busy {
         BoardReady()
         if ComputerThink(frame.now) {
             unused SmoothFramesHost(2)
         }
     }
-    status := AppLocaleHost("chess_your_move")
+    status := ChessText("chess_your_move")
     if !computer_started {
-        status = AppLocaleHost("chess_choose_game")
+        status = ChessText("chess_choose_game")
     } else if ChessFinished(board_result) {
         status = ResultText(board_result, computer_player, "")
     } else if computer_thinking || board_side != computer_player {
-        status = AppLocaleHost("chess_thinking")
+        status = ChessText("chess_thinking")
     } else if board_check >= 0 {
-        status = AppLocaleHost("chess_check")
+        status = ChessText("chess_check")
     }
     Line(cast(u64)8800, margin, top, width, Scale(44), status, true)
     top += Scale(52)
-    controls := ifx setup_open then Scale(160) else Scale(64)
+    controls := ifx setup_open then Scale(160) else Scale(148)
     size := BoardSize(top, controls)
     left := (frame.width - size) / 2
-    interactive := computer_started && !setup_open && !computer_thinking &&
+    interactive := computer_started && !setup_open && !computer_thinking && !hint_busy &&
     board_side == computer_player && !ChessFinished(board_result)
-    move := DrawBoard(left, top, size, computer_player == CHESS_BLACK, computer_player, interactive)
+    move := DrawBoard(left, top, size, (computer_player == CHESS_BLACK) != board_flipped, computer_player, interactive)
     if move != 0 {
         BoardReady()
         if ComputerPlay(move) {
+            hint_move = 0
+            hint_text = ""
             unused SmoothFramesHost(2)
         }
     }
@@ -545,18 +614,278 @@ ComputerView :: (top: s32) {
         return
     }
     gap := Scale(8)
-    half := (width - gap) / 2
+    third := (width - gap * 2) / 3
+    {
+        summary := ifx hint_busy then ChessText("chess_thinking") else hint_text
+        if summary == "" && board_last_san != "" { summary = FormatLocaleText("chess_last_move", board_last_san) }
+        Label(cast(u64)8830, margin, y - Scale(8), width, Scale(28), summary)
+    }
+    y += Scale(24)
     playing := computer_started && !ChessFinished(board_result)
-    if ActionButton(8820, margin, y, half, Scale(40), AppLocaleHost("chess_resign"), !playing) {
+    if ActionButton(8822, margin, y, third, Scale(40), ChessText(ifx hint_busy then "chess_cancel" else "chess_hint"),
+        !hint_busy && (!playing || computer_thinking || board_side != computer_player)) {
+        if hint_busy {
+            ChessSearchCancel()
+            hint_busy = false
+        } else {
+            BoardReady()
+            hint_move = 0
+            hint_text = ""
+            ChessSearchBegin(4, 14000, true, 0, computer_seed)
+            hint_busy = true
+            unused SmoothFramesHost(2)
+        }
+    }
+    if ActionButton(8823, margin + third + gap, y, third, Scale(40), ChessText("chess_undo"),
+        !computer_started || (board_count < (ifx computer_player == CHESS_BLACK then 2 else 1) && computer_resigned == 0)) {
+        hint_busy = false
+        hint_move = 0
+        hint_text = ""
+        BoardReady()
+        unused ComputerUndo()
+        selected = -1
+    }
+    if ActionButton(8824, margin + (third + gap) * 2, y, third, Scale(40), ChessText("chess_flip"), false) {
+        board_flipped = !board_flipped
+        selected = -1
+    }
+    y += Scale(48)
+    if ActionButton(8820, margin, y, third, Scale(40), ChessText("chess_resign"), !playing) {
+        ChessSearchCancel()
+        hint_busy = false
         ComputerResign()
         selected = -1
     }
-    if ActionButton(8821, margin + half + gap, y, half, Scale(40), AppLocaleHost("chess_new_game"), false) {
+    if ActionButton(8821, margin + third + gap, y, third, Scale(40), ChessText("chess_new_game"), false) {
+        ChessSearchCancel()
+        hint_busy = false
+        computer_thinking = false
         setup_level = computer_level
         setup_color = computer_player
         setup_open = true
         selected = -1
         promotion_from = -1
+    }
+    if ActionButton(8825, margin + (third + gap) * 2, y, third, Scale(40), ChessText("chess_review"), !computer_started) {
+        StudyOpen()
+    }
+}
+
+// Study and analysis use a separate line and never save over the game.
+
+StudyRefresh :: () {
+    ChessSearchCancel()
+    study_busy = false
+    study_scanned = false
+    study_move = 0
+    study_summary = ""
+    NotationSeek(*study_line, study_line.cursor)
+    BoardStudyPosition(study_line.moves[:], study_line.cursor)
+    study_fen = ChessFen()
+    study_pgn = NotationPgn(*study_line, computer_player)
+    row := ((ifx study_line.cursor > 0 then study_line.cursor - 1 else 0) / 2) * Scale(32)
+    if row < study_scroll { study_scroll = row }
+    if row + Scale(32) > study_scroll + Scale(88) { study_scroll = row - Scale(56) }
+    selected = -1
+    promotion_from = -1
+}
+
+StudyOpen :: () {
+    ChessSearchCancel()
+    computer_thinking = false
+    hint_busy = false
+    hint_move = 0
+    ComputerShow()
+    result := BoardResultPgn()
+    unused NotationLoad(*study_line, ChessField(computer_record, "moves"), result)
+    study_loaded = true
+    study_analysis = false
+    notation_open = false
+    study_scroll = 0
+    view = CHESS_VIEW_STUDY
+    board_game = CHESS_BOARD_NONE
+    StudyRefresh()
+}
+
+StudyScoreText :: (score: s32) -> string {
+    absolute := ifx score < 0 then -score else score
+    out: Vec(u8)
+    if absolute >= CHESS_MATE_BOUND {
+        BuilderPrint(*out, "%#%", ifx score < 0 then "-" else "+", (CHESS_MATE - absolute + 1) / 2)
+    } else {
+        BuilderPrint(*out, "%", ifx score < 0 then "-" else "+")
+        BuilderPrint(*out, "%.", absolute / 100)
+        if absolute % 100 < 10 { BuilderPrint(*out, "0") }
+        BuilderPrint(*out, "%", absolute % 100)
+    }
+    return BuilderFinish(out)
+}
+
+StudyAnalyze :: () {
+    if !study_analysis || study_scanned { return }
+    if !study_busy {
+        ChessSearchBegin(5, 22000, true, 0, 1)
+        study_busy = true
+    }
+    if !ChessSearchRun(100) {
+        unused SmoothFramesHost(2)
+        return
+    }
+    study_busy = false
+    study_scanned = true
+    study_move = ChessSearchMove()
+    study_score = ChessSearchScore() * (ifx board_side == CHESS_WHITE then 1 else -1)
+    study_depth = ChessSearchDepth()
+    out: Vec(u8)
+    BuilderPrint(*out, "%  ·  % %", FormatLocaleText("chess_white_eval", StudyScoreText(study_score)), ChessText("chess_depth"), study_depth)
+    if study_move != 0 {
+        BuilderPrint(*out, "  ·  %", FormatLocaleText("chess_suggestion", ChessMoveSan(study_move)))
+    }
+    study_summary = BuilderFinish(out)
+}
+
+NotationView :: (top: s32) {
+    margin := ColumnLeft()
+    width := ColumnWidth()
+    half := (width - Scale(8)) / 2
+    if ChoiceButton(8960, margin, top, half, Scale(40), "PGN", !notation_fen) {
+        notation_fen = false
+        notation_cursor = 0
+        notation_anchor = 0
+        notation_scroll = 0
+    }
+    if ChoiceButton(8961, margin + half + Scale(8), top, half, Scale(40), "FEN", notation_fen) {
+        notation_fen = true
+        notation_cursor = 0
+        notation_anchor = 0
+        notation_scroll = 0
+    }
+    value := ifx notation_fen then study_fen else study_pgn
+    top += Scale(48)
+    Line(cast(u64)8962, margin, top, width, Scale(48), ChessText("chess_export_help"), false)
+    top += Scale(56)
+    height := frame.height - frame.bottom - top - Scale(60)
+    if height < Scale(80) { height = Scale(80) }
+    edited := TextArea(frame.session, TextAreaProps.{.key = cast(u64)8963, .focus_id = 8963,
+            .bounds = Bounds(margin, top, width, height), .value = value,
+            .label = ifx notation_fen then "FEN" else "PGN", .read_only = true, .wrap = true,
+            .cursor = notation_cursor, .anchor = notation_anchor, .scroll_y = notation_scroll,
+            .focused = notation_focused, .selecting = notation_selecting,
+            .input = TextAreaInput.{.now_seconds = frame.now, .focus = notation_copy,
+                .select_all = notation_copy, .copy = notation_copy}})
+    notation_copy = false
+    notation_cursor = edited.cursor
+    notation_anchor = edited.anchor
+    notation_scroll = edited.scroll_y
+    notation_focused = edited.focused
+    notation_selecting = edited.selecting
+    top += height + Scale(8)
+    if ActionButton(8964, margin, top, half, Scale(40), ChessText("chess_copy"), false) { notation_copy = true }
+    if ActionButton(8965, margin + half + Scale(8), top, half, Scale(40), ChessText("chess_back_board"), false) {
+        notation_open = false
+    }
+}
+
+StudyView :: (top: s32) {
+    if !study_loaded { StudyOpen() }
+    if notation_open {
+        NotationView(top)
+        return
+    }
+    StudyAnalyze()
+    margin := ColumnLeft()
+    width := ColumnWidth()
+    progress: Vec(u8)
+    BuilderPrint(*progress, "%  % / %", ChessText("chess_review"), study_line.cursor, study_line.count)
+    Line(cast(u64)8920, margin, top, width, Scale(36), BuilderFinish(progress), true)
+    top += Scale(44)
+    size := BoardSize(top, Scale(236))
+    left := (frame.width - size) / 2
+    move := DrawBoard(left, top, size, (computer_player == CHESS_BLACK) != board_flipped,
+        board_side, !study_busy)
+    if study_scanned && study_analysis {
+        score := ifx study_score < -400 then -400 else ifx study_score > 400 then 400 else study_score
+        white_height := (size * (score + 500)) / 1000
+        Box(frame.session, BoxProps.{.key = cast(u64)8921,
+                .bounds = Bounds(left - Scale(10), top, Scale(6), size), .fill = Color.{30, 74, 64, 255}})
+        flipped := (computer_player == CHESS_BLACK) != board_flipped
+        Box(frame.session, BoxProps.{.key = cast(u64)8922,
+                .bounds = Bounds(left - Scale(10), ifx flipped then top else top + size - white_height,
+                Scale(6), white_height), .fill = Color.{246, 241, 231, 255}})
+    }
+    if move != 0 && NotationPlay(*study_line, move) { StudyRefresh() }
+    y := top + size + Scale(12)
+    gap := Scale(8)
+    fourth := (width - gap * 3) / 4
+    labels: [4]string = .["chess_first", "chess_previous", "chess_next", "chess_latest"]
+    index: s32 = 0
+    while index < 4 {
+        disabled := ifx index < 2 then study_line.cursor == 0 else study_line.cursor == study_line.count
+        if ActionButton(8930 + index, margin + index * (fourth + gap), y, fourth, Scale(36), ChessText(labels[index]), disabled) {
+            if index == 0 {
+                study_line.cursor = 0
+            } else if index == 1 {
+                study_line.cursor -= 1
+            } else if index == 2 {
+                study_line.cursor += 1
+            } else {
+                study_line.cursor = study_line.count
+            }
+            StudyRefresh()
+        }
+        index += 1
+    }
+    y += Scale(44)
+    third := (width - gap * 2) / 3
+    if ChoiceButton(8940, margin, y, third, Scale(36), ChessText("chess_analysis"), study_analysis) {
+        ChessSearchCancel()
+        study_busy = false
+        study_analysis = !study_analysis
+        study_scanned = false
+        study_move = 0
+        study_summary = ""
+    }
+    if ActionButton(8941, margin + third + gap, y, third, Scale(36), ChessText("chess_flip"), false) {
+        board_flipped = !board_flipped
+        selected = -1
+    }
+    if ActionButton(8942, margin + (third + gap) * 2, y, third, Scale(36), ChessText("chess_notation"), false) {
+        ChessSearchCancel()
+        study_busy = false
+        notation_open = true
+        notation_cursor = 0
+        notation_anchor = 0
+    }
+    y += Scale(44)
+    Label(cast(u64)8943, margin, y, width, Scale(28),
+        ifx study_busy then ChessText("chess_thinking") else study_summary)
+    y += Scale(32)
+    // Every move is a navigation target, with standard algebraic notation.
+    history := Scroll(frame.session, ScrollProps.{.key = cast(u64)8950,
+            .bounds = Bounds(margin, y, width, Scale(88)),
+            .content_height = ((study_line.count + 1) / 2) * Scale(32), .scroll_offset = study_scroll})
+    study_scroll = history.scroll_offset
+    if history.opened {
+        at: s32 = 0
+        half := (width - gap) / 2
+        while at < study_line.count {
+            row_y := cast(s32)history.content.y + (at / 2) * Scale(32)
+            if row_y + Scale(32) >= y && row_y < y + Scale(88) {
+                label: Vec(u8)
+                if at % 2 == 0 {
+                    BuilderPrint(*label, "%. %", at / 2 + 1, study_line.san[at])
+                } else {
+                    BuilderPrint(*label, "%... %", at / 2 + 1, study_line.san[at])
+                }
+                if ChoiceButton(10000 + at, margin + (at % 2) * (half + gap), row_y,
+                    half, Scale(30), BuilderFinish(label), study_line.cursor == at + 1) {
+                    study_line.cursor = at + 1
+                    StudyRefresh()
+                }
+            }
+            at += 1
+        }
+        End(frame.session)
     }
 }
 
@@ -622,27 +951,27 @@ DisplayName :: (name: string, id: string) -> string {
 
 GameStatusText :: (game: OnlineGame) -> string {
     if pending != CHESS_PENDING_NONE && pending_game == game.id {
-        return AppLocaleHost("chess_sending")
+        return ChessText("chess_sending")
     }
     if !game.checked {
-        return AppLocaleHost("chess_loading")
+        return ChessText("chess_loading")
     }
     if !game.valid {
-        return AppLocaleHost("chess_game_damaged")
+        return ChessText("chess_game_damaged")
     }
     if ChessFinished(game.result) {
         if game.result == CHESS_CHECKMATE {
             mated := ChessSideAfter(game.move_count)
-            return AppLocaleHost(ifx mated == game.my_color then "chess_result_lost" else "chess_result_won")
+            return ChessText(ifx mated == game.my_color then "chess_result_lost" else "chess_result_won")
         }
         if game.result == CHESS_WHITE_RESIGNED || game.result == CHESS_BLACK_RESIGNED {
             resigned := ifx game.result == CHESS_WHITE_RESIGNED then CHESS_WHITE else CHESS_BLACK
-            return AppLocaleHost(ifx resigned == game.my_color then "chess_result_lost" else "chess_result_won")
+            return ChessText(ifx resigned == game.my_color then "chess_result_lost" else "chess_result_won")
         }
-        return AppLocaleHost("chess_result_draw")
+        return ChessText("chess_result_draw")
     }
     if OnlineMyTurn(game) {
-        return AppLocaleHost("chess_your_move")
+        return ChessText("chess_your_move")
     }
     return FormatLocaleText("chess_their_move", DisplayName(game.opponent_name, game.opponent))
 }
@@ -670,7 +999,7 @@ FriendsView :: (top: s32) {
     margin := ColumnLeft()
     width := ColumnWidth()
     if !state.signed_in {
-        Line(cast(u64)9000, margin, top, width, Scale(64), AppLocaleHost("chess_sign_in"), false)
+        Line(cast(u64)9000, margin, top, width, Scale(64), ChessText("chess_sign_in"), false)
         return
     }
     row_height := Scale(56)
@@ -714,10 +1043,10 @@ FriendsView :: (top: s32) {
         Line(cast(u64)9019, x, y, width, heading, NoticeText(), false)
         y += heading
     }
-    Line(cast(u64)9020, x, y, width, heading, AppLocaleHost("chess_games_title"), false)
+    Line(cast(u64)9020, x, y, width, heading, ChessText("chess_games_title"), false)
     y += heading
     if rows + games == 0 {
-        Line(cast(u64)9021, x, y, width, Scale(40), AppLocaleHost("chess_no_games"), false)
+        Line(cast(u64)9021, x, y, width, Scale(40), ChessText("chess_no_games"), false)
         y += Scale(48)
     }
     button_width := Scale(96)
@@ -730,12 +1059,12 @@ FriendsView :: (top: s32) {
             Line(cast(u64)id, x, y, width - button_width * 2 - gap * 2, row_height,
                 FormatLocaleText("chess_invites_you", name), false)
             if ActionButton(id + 1, x + width - button_width * 2 - gap, y + Scale(8), button_width,
-                Scale(40), AppLocaleHost("chess_decline"), busy) {
+                Scale(40), ChessText("chess_decline"), busy) {
                 unused OnlineAnswer(invite, false)
             }
             if Button(frame.session, ButtonProps.{.id = id + 2,
                     .bounds = Bounds(x + width - button_width, y + Scale(8), button_width, Scale(40)),
-                    .label = AppLocaleHost("chess_accept"), .disabled = busy, .fit_content = true,
+                    .label = ChessText("chess_accept"), .disabled = busy, .fit_content = true,
                     .tone = cast(ButtonTone)ButtonToneAccent,
                     .emphasis = cast(ButtonEmphasis)ButtonEmphasisFilled}) != 0 {
                 unused OnlineAnswer(invite, true)
@@ -746,7 +1075,7 @@ FriendsView :: (top: s32) {
             Line(cast(u64)id, x, y, width - button_width - gap, row_height, FormatLocaleText(key, name), false)
             label := ifx invite.status == "declined" then "chess_remove" else "chess_cancel"
             if ActionButton(id + 1, x + width - button_width, y + Scale(8), button_width, Scale(40),
-                AppLocaleHost(label), busy) {
+                ChessText(label), busy) {
                 unused OnlineRemove(invite.shared_id)
             }
             y += row_height + gap
@@ -772,10 +1101,10 @@ FriendsView :: (top: s32) {
         }
         index += 1
     }
-    Line(cast(u64)9030, x, y, width, heading, AppLocaleHost("chess_invite_title"), false)
+    Line(cast(u64)9030, x, y, width, heading, ChessText("chess_invite_title"), false)
     y += heading
     if state.friend_count == 0 {
-        Line(cast(u64)9031, x, y, width, Scale(56), AppLocaleHost("chess_no_friends"), false)
+        Line(cast(u64)9031, x, y, width, Scale(56), ChessText("chess_no_friends"), false)
     }
     index = 0
     while index < state.friend_count {
@@ -785,8 +1114,8 @@ FriendsView :: (top: s32) {
         Label(cast(u64)id, x, y, width - button_width - gap, row_height,
             DisplayName(friend.name, friend.id))
         if ActionButton(id + 1, x + width - button_width, y + Scale(8), button_width, Scale(40),
-            AppLocaleHost(ifx friend_busy then "chess_invited" else "chess_invite"), busy || friend_busy) {
-            unused OnlineInvite(state.name, AppLocaleHost("chess_title"), friend.id, state.time, frame.now)
+            ChessText(ifx friend_busy then "chess_invited" else "chess_invite"), busy || friend_busy) {
+            unused OnlineInvite(state.name, ChessText("chess_title"), friend.id, state.time, frame.now)
         }
         y += row_height + gap
         index += 1
@@ -822,13 +1151,13 @@ FriendGameView :: (top: s32) {
     opponent := DisplayName(game.opponent_name, game.opponent)
     status := ""
     if sending {
-        status = AppLocaleHost("chess_sending")
+        status = ChessText("chess_sending")
     } else if !game.valid {
-        status = AppLocaleHost("chess_game_damaged")
+        status = ChessText("chess_game_damaged")
     } else if ChessFinished(board_result) {
         status = ResultText(board_result, game.my_color, opponent)
     } else if board_side == game.my_color {
-        status = AppLocaleHost(ifx board_check >= 0 then "chess_check" else "chess_your_move")
+        status = ChessText(ifx board_check >= 0 then "chess_check" else "chess_your_move")
     } else {
         status = FormatLocaleText("chess_their_move", opponent)
     }
@@ -852,7 +1181,7 @@ FriendGameView :: (top: s32) {
     y := top + size + Scale(16)
     gap := Scale(8)
     half := (width - gap) / 2
-    if ActionButton(8910, margin, y, half, Scale(40), AppLocaleHost("chess_back"), false) {
+    if ActionButton(8910, margin, y, half, Scale(40), ChessText("chess_back"), false) {
         view = CHESS_VIEW_FRIENDS
         board_game = CHESS_BOARD_NONE
         selected = -1
@@ -862,7 +1191,7 @@ FriendGameView :: (top: s32) {
     finished := game.checked && ChessFinished(game.result)
     mine := game.owner == state.account
     if finished {
-        if ActionButton(8911, margin + half + gap, y, half, Scale(40), AppLocaleHost("chess_remove"),
+        if ActionButton(8911, margin + half + gap, y, half, Scale(40), ChessText("chess_remove"),
             pending != CHESS_PENDING_NONE) {
             if mine {
                 unused OnlineRemove(game.id)
@@ -872,7 +1201,7 @@ FriendGameView :: (top: s32) {
             view = CHESS_VIEW_FRIENDS
             board_game = CHESS_BOARD_NONE
         }
-    } else if ActionButton(8911, margin + half + gap, y, half, Scale(40), AppLocaleHost("chess_resign"),
+    } else if ActionButton(8911, margin + half + gap, y, half, Scale(40), ChessText("chess_resign"),
         pending != CHESS_PENDING_NONE || !game.valid) {
         if !OnlineSend(index, game.my_color + 1, CHESS_PENDING_RESIGN) {
             Notice("chess_send_failed")
@@ -905,24 +1234,33 @@ ChessView :: (message: AppMessage) -> AppMessage {
     }
     // Games with friends are checked one per frame, never while the
     // computer thinks, since checking uses the engine.
-    if !computer_thinking && view != CHESS_VIEW_COMPUTER && OnlineCheckNext() {
+    if !computer_thinking && (view == CHESS_VIEW_FRIENDS || view == CHESS_VIEW_FRIEND_GAME) && OnlineCheckNext() {
         board_stale = true
     }
     margin := ColumnLeft()
     width := ColumnWidth()
     gap := Scale(8)
-    half := (width - gap) / 2
+    third := (width - gap * 2) / 3
     top := frame.top + Scale(12)
-    if ChoiceButton(8100 + 90, margin, top, half, Scale(40), AppLocaleHost("chess_tab_computer"),
+    if ChoiceButton(8720, margin, top, third, Scale(40), ChessText("chess_tab_computer"),
         view == CHESS_VIEW_COMPUTER) && view != CHESS_VIEW_COMPUTER {
+        ChessSearchCancel()
+        study_busy = false
+        hint_busy = false
+        computer_thinking = false
         view = CHESS_VIEW_COMPUTER
+        board_game = CHESS_BOARD_NONE
         selected = -1
         promotion_from = -1
     }
-    if ChoiceButton(8100 + 91, margin + half + gap, top, half, Scale(40), AppLocaleHost("chess_tab_friends"),
-        view != CHESS_VIEW_COMPUTER) && view == CHESS_VIEW_COMPUTER {
+    if ChoiceButton(8721, margin + third + gap, top, third, Scale(40), ChessText("chess_tab_friends"),
+        view == CHESS_VIEW_FRIENDS || view == CHESS_VIEW_FRIEND_GAME) &&
+    view != CHESS_VIEW_FRIENDS && view != CHESS_VIEW_FRIEND_GAME {
         ChessSearchCancel()
         computer_thinking = false
+        hint_busy = false
+        hint_move = 0
+        study_busy = false
         view = CHESS_VIEW_FRIENDS
         board_game = CHESS_BOARD_NONE
         selected = -1
@@ -931,11 +1269,17 @@ ChessView :: (message: AppMessage) -> AppMessage {
             unused RefreshAppSharedHost()
         }
     }
+    if ChoiceButton(8722, margin + (third + gap) * 2, top, third, Scale(40), ChessText("chess_tab_study"),
+        view == CHESS_VIEW_STUDY) && view != CHESS_VIEW_STUDY {
+        StudyOpen()
+    }
     top += Scale(52)
     if view == CHESS_VIEW_COMPUTER {
         ComputerView(top)
     } else if view == CHESS_VIEW_FRIENDS {
         FriendsView(top)
+    } else if view == CHESS_VIEW_STUDY {
+        StudyView(top)
     } else {
         FriendGameView(top)
     }

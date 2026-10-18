@@ -163,3 +163,60 @@
 [chess_result_draw]
 무승부
 ---
+[chess_analysis]
+분석
+---
+[chess_back_board]
+체스판으로 돌아가기
+---
+[chess_depth]
+탐색 깊이
+---
+[chess_export_help]
+복사로 기보를 PGN 형식으로, 현재 위치를 FEN 형식으로 내보냅니다.
+---
+[chess_first]
+처음
+---
+[chess_flip]
+체스판 뒤집기
+---
+[chess_hint]
+힌트
+---
+[chess_last_move]
+마지막 수: %s
+---
+[chess_latest]
+마지막
+---
+[chess_level_expert]
+전문가
+---
+[chess_next]
+다음
+---
+[chess_notation]
+기보
+---
+[chess_previous]
+이전
+---
+[chess_review]
+복기
+---
+[chess_suggestion]
+추천 수: %s
+---
+[chess_tab_study]
+연구
+---
+[chess_undo]
+무르기
+---
+[chess_white_eval]
+백: %s
+---
+[chess_copy]
+복사
+---

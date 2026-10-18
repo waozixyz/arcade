@@ -24,6 +24,7 @@ CHESS_BLACK_RESIGNED :: 8
 CHESS_LEVEL_EASY :: 0
 CHESS_LEVEL_MEDIUM :: 1
 CHESS_LEVEL_HARD :: 2
+CHESS_LEVEL_EXPERT :: 3
 
 CHESS_ONLINE_MAX :: 16
 CHESS_INVITE_MAX :: 16
@@ -341,6 +342,27 @@ BoardMovesText :: () -> string {
     return ChessMovesText(board_moves[:], board_count)
 }
 
+// The study board supplies a legal position without replacing a live game.
+BoardStudyPosition :: (moves: []s32, count: s32) {
+    board_count = count
+    index: s32 = 0
+    while index < count {
+        board_moves[index] = moves[index]
+        index += 1
+    }
+    board_result = CHESS_PLAYING
+    BoardRefresh()
+}
+
+BoardResultPgn :: () -> string {
+    if board_result == CHESS_CHECKMATE {
+        return ifx board_side == CHESS_WHITE then "0-1" else "1-0"
+    }
+    if board_result == CHESS_WHITE_RESIGNED { return "0-1" }
+    if board_result == CHESS_BLACK_RESIGNED { return "1-0" }
+    return ifx ChessFinished(board_result) then "1/2-1/2" else "*"
+}
+
 BoardPieceAt :: (square: s32) -> s32 {
     return board_shown[ChessRank(square) * 8 + ChessFile(square)]
 }
@@ -354,7 +376,7 @@ LevelDepth :: (level: s32) -> s32 {
     if level == CHESS_LEVEL_MEDIUM {
         return 3
     }
-    return 5
+    return ifx level == CHESS_LEVEL_EXPERT then 7 else 5
 }
 
 LevelNodes :: (level: s32) -> s32 {
@@ -364,7 +386,7 @@ LevelNodes :: (level: s32) -> s32 {
     if level == CHESS_LEVEL_MEDIUM {
         return 5000
     }
-    return 12000
+    return ifx level == CHESS_LEVEL_EXPERT then 50000 else 18000
 }
 
 // Easy misjudges positions by up to more than a pawn, so it blunders the
@@ -376,7 +398,7 @@ LevelNoise :: (level: s32) -> s32 {
     if level == CHESS_LEVEL_MEDIUM {
         return 30
     }
-    return 6
+    return ifx level == CHESS_LEVEL_EXPERT then 0 else 6
 }
 
 ComputerRecordText :: () -> string {
@@ -405,7 +427,7 @@ ComputerLoad :: () {
         return
     }
     level := ChessNumber(ChessField(record, "level"))
-    if level >= 0 && level <= CHESS_LEVEL_HARD {
+    if level >= 0 && level <= CHESS_LEVEL_EXPERT {
         computer_level = cast(s32)level
     }
     computer_player = ifx ChessField(record, "color") == "b" then CHESS_BLACK else CHESS_WHITE
@@ -464,6 +486,27 @@ ComputerPlay :: (move: s32) -> bool {
     if !BoardPlay(move) {
         return false
     }
+    ComputerSave()
+    return true
+}
+
+// Return to the person's previous turn, including a reply already made by
+// the computer. The opening computer move is retained when playing Black.
+ComputerUndo :: () -> bool {
+    if !computer_started { return false }
+    ChessSearchCancel()
+    computer_thinking = false
+    if computer_resigned != 0 {
+        computer_resigned = 0
+        unused BoardLoad(ChessField(computer_record, "moves"), 0)
+        ComputerSave()
+        return true
+    }
+    keep := board_count - 1
+    if keep >= 0 && ChessSideAfter(keep) != computer_player { keep -= 1 }
+    if keep < 0 { return false }
+    text := ChessMovesText(board_moves[:], keep)
+    unused BoardLoad(text, 0)
     ComputerSave()
     return true
 }

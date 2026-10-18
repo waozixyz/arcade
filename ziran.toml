@@ -5,7 +5,7 @@ module_roots = ["src"]
 
 [toolchain]
 git = "https://github.com/ziranlang/ziran.git"
-ref = "master"
+ref = "28c331e3a4095a45388fecdff44698aae05ebed5"
 
 [install]
 bin = "arcade"

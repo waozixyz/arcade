@@ -32,18 +32,37 @@ def build(ziran, lock_flags):
         shutil.copyfile(source / registration["manifest"], resources / "catalog.json")
         locales = resources / "locales"
         locales.mkdir(exist_ok=True)
+        translations = {}
         for locale in sorted((source / descriptor["locales"]).glob("*.txt")):
             blocks = []
+            values = {}
             for block in locale.read_text().split("---\n"):
                 lines = block.splitlines()
                 if lines and lines[0].startswith("[" + descriptor["locale_prefix"]):
                     blocks.append(block.rstrip() + "\n---\n")
+                    values[lines[0][1:-1]] = "\n".join(lines[1:]).rstrip()
             (locales / locale.name).write_text("".join(blocks))
+            translations[locale.stem] = values
+        # Text also lives in the game itself: released legacy hosts only know
+        # their own locale file and cannot provide newly added game strings.
+        generated = ROOT / 'build/game-generated' / name
+        generated.mkdir(parents=True, exist_ok=True)
+        code = 'GameLocaleText :: (language: string, key: string) -> string {\n'
+        for language, values in sorted(translations.items(), key=lambda item: item[0] == 'en'):
+            if language != 'en':
+                code += '    if language == ' + json.dumps(language) + ' {\n'
+            for key, value in values.items():
+                code += ('        ' if language != 'en' else '    ') + 'if key == ' + json.dumps(key) + ' { return ' + json.dumps(value, ensure_ascii=False) + ' }\n'
+            if language != 'en':
+                code += '    }\n'
+        code += '    return ""\n}\n'
+        (generated / 'translations.zi').write_text(code)
         bundle = ROOT / "build/games" / (name + ".zib")
         bundle.parent.mkdir(parents=True, exist_ok=True)
         subprocess.run([
             ziran, "bundle", "--root", str(source),
             "--module-path", str(source / "src"),
+            "--module-path", str(generated),
             "--module-path", str(kryon / "src/ui"),
             "--module-path", str(toolchain / "std"),
             "--module-path", "inbe=" + str(package("inbe") / "src/cells"),

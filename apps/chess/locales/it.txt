@@ -163,3 +163,60 @@ Hai perso
 [chess_result_draw]
 Patta
 ---
+[chess_analysis]
+Analisi
+---
+[chess_back_board]
+Torna alla scacchiera
+---
+[chess_depth]
+Profondità
+---
+[chess_export_help]
+Copia esporta la partita in PGN o questa posizione in FEN.
+---
+[chess_first]
+Inizio
+---
+[chess_flip]
+Ruota scacchiera
+---
+[chess_hint]
+Suggerimento
+---
+[chess_last_move]
+Ultima mossa: %s
+---
+[chess_latest]
+Fine
+---
+[chess_level_expert]
+Esperto
+---
+[chess_next]
+Avanti
+---
+[chess_notation]
+Notazione
+---
+[chess_previous]
+Indietro
+---
+[chess_review]
+Rivedi
+---
+[chess_suggestion]
+Mossa suggerita: %s
+---
+[chess_tab_study]
+Studio
+---
+[chess_undo]
+Annulla mossa
+---
+[chess_white_eval]
+Bianco: %s
+---
+[chess_copy]
+Copia
+---

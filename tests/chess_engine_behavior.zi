@@ -137,6 +137,7 @@ Think :: (depth: s32, limit: s32, quiescence: bool, noise: s32) -> s32 {
     if ChessFen() != before {
         return -2
     }
+    if ChessSearchDepth() < 1 || ChessSearchDepth() > depth { return -3 }
     return ChessSearchMove()
 }
 
@@ -215,8 +216,39 @@ ReplayChecks :: () -> s32 {
     return 0
 }
 
+#import, file "../apps/chess/notation.zi";
+
+StudyNotationChecks :: () -> s32 {
+    line: ChessNotation
+    if !NotationLoad(*line, "e2e4 e7e5 g1f3 b8c6 f1b5 a7a6 b5a4 g8f6 e1g1", "*") { return 120 }
+    if line.count != 9 || line.san[0] != "e4" || line.san[2] != "Nf3" || line.san[8] != "O-O" { return 121 }
+    end := ChessFen()
+    NotationSeek(*line, 0)
+    if ChessFen() != CHESS_START_FEN || line.count != 9 { return 122 }
+    NotationSeek(*line, 9)
+    if ChessFen() != end || !ChessConsistent() { return 123 }
+    NotationSeek(*line, 2)
+    if !NotationPlay(*line, ChessFindMove(1, 34, 0)) || line.count != 3 || line.san[2] != "Nc3" { return 124 }
+    if NotationCoordinates(*line, 3) != "e2e4 e7e5 b1c3" { return 125 }
+    before := ChessFen()
+    if NotationPlay(*line, 0) || ChessFen() != before { return 126 }
+    text := NotationPgn(*line, CHESS_WHITE)
+    expected := "[Event \"Chess\"]\n[Site \"Arcade / Inbe\"]\n[Date \"????.??.??\"]\n[Round \"?\"]\n[White \"Player\"]\n[Black \"Computer\"]\n[Result \"*\"]\n\n1. e4 e5 2. Nc3 *"
+    if text != expected || ChessFen() != before { return 127 }
+    if !NotationLoad(*line, "f2f3 e7e5 g2g4 d8h4", "0-1") || line.san[3] != "Qh4#" { return 128 }
+    NotationSeek(*line, 3)
+    if !NotationPlay(*line, ChessFindMove(115, 55, 0)) || line.result != "0-1" { return 129 }
+    if NotationLoad(*line, "e2e5", "*") { return 130 }
+    ChessReset()
+    expert := Think(7, 50000, true, 0)
+    if expert == 0 || ChessFindMove(ChessMoveFrom(expert), ChessMoveTo(expert), ChessMovePromotion(expert)) != expert { return 131 }
+    return 0
+}
+
 #program_export
 Check :: () -> s32 {
+    notation := StudyNotationChecks()
+    if notation != 0 { return notation }
     result_replay := ReplayChecks()
     if result_replay != 0 { return result_replay }
     result := NotationChecks()

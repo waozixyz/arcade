@@ -163,3 +163,60 @@
 [chess_result_draw]
 Ничья
 ---
+[chess_analysis]
+Анализ
+---
+[chess_back_board]
+Вернуться к доске
+---
+[chess_depth]
+Глубина
+---
+[chess_export_help]
+Копировать экспортирует партию в PGN или эту позицию в FEN.
+---
+[chess_first]
+Начало
+---
+[chess_flip]
+Перевернуть
+---
+[chess_hint]
+Подсказка
+---
+[chess_last_move]
+Последний ход: %s
+---
+[chess_latest]
+Конец
+---
+[chess_level_expert]
+Эксперт
+---
+[chess_next]
+Далее
+---
+[chess_notation]
+Нотация
+---
+[chess_previous]
+Назад
+---
+[chess_review]
+Разбор
+---
+[chess_suggestion]
+Рекомендуемый ход: %s
+---
+[chess_tab_study]
+Изучение
+---
+[chess_undo]
+Вернуть ход
+---
+[chess_white_eval]
+Белые: %s
+---
+[chess_copy]
+Копировать
+---

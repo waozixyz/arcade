@@ -163,3 +163,60 @@ Você perdeu
 [chess_result_draw]
 Empate
 ---
+[chess_analysis]
+Análise
+---
+[chess_back_board]
+Voltar ao tabuleiro
+---
+[chess_depth]
+Profundidade
+---
+[chess_export_help]
+Copiar exporta a partida em PGN ou esta posição em FEN.
+---
+[chess_first]
+Início
+---
+[chess_flip]
+Virar tabuleiro
+---
+[chess_hint]
+Dica
+---
+[chess_last_move]
+Último lance: %s
+---
+[chess_latest]
+Final
+---
+[chess_level_expert]
+Especialista
+---
+[chess_next]
+Próximo
+---
+[chess_notation]
+Notação
+---
+[chess_previous]
+Anterior
+---
+[chess_review]
+Revisar
+---
+[chess_suggestion]
+Lance sugerido: %s
+---
+[chess_tab_study]
+Estudo
+---
+[chess_undo]
+Desfazer
+---
+[chess_white_eval]
+Brancas: %s
+---
+[chess_copy]
+Copiar
+---

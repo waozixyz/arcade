@@ -222,6 +222,7 @@ search_seed: u64;
 search_result: s32;
 search_completed_move: s32;
 search_completed_score: s32;
+search_completed_depth: s32;
 search_root_history: s32;
 
 #scope_export
@@ -1991,6 +1992,7 @@ ChessSearchBegin :: (depth: s32, node_limit: s32, quiescence: bool, noise: s32, 
     search_result = 0
     search_completed_move = 0
     search_completed_score = 0
+    search_completed_depth = 0
     search_iteration = 1
     search_root_history = history_count
     search_active = true
@@ -2020,6 +2022,7 @@ ChessSearchRun :: (budget: s32) -> bool {
                 // An iteration finished at the starting position.
                 search_completed_move = search_best_move[0]
                 search_completed_score = search_best[0]
+                search_completed_depth = search_iteration
                 if search_completed_move == 0 || search_iteration >= search_max_depth ||
                 search_completed_score > CHESS_MATE_BOUND ||
                 search_nodes >= search_node_limit {
@@ -2056,6 +2059,11 @@ ChessSearchScore :: () -> s32 {
 
 ChessSearchNodes :: () -> s32 {
     return search_nodes
+}
+
+// Depth of the completed result, rather than an unfinished iteration.
+ChessSearchDepth :: () -> s32 {
+    return search_completed_depth
 }
 
 // Stops a search and restores the starting position.

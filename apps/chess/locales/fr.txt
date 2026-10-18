@@ -163,3 +163,60 @@ Vous avez perdu
 [chess_result_draw]
 Partie nulle
 ---
+[chess_analysis]
+Analyse
+---
+[chess_back_board]
+Retour à l’échiquier
+---
+[chess_depth]
+Profondeur
+---
+[chess_export_help]
+Copier exporte la partie en PGN ou cette position en FEN.
+---
+[chess_first]
+Début
+---
+[chess_flip]
+Retourner
+---
+[chess_hint]
+Indice
+---
+[chess_last_move]
+Dernier coup : %s
+---
+[chess_latest]
+Fin
+---
+[chess_level_expert]
+Expert
+---
+[chess_next]
+Suivant
+---
+[chess_notation]
+Notation
+---
+[chess_previous]
+Précédent
+---
+[chess_review]
+Revoir
+---
+[chess_suggestion]
+Coup conseillé : %s
+---
+[chess_tab_study]
+Étude
+---
+[chess_undo]
+Annuler le coup
+---
+[chess_white_eval]
+Blancs : %s
+---
+[chess_copy]
+Copier
+---

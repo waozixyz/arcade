@@ -1,0 +1,102 @@
+// A separate study line. Seeking and trying variations never writes a game.
+#import "vec"
+#import, file "engine.zi";
+
+CHESS_NOTATION_LIMIT :: 1200
+
+ChessNotation :: struct {
+    moves: [CHESS_NOTATION_LIMIT]s32
+    san: [CHESS_NOTATION_LIMIT]string
+    count: s32
+    cursor: s32
+    result: string
+}
+
+NotationLoad :: (line: *ChessNotation, coordinates: string, result: string) -> bool {
+    ChessSearchCancel()
+    ChessReset()
+    line.count = 0
+    line.cursor = 0
+    line.result = result
+    at: s64 = 0
+    while at < coordinates.count {
+        while at < coordinates.count && coordinates[at] == #char " " { at += 1 }
+        end := at
+        while end < coordinates.count && coordinates[end] != #char " " { end += 1 }
+        if end > at {
+            if line.count >= CHESS_NOTATION_LIMIT { return false }
+            // Parse through the rules engine, then return to the position
+            // before the move to generate disambiguation, checks and mates.
+            move := ChessPlayText(coordinates[at:end])
+            if move == 0 { return false }
+            ChessUnmakeMove()
+            line.moves[line.count] = move
+            line.san[line.count] = ChessMoveSan(move)
+            ChessMakeMove(move)
+            line.count += 1
+        }
+        at = end + 1
+    }
+    line.cursor = line.count
+    return true
+}
+
+NotationSeek :: (line: *ChessNotation, cursor: s32) {
+    ChessSearchCancel()
+    ChessReset()
+    line.cursor = ifx cursor < 0 then 0 else ifx cursor > line.count then line.count else cursor
+    index: s32 = 0
+    while index < line.cursor {
+        ChessMakeMove(line.moves[index])
+        index += 1
+    }
+}
+
+NotationPlay :: (line: *ChessNotation, move: s32) -> bool {
+    if line.cursor >= CHESS_NOTATION_LIMIT || move == 0 ||
+    ChessFindMove(ChessMoveFrom(move), ChessMoveTo(move), ChessMovePromotion(move)) != move {
+        return false
+    }
+    line.san[line.cursor] = ChessMoveSan(move)
+    line.moves[line.cursor] = move
+    ChessMakeMove(move)
+    line.cursor += 1
+    line.count = line.cursor
+    line.result = "*"
+    status := ChessStatus()
+    if status == CHESS_CHECKMATE {
+        line.result = ifx ChessSideToMove() == CHESS_WHITE then "0-1" else "1-0"
+    } else if status != CHESS_PLAYING {
+        line.result = "1/2-1/2"
+    }
+    return true
+}
+
+NotationCoordinates :: (line: *ChessNotation, count: s32) -> string {
+    out: Vec(u8)
+    index: s32 = 0
+    while index < count && index < line.count {
+        if index > 0 { unused VecPush(out, #char " ") }
+        BuilderPrint(*out, "%", ChessMoveText(line.moves[index]))
+        index += 1
+    }
+    return BuilderFinish(out)
+}
+
+NotationPgn :: (line: *ChessNotation, player: s32) -> string {
+    out: Vec(u8)
+    result := ifx line.result == "" then "*" else line.result
+    BuilderPrint(*out, "[Event \"Chess\"]\n[Site \"Arcade / Inbe\"]\n[Date \"????.??.??\"]\n[Round \"?\"]\n")
+    BuilderPrint(*out, "[White \"%\"]\n[Black \"%\"]\n[Result \"%\"]\n\n",
+        ifx player == CHESS_WHITE then "Player" else "Computer",
+        ifx player == CHESS_BLACK then "Player" else "Computer", result)
+    index: s32 = 0
+    while index < line.count {
+        if index % 2 == 0 { BuilderPrint(*out, "%. ", index / 2 + 1) }
+        BuilderPrint(*out, "% ", line.san[index])
+        if index % 12 == 11 { unused VecPush(out, #char "\n") }
+        index += 1
+    }
+    BuilderPrint(*out, "%", result)
+    return BuilderFinish(out)
+}

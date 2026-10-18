@@ -16,6 +16,7 @@ mkdir -p "$work/c"
 cp "$root/build/games/chess.zib" "$work/chess.zib"
 "$ziran" build --target=c --no-main --entry chess_app_behavior:main --root "$root/tests" \
     --module-path "$root/src" --module-path "inbe=$inbe/src/cells" \
+    --module-path "$root/build/game-generated/chess" \
     --module-path "$kryon/src/backend" --module-path "$kryon/src/ui" \
     --module-path "$toolchain/std" -o "$work/c" "$root/tests/chess_app_behavior.zi"
 # Modules imported by file keep their directories in the generated C.

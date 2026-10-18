@@ -6,8 +6,8 @@
     "chess": {
       "id": "inbe.chess",
       "title": "Chess",
-      "version": "1.0.2",
-      "sequence": 3,
+      "version": "1.1.0",
+      "sequence": 4,
       "host_api": 12
     },
     "pushy": {

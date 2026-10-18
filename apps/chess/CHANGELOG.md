@@ -1,5 +1,14 @@
 # Chess changelog
 
+## [1.1.0] - 2026-10-18
+
+- Ask for a suggested move, take back a turn, flip the board and read its coordinates.
+- Play an Expert computer level, with a deeper search and no added evaluation noise.
+- Review every move in algebraic notation and try variations in a separate study board.
+- Analyze positions with an evaluation bar, completed search depth and a suggested move.
+- Copy a game's PGN or the study position's FEN for use in other chess tools.
+- New game labels travel with Chess in all twelve languages, preserving existing saves and friend games.
+
 ## [1.0.2] - 2026-10-18
 
 - Play the same Chess game from Arcade or Inner Breeze, keeping existing
