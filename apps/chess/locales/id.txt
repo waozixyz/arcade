@@ -220,3 +220,33 @@ Putih: %s
 [chess_copy]
 Salin
 ---
+[chess_import]
+Impor
+---
+[chess_import_help]
+Tempel satu permainan PGN atau posisi FEN. Hanya jalur utama PGN yang diimpor; komentar dan variasi dilewati.
+---
+[chess_import_text]
+PGN atau FEN
+---
+[chess_paste]
+Tempel
+---
+[chess_import_open]
+Buka studi
+---
+[chess_importing]
+Mengimpor…
+---
+[chess_import_error]
+PGN/FEN tidak valid. Periksa format dan posisi awal.
+---
+[chess_import_move_error]
+Ditemukan langkah ilegal atau ambigu. Periksa jalur utama.
+---
+[chess_import_variant_error]
+Hanya catur standar yang didukung.
+---
+[chess_import_limit_error]
+Gunakan satu permainan di bawah 64 KB dan hingga 1.200 setengah langkah.
+---

@@ -25,6 +25,7 @@
 #import, file "engine.zi";
 #import, file "game.zi";
 #import, file "notation.zi";
+#import, file "import.zi";
 #import "inbe/node_app_types"
 host_api :: #system_library "host_api";
 ReadAppUiHost :: () -> AppUiFrame #foreign host_api;
@@ -101,6 +102,18 @@ notation_scroll: s32;
 notation_focused: bool;
 notation_selecting: bool;
 notation_copy: bool;
+import_open: bool;
+import_busy: bool;
+import_job: ChessImport;
+import_line: ChessNotation;
+import_text: string;
+import_cursor: s32;
+import_anchor: s32;
+import_scroll: s32;
+import_focused: bool;
+import_selecting: bool;
+import_focus: bool;
+import_paste: bool;
 
 // Board colors from the app's palette: mist and a soft jade, with the
 // light orange accent for the last move and lake blue for the selection.
@@ -683,7 +696,8 @@ StudyRefresh :: () {
     BoardStudyPosition(study_line.moves[:], study_line.cursor)
     study_fen = ChessFen()
     study_pgn = NotationPgn(*study_line, computer_player)
-    row := ((ifx study_line.cursor > 0 then study_line.cursor - 1 else 0) / 2) * Scale(32)
+    first: s32 = ifx study_line.first_side == CHESS_BLACK then 1 else 0
+    row := ((ifx study_line.cursor > 0 then study_line.cursor - 1 + first else 0) / 2) * Scale(32)
     if row < study_scroll { study_scroll = row }
     if row + Scale(32) > study_scroll + Scale(88) { study_scroll = row - Scale(56) }
     selected = -1
@@ -701,7 +715,23 @@ StudyOpen :: () {
     study_loaded = true
     study_analysis = false
     notation_open = false
+    import_open = false
+    import_busy = false
     study_scroll = 0
+    view = CHESS_VIEW_STUDY
+    board_game = CHESS_BOARD_NONE
+    StudyRefresh()
+}
+
+StudyEnter :: () {
+    if !study_loaded { StudyOpen(); return }
+    ChessSearchCancel()
+    computer_thinking = false
+    hint_busy = false
+    hint_move = 0
+    notation_open = false
+    import_open = false
+    import_busy = false
     view = CHESS_VIEW_STUDY
     board_game = CHESS_BOARD_NONE
     StudyRefresh()
@@ -745,6 +775,7 @@ StudyAnalyze :: () {
 }
 
 NotationView :: (top: s32) {
+    if import_open { ImportView(top); return }
     margin := ColumnLeft()
     width := ColumnWidth()
     half := (width - Scale(8)) / 2
@@ -780,9 +811,103 @@ NotationView :: (top: s32) {
     notation_focused = edited.focused
     notation_selecting = edited.selecting
     top += height + Scale(8)
-    if ActionButton(8964, margin, top, half, Scale(40), ChessText("chess_copy"), false) { notation_copy = true }
-    if ActionButton(8965, margin + half + Scale(8), top, half, Scale(40), ChessText("chess_back_board"), false) {
+    third := (width - Scale(16)) / 3
+    if ActionButton(8964, margin, top, third, Scale(40), ChessText("chess_copy"), false) { notation_copy = true }
+    if ActionButton(8966, margin + third + Scale(8), top, third, Scale(40), ChessText("chess_import"), false) {
+        import_open = true
+        import_focus = true
+        import_job = ChessImport.{}
+    }
+    if ActionButton(8965, margin + (third + Scale(8)) * 2, top, third, Scale(40), ChessText("chess_back_board"), false) {
         notation_open = false
+    }
+}
+
+ImportView :: (top: s32) {
+    if import_busy {
+        ImportStep(*import_job, *import_line)
+        if import_job.done {
+            study_line = import_line
+            import_busy = false
+            import_open = false
+            notation_open = false
+            study_scroll = 0
+            StudyRefresh()
+            return
+        }
+        if import_job.error != 0 {
+            import_busy = false
+            StudyRefresh()
+        } else {
+            unused SmoothFramesHost(2)
+        }
+    }
+    margin := ColumnLeft()
+    width := ColumnWidth()
+    half := (width - Scale(8)) / 2
+    if ChoiceButton(8970, margin, top, half, Scale(40), "PGN", !notation_fen) {
+        import_busy = false
+        notation_fen = false
+        import_job = ChessImport.{}
+        StudyRefresh()
+    }
+    if ChoiceButton(8971, margin + half + Scale(8), top, half, Scale(40), "FEN", notation_fen) {
+        import_busy = false
+        notation_fen = true
+        import_job = ChessImport.{}
+        StudyRefresh()
+    }
+    top += Scale(48)
+    Line(cast(u64)8972, margin, top, width, Scale(80), ChessText("chess_import_help"), false)
+    top += Scale(88)
+    height := frame.height - frame.bottom - top - Scale(108)
+    if height < Scale(60) { height = Scale(60) }
+    edited := TextArea(frame.session, TextAreaProps.{.key = cast(u64)8973, .focus_id = 8973,
+            .bounds = Bounds(margin, top, width, height), .value = import_text,
+            .label = ChessText("chess_import_text"), .wrap = true, .disabled = import_busy,
+            .max_bytes = CHESS_IMPORT_BYTES, .cursor = import_cursor, .anchor = import_anchor,
+            .scroll_y = import_scroll, .focused = import_focused, .selecting = import_selecting,
+            .input = TextAreaInput.{.now_seconds = frame.now, .focus = import_focus || import_paste,
+                .select_all = import_paste, .paste = import_paste}})
+    import_focus = false
+    import_paste = false
+    if edited.edit.changed && edited.edit.start >= 0 && edited.edit.end >= edited.edit.start && edited.edit.end <= import_text.count {
+        out: Vec(u8)
+        BuilderPrint(*out, "%", import_text[:edited.edit.start])
+        BuilderPrint(*out, "%", edited.edit.replacement)
+        BuilderPrint(*out, "%", import_text[edited.edit.end:])
+        import_text = BuilderFinish(out)
+        import_job.error = 0
+    }
+    import_cursor = edited.cursor
+    import_anchor = edited.anchor
+    import_scroll = edited.scroll_y
+    import_focused = edited.focused
+    import_selecting = edited.selecting
+    top += height + Scale(4)
+    message := ""
+    if import_busy { message = ChessText("chess_importing") }
+    if import_job.error != 0 {
+        key := "chess_import_error"
+        if import_job.error == CHESS_IMPORT_MOVE { key = "chess_import_move_error" }
+        if import_job.error == CHESS_IMPORT_VARIANT { key = "chess_import_variant_error" }
+        if import_job.error == CHESS_IMPORT_LIMIT { key = "chess_import_limit_error" }
+        message = ChessText(key)
+    }
+    Line(cast(u64)8974, margin, top, width, Scale(52), message, false)
+    top += Scale(56)
+    third := (width - Scale(16)) / 3
+    if ActionButton(8975, margin, top, third, Scale(40), ChessText("chess_paste"), import_busy) { import_paste = true }
+    if ActionButton(8976, margin + third + Scale(8), top, third, Scale(40), ChessText("chess_import_open"), import_busy || import_text == "") {
+        ImportBegin(*import_job, *import_line, import_text, notation_fen)
+        import_busy = import_job.error == 0
+        unused SmoothFramesHost(2)
+    }
+    if ActionButton(8977, margin + (third + Scale(8)) * 2, top, third, Scale(40), ChessText("chess_cancel"), false) {
+        import_busy = false
+        import_open = false
+        notation_open = false
+        StudyRefresh()
     }
 }
 
@@ -861,24 +986,20 @@ StudyView :: (top: s32) {
         ifx study_busy then ChessText("chess_thinking") else study_summary)
     y += Scale(32)
     // Every move is a navigation target, with standard algebraic notation.
+    first: s32 = ifx study_line.first_side == CHESS_BLACK then 1 else 0
     history := Scroll(frame.session, ScrollProps.{.key = cast(u64)8950,
             .bounds = Bounds(margin, y, width, Scale(88)),
-            .content_height = ((study_line.count + 1) / 2) * Scale(32), .scroll_offset = study_scroll})
+            .content_height = ((study_line.count + first + 1) / 2) * Scale(32), .scroll_offset = study_scroll})
     study_scroll = history.scroll_offset
     if history.opened {
         at: s32 = 0
         half := (width - gap) / 2
         while at < study_line.count {
-            row_y := cast(s32)history.content.y + (at / 2) * Scale(32)
+            ply := at + first
+            row_y := cast(s32)history.content.y + (ply / 2) * Scale(32)
             if row_y + Scale(32) >= y && row_y < y + Scale(88) {
-                label: Vec(u8)
-                if at % 2 == 0 {
-                    BuilderPrint(*label, "%. %", at / 2 + 1, study_line.san[at])
-                } else {
-                    BuilderPrint(*label, "%... %", at / 2 + 1, study_line.san[at])
-                }
-                if ChoiceButton(10000 + at, margin + (at % 2) * (half + gap), row_y,
-                    half, Scale(30), BuilderFinish(label), study_line.cursor == at + 1) {
+                if ChoiceButton(10000 + at, margin + (ply % 2) * (half + gap), row_y,
+                    half, Scale(30), NotationMoveLabel(*study_line, at), study_line.cursor == at + 1) {
                     study_line.cursor = at + 1
                     StudyRefresh()
                 }
@@ -1247,6 +1368,8 @@ ChessView :: (message: AppMessage) -> AppMessage {
         ChessSearchCancel()
         study_busy = false
         hint_busy = false
+        import_busy = false
+        import_open = false
         computer_thinking = false
         view = CHESS_VIEW_COMPUTER
         board_game = CHESS_BOARD_NONE
@@ -1258,6 +1381,8 @@ ChessView :: (message: AppMessage) -> AppMessage {
     view != CHESS_VIEW_FRIENDS && view != CHESS_VIEW_FRIEND_GAME {
         ChessSearchCancel()
         computer_thinking = false
+        import_busy = false
+        import_open = false
         hint_busy = false
         hint_move = 0
         study_busy = false
@@ -1271,7 +1396,7 @@ ChessView :: (message: AppMessage) -> AppMessage {
     }
     if ChoiceButton(8722, margin + (third + gap) * 2, top, third, Scale(40), ChessText("chess_tab_study"),
         view == CHESS_VIEW_STUDY) && view != CHESS_VIEW_STUDY {
-        StudyOpen()
+        StudyEnter()
     }
     top += Scale(52)
     if view == CHESS_VIEW_COMPUTER {

@@ -1,0 +1,372 @@
+// Bounded import of a single PGN main line or a FEN study position.
+// The caller keeps the old study until the temporary line is complete.
+#import "vec"
+#import, file "notation.zi";
+#import, file "engine.zi";
+
+CHESS_IMPORT_BYTES :: 65536
+CHESS_IMPORT_INVALID :: 1
+CHESS_IMPORT_MOVE :: 2
+CHESS_IMPORT_VARIANT :: 3
+CHESS_IMPORT_LIMIT :: 4
+
+ChessImport :: struct {
+    text: string
+    at: s64
+    fen_only: bool
+    started: bool
+    done: bool
+    error: s32
+    bad_move: string
+    setup: string
+    tag_result: string
+    move_result: string
+    variation: s32
+    comment: bool
+    line_comment: bool
+    has_fen: bool
+    tags: s32
+}
+
+ImportSpace :: (byte: u8) -> bool { return byte <= cast(u8)32 }
+
+ImportCopy :: (text: string) -> string {
+    out: Vec(u8)
+    BuilderPrint(*out, "%", text)
+    return BuilderFinish(out)
+}
+
+ImportTrim :: (text: string) -> string {
+    start: s64 = 0
+    end := text.count
+    while start < end && ImportSpace(text[start]) { start += 1 }
+    while end > start && ImportSpace(text[end - 1]) { end -= 1 }
+    return text[start:end]
+}
+
+ImportNumber :: (text: string, positive: bool) -> bool {
+    if text.count == 0 || text.count > 6 { return false }
+    value: s32 = 0
+    for byte: text {
+        if byte < #char "0" || byte > #char "9" { return false }
+        value = value * 10 + cast(s32)(byte - #char "0")
+    }
+    return !positive || value > 0
+}
+
+// The engine accepts some abbreviated positions for internal probes. Import
+// requires all six FEN fields and refuses silently corrected rights/fields.
+ImportFen :: (source: string) -> bool {
+    text := ImportTrim(source)
+    fields: [6]string
+    count: s32 = 0
+    at: s64 = 0
+    while at < text.count {
+        if count == 6 { return false }
+        end := at
+        while end < text.count && !ImportSpace(text[end]) { end += 1 }
+        fields[count] = text[at:end]
+        count += 1
+        at = end
+        while at < text.count && ImportSpace(text[at]) { at += 1 }
+    }
+    if count != 6 || (fields[1] != "w" && fields[1] != "b") ||
+    !ImportNumber(fields[4], false) || !ImportNumber(fields[5], true) { return false }
+    rights := fields[2]
+    if rights != "-" {
+        if rights.count == 0 || rights.count > 4 { return false }
+        seen: s32 = 0
+        for byte: rights {
+            bit: s32 = 0
+            if byte == #char "K" { bit = 1 }
+            if byte == #char "Q" { bit = 2 }
+            if byte == #char "k" { bit = 4 }
+            if byte == #char "q" { bit = 8 }
+            if bit == 0 || (seen & bit) != 0 { return false }
+            seen |= bit
+        }
+    }
+    ep := fields[3]
+    if ep != "-" && (ep.count != 2 || ep[0] < #char "a" || ep[0] > #char "h" ||
+        ep[1] != (ifx fields[1] == "w" then #char "6" else #char "3")) { return false }
+    normalized: Vec(u8)
+    for index: 0..5 {
+        if index > 0 { unused VecPush(normalized, #char " ") }
+        BuilderPrint(*normalized, "%", fields[index])
+    }
+    if !ChessLoadFen(BuilderFinish(normalized)) { return false }
+    for byte: rights {
+        king: s32 = 116
+        rook: s32 = 112
+        if byte == #char "K" || byte == #char "Q" { king = 4 }
+        if byte == #char "K" { rook = 7 }
+        if byte == #char "Q" { rook = 0 }
+        if byte == #char "k" { rook = 119 }
+        color := ifx king == 4 then CHESS_WHITE else CHESS_BLACK
+        if byte != #char "-" && (ChessPieceAt(king) != (color | CHESS_KING) ||
+            ChessPieceAt(rook) != (color | CHESS_ROOK)) { return false }
+    }
+    if ep != "-" {
+        square := ChessSquare(cast(s32)(ep[0] - #char "a"), cast(s32)(ep[1] - #char "1"))
+        pawn := square + (ifx fields[1] == "w" then -16 else 16)
+        origin := square + (ifx fields[1] == "w" then 16 else -16)
+        color := ifx fields[1] == "w" then CHESS_BLACK else CHESS_WHITE
+        if ChessPieceAt(square) != CHESS_EMPTY || ChessPieceAt(origin) != CHESS_EMPTY ||
+        ChessPieceAt(pawn) != (color | CHESS_PAWN) || ChessHalfmoveClock() != 0 { return false }
+    }
+    return true
+}
+
+ImportResult :: (text: string) -> bool {
+    return text == "*" || text == "1-0" || text == "0-1" || text == "1/2-1/2"
+}
+
+ImportBegin :: (job: *ChessImport, line: *ChessNotation, text: string, fen: bool) {
+    ChessSearchCancel()
+    job.* = ChessImport.{.fen_only = fen, .has_fen = fen}
+    line.* = ChessNotation.{.fen = CHESS_START_FEN, .result = "*", .first_number = 1, .imported = true}
+    if text.count > CHESS_IMPORT_BYTES { job.error = CHESS_IMPORT_LIMIT; return }
+    job.text = ImportCopy(ImportTrim(text))
+    if job.text.count >= 3 && job.text[0] == cast(u8)239 && job.text[1] == cast(u8)187 &&
+    job.text[2] == cast(u8)191 { job.text = ImportCopy(ImportTrim(job.text[3:])) }
+    if job.text.count == 0 { job.error = CHESS_IMPORT_INVALID }
+    if job.text.count > CHESS_IMPORT_BYTES { job.error = CHESS_IMPORT_LIMIT }
+}
+
+ImportReady :: (job: *ChessImport, line: *ChessNotation) -> bool {
+    if job.started { return true }
+    if (job.setup == "1" && !job.has_fen) || !ImportFen(line.fen) {
+        job.error = CHESS_IMPORT_INVALID
+        return false
+    }
+    line.fen = ChessFen()
+    if job.setup == "0" && line.fen != CHESS_START_FEN {
+        job.error = CHESS_IMPORT_INVALID
+        return false
+    }
+    line.first_side = ChessSideToMove()
+    line.first_number = ChessFullmoveNumber()
+    job.started = true
+    return true
+}
+
+// Parse one tag, including quoted escapes. Unknown metadata is ignored;
+// the standard seven tags and the custom starting position are retained.
+ImportTag :: (job: *ChessImport, line: *ChessNotation) -> bool {
+    at := job.at + 1
+    while at < job.text.count && ImportSpace(job.text[at]) { at += 1 }
+    start := at
+    while at < job.text.count && ((job.text[at] >= #char "A" && job.text[at] <= #char "Z") ||
+        (job.text[at] >= #char "a" && job.text[at] <= #char "z") ||
+        (job.text[at] >= #char "0" && job.text[at] <= #char "9") || job.text[at] == #char "_") { at += 1 }
+    name := job.text[start:at]
+    if name.count == 0 || name.count > 64 { return false }
+    while at < job.text.count && ImportSpace(job.text[at]) { at += 1 }
+    if at >= job.text.count || job.text[at] != #char "\"" { return false }
+    at += 1
+    value: Vec(u8)
+    closed := false
+    while at < job.text.count && at - start < 2048 {
+        byte := job.text[at]
+        at += 1
+        if byte == #char "\"" { closed = true; break }
+        if byte == #char "\\" {
+            if at >= job.text.count || (job.text[at] != #char "\\" && job.text[at] != #char "\"") { return false }
+            byte = job.text[at]
+            at += 1
+        }
+        unused VecPush(value, ifx ImportSpace(byte) then #char " " else byte)
+    }
+    while at < job.text.count && ImportSpace(job.text[at]) { at += 1 }
+    if !closed || at >= job.text.count || job.text[at] != #char "]" { return false }
+    job.at = at + 1
+    text := BuilderFinish(value)
+    if name == "Event" { line.event = text }
+    if name == "Site" { line.site = text }
+    if name == "Date" { line.date = text }
+    if name == "Round" { line.round = text }
+    if name == "White" { line.white = text }
+    if name == "Black" { line.black = text }
+    if name == "Result" {
+        if !ImportResult(text) || (job.tag_result != "" && job.tag_result != text) { return false }
+        job.tag_result = text
+    }
+    if name == "SetUp" {
+        if (text != "0" && text != "1") || (job.setup != "" && job.setup != text) { return false }
+        job.setup = text
+    }
+    if name == "FEN" {
+        if job.has_fen && line.fen != text { return false }
+        line.fen = text
+        job.has_fen = true
+    }
+    if name == "Variant" && text != "Standard" && text != "Chess" {
+        job.error = CHESS_IMPORT_VARIANT
+        return false
+    }
+    job.tags += 1
+    return true
+}
+
+ImportSanCore :: (text: string) -> string {
+    end := text.count
+    while end > 0 && (text[end - 1] == #char "+" || text[end - 1] == #char "#") { end -= 1 }
+    return text[:end]
+}
+
+ImportMove :: (source: string) -> s32 {
+    end := source.count
+    while end > 0 && (source[end - 1] == #char "!" || source[end - 1] == #char "?") { end -= 1 }
+    text := source[:end]
+    if text == "0-0" { text = "O-O" }
+    if text == "0-0-0" { text = "O-O-O" }
+    if text == "0-0+" { text = "O-O+" }
+    if text == "0-0-0+" { text = "O-O-O+" }
+    if text == "0-0#" { text = "O-O#" }
+    if text == "0-0-0#" { text = "O-O-O#" }
+    core := ImportSanCore(text)
+    castle := core == "O-O" || core == "O-O-O"
+    target: s32 = -1
+    kind: s32 = CHESS_PAWN
+    if !castle {
+        end = core.count
+        if end >= 2 && core[end - 2] == #char "=" { end -= 2 }
+        if end < 2 || core[end - 2] < #char "a" || core[end - 2] > #char "h" ||
+        core[end - 1] < #char "1" || core[end - 1] > #char "8" { return 0 }
+        target = ChessSquare(cast(s32)(core[end - 2] - #char "a"), cast(s32)(core[end - 1] - #char "1"))
+        if text[0] == #char "N" { kind = CHESS_KNIGHT }
+        if text[0] == #char "B" { kind = CHESS_BISHOP }
+        if text[0] == #char "R" { kind = CHESS_ROOK }
+        if text[0] == #char "Q" { kind = CHESS_QUEEN }
+        if text[0] == #char "K" { kind = CHESS_KING }
+    }
+    candidates: [256]s32
+    count := ChessGenerateLegal()
+    index: s32 = 0
+    while index < count { candidates[index] = ChessLegalAt(index); index += 1 }
+    found: s32 = 0
+    index = 0
+    while index < count {
+        move := candidates[index]
+        index += 1
+        if castle {
+            if (ChessMoveFlags(move) & CHESS_MOVE_CASTLE) == 0 ||
+            ChessFile(ChessMoveTo(move)) != (ifx core == "O-O" then 6 else 2) { continue }
+        } else if ChessMoveTo(move) != target || ChessKind(ChessPieceAt(ChessMoveFrom(move))) != kind {
+            continue
+        }
+        san := ChessMoveSan(move)
+        if san == text || ImportSanCore(san) == text {
+            if found != 0 { return 0 }
+            found = move
+        }
+    }
+    return found
+}
+
+ImportFinish :: (job: *ChessImport, line: *ChessNotation) {
+    if !ImportReady(job, line) { return }
+    if job.comment || job.variation != 0 || (line.count == 0 && job.tags == 0 && job.move_result == "") ||
+    (job.tag_result != "" && job.move_result != "" && job.tag_result != job.move_result) {
+        job.error = CHESS_IMPORT_INVALID
+        return
+    }
+    declared := ifx job.move_result != "" then job.move_result else job.tag_result
+    if declared != "" { line.result = declared }
+    line.cursor = line.count
+    job.done = true
+}
+
+// At most one move/tag and 1024 skipped bytes per frame. Long comments and
+// variations yield to the UI, and a caller can cancel between steps.
+ImportStep :: (job: *ChessImport, line: *ChessNotation) {
+    if job.done || job.error != 0 { return }
+    if job.fen_only {
+        line.fen = job.text
+        if !ImportReady(job, line) { return }
+        status := ChessStatus()
+        if status == CHESS_CHECKMATE {
+            line.result = ifx ChessSideToMove() == CHESS_WHITE then "0-1" else "1-0"
+        } else if status != CHESS_PLAYING {
+            line.result = "1/2-1/2"
+        }
+        job.done = true
+        return
+    }
+    scanned: s32 = 0
+    while job.at < job.text.count && scanned < 1024 {
+        byte := job.text[job.at]
+        job.at += 1
+        scanned += 1
+        if job.line_comment {
+            if byte == cast(u8)10 || byte == cast(u8)13 { job.line_comment = false }
+            continue
+        }
+        if job.comment {
+            if byte == #char "}" { job.comment = false }
+            continue
+        }
+        if ImportSpace(byte) { continue }
+        if byte == #char ";" || (byte == #char "%" &&
+            (job.at == 1 || job.text[job.at - 2] == cast(u8)10 || job.text[job.at - 2] == cast(u8)13)) {
+            job.line_comment = true
+            continue
+        }
+        if byte == #char "{" { job.comment = true; continue }
+        if byte == #char "(" {
+            job.variation += 1
+            if job.variation > 32 { job.error = CHESS_IMPORT_LIMIT; return }
+            continue
+        }
+        if byte == #char ")" {
+            if job.variation == 0 { job.error = CHESS_IMPORT_INVALID; return }
+            job.variation -= 1
+            continue
+        }
+        if job.variation > 0 { continue }
+        if byte == #char "[" {
+            job.at -= 1
+            if job.started || !ImportTag(job, line) {
+                if job.error == 0 { job.error = CHESS_IMPORT_INVALID }
+            }
+            return
+        }
+        start := job.at - 1
+        while job.at < job.text.count && !ImportSpace(job.text[job.at]) &&
+        job.text[job.at] != #char "{" && job.text[job.at] != #char "(" && job.text[job.at] != #char ")" &&
+        job.text[job.at] != #char ";" && job.text[job.at] != #char "$" && job.text[job.at] != #char "[" {
+            job.at += 1
+            if job.at - start > 256 { job.error = CHESS_IMPORT_LIMIT; return }
+        }
+        token := job.text[start:job.at]
+        if token[0] == #char "$" {
+            if !ImportNumber(token[1:], false) { job.error = CHESS_IMPORT_INVALID; return }
+            continue
+        }
+        if ImportResult(token) {
+            if !ImportReady(job, line) { return }
+            if job.move_result != "" { job.error = CHESS_IMPORT_INVALID; return }
+            job.move_result = token
+            continue
+        }
+        skip: s64 = 0
+        while skip < token.count && token[skip] >= #char "0" && token[skip] <= #char "9" { skip += 1 }
+        if skip > 0 && skip < token.count && token[skip] == #char "." {
+            while skip < token.count && token[skip] == #char "." { skip += 1 }
+            token = token[skip:]
+        }
+        if token == "" || token == "..." || token == "e.p." { continue }
+        if job.move_result != "" || !ImportReady(job, line) {
+            if job.error == 0 { job.error = CHESS_IMPORT_INVALID }
+            return
+        }
+        if line.count >= CHESS_NOTATION_LIMIT { job.error = CHESS_IMPORT_LIMIT; return }
+        move := ImportMove(token)
+        if move == 0 || !NotationPlay(line, move) {
+            job.error = CHESS_IMPORT_MOVE
+            job.bad_move = ImportCopy(token)
+        }
+        return
+    }
+    if job.at >= job.text.count { ImportFinish(job, line) }
+}

@@ -220,3 +220,33 @@ Brancas: %s
 [chess_copy]
 Copiar
 ---
+[chess_import]
+Importar
+---
+[chess_import_help]
+Cole uma partida PGN ou uma posição FEN. Apenas a linha principal do PGN é importada; comentários e variantes são ignorados.
+---
+[chess_import_text]
+PGN ou FEN
+---
+[chess_paste]
+Colar
+---
+[chess_import_open]
+Abrir estudo
+---
+[chess_importing]
+Importando…
+---
+[chess_import_error]
+PGN/FEN inválido. Verifique o formato e a posição inicial.
+---
+[chess_import_move_error]
+Foi encontrado um lance ilegal ou ambíguo. Verifique a linha principal.
+---
+[chess_import_variant_error]
+Apenas o xadrez padrão é compatível.
+---
+[chess_import_limit_error]
+Use uma partida com menos de 64 KB e até 1200 meios-lances.
+---

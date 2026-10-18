@@ -8,6 +8,7 @@ import tempfile
 import time
 
 from PIL import Image
+from chess_import_flow import check_import
 
 ROOT = Path(__file__).resolve().parents[1]
 assert int(os.environ["DISPLAY"].split(":")[-1].split(".")[0]) >= 400
@@ -203,6 +204,10 @@ with tempfile.TemporaryDirectory(prefix="profile-", dir=OUTPUT) as directory:
         assert second.returncode == 1, "Two processes were allowed to write the same game"
         assert record.read_bytes() == saved
 
+    with application(profile, 'import', '--app', 'chess') as child:
+        driver.wait(label='Your move')
+        check_import(driver, record.read_bytes, lambda name: capture(child, name))
+
     # Black keeps the computer's opening move when taking back a turn.
     black_profile = profile / 'black'
     black_record = black_profile / 'games/inbe.chess/records/computer'
@@ -244,4 +249,4 @@ with tempfile.TemporaryDirectory(prefix="profile-", dir=OUTPUT) as directory:
         driver.wait(label='Copiar exporta la partida en PGN o esta posición en FEN.')
         capture(child, 'spanish-notation')
 
-print("Arcade: Chess preview, moves, hints, study variations, analysis, PGN/FEN clipboard, flip, full-turn takebacks, Black opening, Expert reply, persistence and private storage passed")
+print("Arcade: Chess preview, moves, hints, study variations, analysis, PGN/FEN clipboard, flip, full-turn takebacks, PGN/FEN import and recovery, Black opening, Expert reply, persistence and private storage passed")

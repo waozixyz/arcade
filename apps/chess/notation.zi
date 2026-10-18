@@ -10,6 +10,16 @@ ChessNotation :: struct {
     count: s32
     cursor: s32
     result: string
+    fen: string
+    first_side: s32
+    first_number: s32
+    event: string
+    site: string
+    date: string
+    round: string
+    white: string
+    black: string
+    imported: bool
 }
 
 NotationLoad :: (line: *ChessNotation, coordinates: string, result: string) -> bool {
@@ -18,6 +28,16 @@ NotationLoad :: (line: *ChessNotation, coordinates: string, result: string) -> b
     line.count = 0
     line.cursor = 0
     line.result = result
+    line.fen = CHESS_START_FEN
+    line.first_side = CHESS_WHITE
+    line.first_number = 1
+    line.event = ""
+    line.site = ""
+    line.date = ""
+    line.round = ""
+    line.white = ""
+    line.black = ""
+    line.imported = false
     at: s64 = 0
     while at < coordinates.count {
         while at < coordinates.count && coordinates[at] == #char " " { at += 1 }
@@ -43,7 +63,7 @@ NotationLoad :: (line: *ChessNotation, coordinates: string, result: string) -> b
 
 NotationSeek :: (line: *ChessNotation, cursor: s32) {
     ChessSearchCancel()
-    ChessReset()
+    unused ChessLoadFen(ifx line.fen == "" then CHESS_START_FEN else line.fen)
     line.cursor = ifx cursor < 0 then 0 else ifx cursor > line.count then line.count else cursor
     index: s32 = 0
     while index < line.cursor {
@@ -83,16 +103,52 @@ NotationCoordinates :: (line: *ChessNotation, count: s32) -> string {
     return BuilderFinish(out)
 }
 
+NotationMoveLabel :: (line: *ChessNotation, index: s32) -> string {
+    ply := index + (ifx line.first_side == CHESS_BLACK then 1 else 0)
+    out: Vec(u8)
+    BuilderPrint(*out, "%", (ifx line.first_number > 0 then line.first_number else 1) + ply / 2)
+    BuilderPrint(*out, "% %", ifx ply % 2 == 0 then "." else "...", line.san[index])
+    return BuilderFinish(out)
+}
+
+NotationTag :: (out: *Vec(u8), name: string, value: string) {
+    BuilderPrint(out, "[% \"", name)
+    for byte: value {
+        if byte == #char "\\" || byte == #char "\"" { unused VecPush(out.*, #char "\\") }
+        unused VecPush(out.*, ifx byte < cast(u8)32 then #char " " else byte)
+    }
+    BuilderPrint(out, "\"]\n")
+}
+
 NotationPgn :: (line: *ChessNotation, player: s32) -> string {
     out: Vec(u8)
     result := ifx line.result == "" then "*" else line.result
-    BuilderPrint(*out, "[Event \"Chess\"]\n[Site \"Arcade / Inbe\"]\n[Date \"????.??.??\"]\n[Round \"?\"]\n")
-    BuilderPrint(*out, "[White \"%\"]\n[Black \"%\"]\n[Result \"%\"]\n\n",
-        ifx player == CHESS_WHITE then "Player" else "Computer",
-        ifx player == CHESS_BLACK then "Player" else "Computer", result)
+    event := ifx line.imported then "?" else "Chess"
+    site := ifx line.imported then "?" else "Arcade / Inbe"
+    white := ifx player == CHESS_WHITE then "Player" else "Computer"
+    black := ifx player == CHESS_BLACK then "Player" else "Computer"
+    if line.imported { white = "?"; black = "?" }
+    NotationTag(*out, "Event", ifx line.event == "" then event else line.event)
+    NotationTag(*out, "Site", ifx line.site == "" then site else line.site)
+    NotationTag(*out, "Date", ifx line.date == "" then "????.??.??" else line.date)
+    NotationTag(*out, "Round", ifx line.round == "" then "?" else line.round)
+    NotationTag(*out, "White", ifx line.white != "" then line.white else white)
+    NotationTag(*out, "Black", ifx line.black != "" then line.black else black)
+    NotationTag(*out, "Result", result)
+    if line.fen != "" && line.fen != CHESS_START_FEN {
+        NotationTag(*out, "SetUp", "1")
+        NotationTag(*out, "FEN", line.fen)
+    }
+    unused VecPush(out, #char "\n")
     index: s32 = 0
     while index < line.count {
-        if index % 2 == 0 { BuilderPrint(*out, "%. ", index / 2 + 1) }
+        ply := index + (ifx line.first_side == CHESS_BLACK then 1 else 0)
+        number := (ifx line.first_number > 0 then line.first_number else 1) + ply / 2
+        if ply % 2 == 0 {
+            BuilderPrint(*out, "%. ", number)
+        } else if index == 0 {
+            BuilderPrint(*out, "%... ", number)
+        }
         BuilderPrint(*out, "% ", line.san[index])
         if index % 12 == 11 { unused VecPush(out, #char "\n") }
         index += 1

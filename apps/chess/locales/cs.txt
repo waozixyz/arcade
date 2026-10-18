@@ -220,3 +220,33 @@ Bílý: %s
 [chess_copy]
 Kopírovat
 ---
+[chess_import]
+Importovat
+---
+[chess_import_help]
+Vložte partii PGN nebo pozici FEN. Importuje se jen hlavní řada PGN; komentáře a varianty se přeskakují.
+---
+[chess_import_text]
+PGN nebo FEN
+---
+[chess_paste]
+Vložit
+---
+[chess_import_open]
+Otevřít studii
+---
+[chess_importing]
+Importování…
+---
+[chess_import_error]
+Neplatné PGN/FEN. Zkontrolujte formát a výchozí pozici.
+---
+[chess_import_move_error]
+Byl nalezen neplatný nebo nejednoznačný tah. Zkontrolujte hlavní řadu.
+---
+[chess_import_variant_error]
+Podporovány jsou pouze standardní šachy.
+---
+[chess_import_limit_error]
+Použijte jednu partii do 64 KB s nejvýše 1200 půltahy.
+---

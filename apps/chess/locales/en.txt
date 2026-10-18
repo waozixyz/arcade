@@ -220,3 +220,33 @@ White: %s
 [chess_copy]
 Copy
 ---
+[chess_import]
+Import
+---
+[chess_import_help]
+Paste one PGN game or a FEN position. Only the PGN main line is imported; comments and variations are skipped.
+---
+[chess_import_text]
+PGN or FEN
+---
+[chess_paste]
+Paste
+---
+[chess_import_open]
+Open study
+---
+[chess_importing]
+Importing…
+---
+[chess_import_error]
+Invalid PGN/FEN. Check the format and starting position.
+---
+[chess_import_move_error]
+An illegal or ambiguous move was found. Check the main line.
+---
+[chess_import_variant_error]
+Only standard chess is supported.
+---
+[chess_import_limit_error]
+Use one game under 64 KB and up to 1,200 half-moves.
+---

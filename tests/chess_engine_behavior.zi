@@ -217,6 +217,78 @@ ReplayChecks :: () -> s32 {
 }
 
 #import, file "../apps/chess/notation.zi";
+#import, file "../apps/chess/import.zi";
+
+ImportAll :: (job: *ChessImport, line: *ChessNotation, text: string, fen: bool) -> bool {
+    ImportBegin(job, line, text, fen)
+    steps: s32 = 0
+    while !job.done && job.error == 0 {
+        ImportStep(job, line)
+        steps += 1
+        if steps > 10000 { return false }
+    }
+    return job.done && job.error == 0
+}
+
+ImportChecks :: () -> s32 {
+    line: ChessNotation
+    job: ChessImport
+    pgn := "[Event \"A \\\"study\\\"\"] [White \"Alice\"] [Black \"Bob\"] [Result \"*\"]\n1.e4 {hello (not a variation)} e5 $1 (1...c5 (2.Nf3 d6)) 2.Nf3 Nc6 ; comment\n3.Bb5 a6 4.Ba4 Nf6 5.0-0 *"
+    if !ImportAll(*job, *line, pgn, false) || line.count != 9 || line.san[8] != "O-O" { return 140 }
+    if line.white != "Alice" || line.black != "Bob" || line.event != "A \"study\"" { return 141 }
+    finish := ChessFen()
+    exported := NotationPgn(*line, CHESS_WHITE)
+    second: ChessNotation
+    if !ImportAll(*job, *second, exported, false) || ChessFen() != finish || !ChessConsistent() { return 142 }
+    if !ImportAll(*job, *line, "f3 e5 g4 Qh4# 0-1", false) || line.result != "0-1" { return 143 }
+    if ImportAll(*job, *line, "1.e4 e5 2.Bh6 *", false) || job.error != CHESS_IMPORT_MOVE || job.bad_move != "Bh6" { return 144 }
+    if ImportAll(*job, *line, "1.e4 {unclosed", false) || job.error != CHESS_IMPORT_INVALID { return 145 }
+    if ImportAll(*job, *line, "1.e4 (1.d4 d5", false) || job.error != CHESS_IMPORT_INVALID { return 146 }
+    if ImportAll(*job, *line, "[Result \"1-0\"] 1.e4 0-1", false) { return 147 }
+    if ImportAll(*job, *line, "[Variant \"Chess960\"] 1.e4 *", false) || job.error != CHESS_IMPORT_VARIANT { return 148 }
+    if ImportAll(*job, *line, "[SetUp \"1\"] *", false) { return 149 }
+    if ImportAll(*job, *line, "1.e4 * 1...e5", false) { return 150 }
+    if ImportAll(*job, *line, "1.e4 * [Event \"another\"]", false) { return 151 }
+    custom := "7k/8/8/8/8/8/p7/7K b - - 0 17"
+    if !ImportAll(*job, *line, custom, true) || line.first_side != CHESS_BLACK || line.first_number != 17 { return 152 }
+    if ChessFen() != custom || line.count != 0 || !ChessConsistent() { return 153 }
+    if !NotationPlay(*line, ChessFindMove(16, 0, CHESS_QUEEN)) || NotationMoveLabel(*line, 0) != "17... a1=Q+" { return 154 }
+    after_promotion := ChessFen()
+    NotationSeek(*line, 0)
+    if ChessFen() != custom { return 155 }
+    NotationSeek(*line, 1)
+    if ChessFen() != after_promotion { return 156 }
+    if !ImportAll(*job, *second, NotationPgn(*line, CHESS_WHITE), false) || second.first_number != 17 ||
+    second.san[0] != "a1=Q+" || ChessFen() != after_promotion { return 157 }
+    // Six fields, exact side/rights/numbers, and a possible en-passant
+    // double step are required rather than silently repaired.
+    if ImportAll(*job, *line, "8/8/8/8/8/4k3/8/4K3 w - -", true) { return 158 }
+    if ImportAll(*job, *line, "8/8/8/8/8/4k3/8/4K3 white - - 0 1", true) { return 159 }
+    if ImportAll(*job, *line, "8/8/8/8/8/4k3/8/4K3 w K - 0 1", true) { return 160 }
+    if ImportAll(*job, *line, "8/8/8/8/8/4k3/8/4K3 w - - 0x 1", true) { return 161 }
+    if ImportAll(*job, *line, "8/8/8/8/8/4k3/8/4K3 w - - 0 0", true) { return 162 }
+    if ImportAll(*job, *line, "8/8/8/8/8/4k3/8/4K3 w - e6 0 1", true) { return 163 }
+    if !ImportAll(*job, *line, "rnbqkbnr/pppppppp/8/8/4P3/8/PPPP1PPP/RNBQKBNR b KQkq e3 0 1", true) { return 164 }
+    if !ImportAll(*job, *line, "[SetUp \"1\"] [FEN \"rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1\"] *", false) { return 165 }
+    // A comment-heavy import yields even when no move is being processed.
+    text: Vec(u8)
+    BuilderPrint(*text, "{")
+    for index: 0..3000 { unused VecPush(text, #char "x") }
+    BuilderPrint(*text, "} 1.e4 *")
+    ImportBegin(*job, *line, BuilderFinish(text), false)
+    ImportStep(*job, *line)
+    if job.done || job.error != 0 || job.at > 1024 || line.count != 0 { return 166 }
+    if ImportAll(*job, *line, "{only a comment}", false) { return 167 }
+    // Prefix truncation and arbitrary bytes must terminate without an out-of-bounds read.
+    for length: cast(s64)1..cast(s64)120 {
+        if length < pgn.count { unused ImportAll(*job, *line, pgn[:length], false) }
+    }
+    oversized: Vec(u8)
+    for index: 0..CHESS_IMPORT_BYTES { unused VecPush(oversized, #char "x") }
+    ImportBegin(*job, *line, BuilderFinish(oversized), false)
+    if job.error != CHESS_IMPORT_LIMIT || job.text.count != 0 { return 168 }
+    return 0
+}
 
 StudyNotationChecks :: () -> s32 {
     line: ChessNotation
@@ -247,6 +319,8 @@ StudyNotationChecks :: () -> s32 {
 
 #program_export
 Check :: () -> s32 {
+    imported := ImportChecks()
+    if imported != 0 { return imported }
     notation := StudyNotationChecks()
     if notation != 0 { return notation }
     result_replay := ReplayChecks()

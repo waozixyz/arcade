@@ -220,3 +220,33 @@ Bianco: %s
 [chess_copy]
 Copia
 ---
+[chess_import]
+Importa
+---
+[chess_import_help]
+Incolla una partita PGN o una posizione FEN. Si importa solo la linea principale del PGN; commenti e varianti vengono ignorati.
+---
+[chess_import_text]
+PGN o FEN
+---
+[chess_paste]
+Incolla
+---
+[chess_import_open]
+Apri studio
+---
+[chess_importing]
+Importazione…
+---
+[chess_import_error]
+PGN/FEN non valido. Controlla il formato e la posizione iniziale.
+---
+[chess_import_move_error]
+È stata trovata una mossa illegale o ambigua. Controlla la linea principale.
+---
+[chess_import_variant_error]
+Sono supportati solo gli scacchi standard.
+---
+[chess_import_limit_error]
+Usa una partita sotto 64 KB e con un massimo di 1200 semimosse.
+---

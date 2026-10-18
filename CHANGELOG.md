@@ -1,5 +1,11 @@
 # Arcade changelog
 
+## 0.3.0
+
+- Import a PGN game or FEN position into Chess study, with player details and the correct starting move number.
+- Review and analyze imported positions, then copy them back to other chess tools.
+- Keep an imported study while switching between Chess tabs, with clear feedback for invalid input.
+
 ## 0.2.1
 
 - Pushy adds Continue and a level selector with completion marks.

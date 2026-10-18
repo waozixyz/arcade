@@ -16,6 +16,8 @@ def entries(path):
 
 english = entries(ROOT / 'apps/chess/locales/en.txt')
 new_keys = {'chess_' + suffix for suffix in [
+    'import', 'import_help', 'import_text', 'paste', 'import_open', 'importing',
+    'import_error', 'import_move_error', 'import_variant_error', 'import_limit_error',
     'copy', 'analysis', 'back_board', 'depth', 'export_help', 'first', 'flip', 'hint',
     'last_move', 'latest', 'level_expert', 'next', 'notation', 'previous',
     'review', 'suggestion', 'tab_study', 'undo', 'white_eval']}

@@ -220,3 +220,33 @@ Blancs : %s
 [chess_copy]
 Copier
 ---
+[chess_import]
+Importer
+---
+[chess_import_help]
+Collez une partie PGN ou une position FEN. Seule la ligne principale du PGN est importée ; commentaires et variantes sont ignorés.
+---
+[chess_import_text]
+PGN ou FEN
+---
+[chess_paste]
+Coller
+---
+[chess_import_open]
+Ouvrir l’étude
+---
+[chess_importing]
+Importation…
+---
+[chess_import_error]
+PGN/FEN invalide. Vérifiez le format et la position initiale.
+---
+[chess_import_move_error]
+Un coup illégal ou ambigu a été trouvé. Vérifiez la ligne principale.
+---
+[chess_import_variant_error]
+Seuls les échecs classiques sont pris en charge.
+---
+[chess_import_limit_error]
+Utilisez une partie de moins de 64 Ko et de 1 200 demi-coups maximum.
+---

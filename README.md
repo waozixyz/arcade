@@ -15,8 +15,14 @@ try a different continuation, and analyze a position with an evaluation bar,
 best move and completed search depth. Copy the game as PGN or the displayed
 position as FEN. Study never overwrites the saved computer game. Analysis and
 hints are available for computer play and study, rather than active friend
-games. Clocked games, puzzles, lessons, public matchmaking and automated
-full-game review are not implemented.
+games. In Notation, choose Import to paste one PGN game or FEN position.
+PGN imports keep the main line and standard game details; comments and side
+variations are skipped. Custom starting positions keep their side and move
+number. A failed or canceled import preserves the previous study. Studies
+stay available while switching tabs during the same session.
+
+Clocked games, puzzles, lessons, public matchmaking and automated full-game
+review are not implemented.
 
 ## One Chess app, two harnesses
 

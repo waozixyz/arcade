@@ -220,3 +220,33 @@ Blancas: %s
 [chess_copy]
 Copiar
 ---
+[chess_import]
+Importar
+---
+[chess_import_help]
+Pega una partida PGN o una posición FEN. Solo se importa la línea principal del PGN; se omiten comentarios y variantes.
+---
+[chess_import_text]
+PGN o FEN
+---
+[chess_paste]
+Pegar
+---
+[chess_import_open]
+Abrir estudio
+---
+[chess_importing]
+Importando…
+---
+[chess_import_error]
+PGN/FEN no válido. Revisa el formato y la posición inicial.
+---
+[chess_import_move_error]
+Hay una jugada ilegal o ambigua. Revisa la línea principal.
+---
+[chess_import_variant_error]
+Solo se admite el ajedrez estándar.
+---
+[chess_import_limit_error]
+Usa una partida de menos de 64 KB y hasta 1200 medias jugadas.
+---

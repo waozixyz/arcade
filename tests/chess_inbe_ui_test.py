@@ -13,6 +13,7 @@ INBE = Path(subprocess.check_output([str(ROOT / 'scripts/ziran.sh'), 'pkg', 'pat
                                   cwd=ROOT, text=True).strip())
 sys.path.insert(0, str(INBE / 'tests'))
 from ui_driver import UiDriver
+from chess_import_flow import check_import
 
 assert int(os.environ['DISPLAY'].split(':')[-1].split('.')[0]) >= 400
 assert os.environ['YUE_DESKTOP_RECOVERY'] == '0'
@@ -132,5 +133,6 @@ with tempfile.TemporaryDirectory(prefix='profile-', dir=OUTPUT) as directory:
         driver.press(label='Flip board', role='button')
         driver.press(label='Take back', role='button')
         wait(lambda: saved_game().endswith('moves='), 'Takeback did not restore the previous turn')
+        check_import(driver, saved_game)
 
-print('Inbe: narrow Chess hints, study variations, analysis, PGN/FEN clipboard, flip and takeback passed')
+print('Inbe: narrow Chess hints, study variations, analysis, PGN/FEN clipboard, flip, takeback, PGN/FEN import and recovery passed')

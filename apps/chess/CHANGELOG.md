@@ -1,5 +1,12 @@
 # Chess changelog
 
+## [1.2.0] - 2026-10-18
+
+- Paste one PGN game or a FEN position into the study board.
+- Import the PGN main line and player details, including custom starting positions and Black-to-move numbering. Comments and side variations are skipped.
+- Keep the existing study when an import fails or is canceled, and retain imported studies while switching tabs.
+- Review, vary, analyze and export imported positions without changing the saved computer game.
+
 ## [1.1.0] - 2026-10-18
 
 - Ask for a suggested move, take back a turn, flip the board and read its coordinates.

@@ -75,7 +75,9 @@ authorize an upload; the publisher requires that older-host result too.
 The gate checks the exact bundle in Arcade and the supplied Inbe host,
 including actual rendering, input and save restoration. The intended and
 oldest host checks also exercise study, hints, analysis, clipboard export and
-takebacks at a narrow window size. It also tests Chess's
+takebacks at a narrow window size. The same native import flow checks PGN
+main lines, custom FEN promotion/numbering, failed-import recovery and
+preservation of the live game in both harnesses. It also tests Chess's
 rules, computer play and friend-game protocol. The saved receipt is bound to
 the bundle hash, release version and sequence. The publisher refuses a
 remote upload if that receipt is missing or stale.

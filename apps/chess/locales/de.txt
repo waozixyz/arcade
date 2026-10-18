@@ -220,3 +220,33 @@ Weiß: %s
 [chess_copy]
 Kopieren
 ---
+[chess_import]
+Importieren
+---
+[chess_import_help]
+Füge eine PGN-Partie oder FEN-Stellung ein. Nur die PGN-Hauptlinie wird importiert; Kommentare und Varianten werden übersprungen.
+---
+[chess_import_text]
+PGN oder FEN
+---
+[chess_paste]
+Einfügen
+---
+[chess_import_open]
+Studie öffnen
+---
+[chess_importing]
+Wird importiert…
+---
+[chess_import_error]
+Ungültiges PGN/FEN. Prüfe Format und Ausgangsstellung.
+---
+[chess_import_move_error]
+Ein Zug ist unzulässig oder mehrdeutig. Prüfe die Hauptlinie.
+---
+[chess_import_variant_error]
+Es wird nur Standardschach unterstützt.
+---
+[chess_import_limit_error]
+Nutze eine Partie unter 64 KB mit höchstens 1200 Halbzügen.
+---

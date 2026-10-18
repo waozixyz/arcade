@@ -220,3 +220,33 @@
 [chess_copy]
 복사
 ---
+[chess_import]
+불러오기
+---
+[chess_import_help]
+PGN 대국 또는 FEN 위치를 붙여 넣으세요. PGN의 주 진행만 불러오며 주석과 변형은 건너뜁니다.
+---
+[chess_import_text]
+PGN 또는 FEN
+---
+[chess_paste]
+붙여넣기
+---
+[chess_import_open]
+연구 열기
+---
+[chess_importing]
+불러오는 중…
+---
+[chess_import_error]
+잘못된 PGN/FEN입니다. 형식과 시작 위치를 확인하세요.
+---
+[chess_import_move_error]
+불가능하거나 모호한 수가 있습니다. 주 진행을 확인하세요.
+---
+[chess_import_variant_error]
+일반 체스만 지원합니다.
+---
+[chess_import_limit_error]
+64 KB 미만, 최대 1200 반수인 대국 하나를 사용하세요.
+---
