@@ -37,14 +37,6 @@
       "url": "https://github.com/ziranlang/qrcode.git"
     },
     {
-      "commit": "2eed1f26ae27b18d247ac5d94ef7730cad3c9dff",
-      "dependencies": {"crypto": "pf039d7a776333200", "kryon": "p5591841976c9360a"},
-      "id": "p1633df9bffecb8c0",
-      "name": "Apps",
-      "ref": "master",
-      "url": "https://github.com/waozixyz/apps.git"
-    },
-    {
       "commit": "1cb9df183089a77c8a16448a556186f30b261a98",
       "dependencies": {"kryon": "p5591841976c9360a"},
       "id": "p1b13dda539ed2a39",
@@ -59,6 +51,14 @@
       "name": "Game2D",
       "ref": "master",
       "url": "https://github.com/kryonlabs/game2d.git"
+    },
+    {
+      "commit": "89a58f4b3707a95f864443278f2f8b67cb086e70",
+      "dependencies": {"apps": "pfd516d9433304a0e", "kryon": "p5591841976c9360a"},
+      "id": "p2dba9980fb5bd21b",
+      "name": "Pushy",
+      "ref": "master",
+      "url": "https://github.com/waozixyz/pushy.git"
     },
     {
       "commit": "828688710f774bede41c28836d58f56e37b087b4",
@@ -92,14 +92,6 @@
       "name": "Oqs",
       "ref": "master",
       "url": "https://github.com/ziranlang/oqs.git"
-    },
-    {
-      "commit": "45c2e619f8dc21b641a50f7035b9243bddf2193f",
-      "dependencies": {"apps": "p1633df9bffecb8c0", "kryon": "p5591841976c9360a"},
-      "id": "pabbfe8e4107c8fe5",
-      "name": "Pushy",
-      "ref": "master",
-      "url": "https://github.com/waozixyz/pushy.git"
     },
     {
       "commit": "b7defd99b3b4438b250ee9489036f1048e698ef9",
@@ -150,10 +142,18 @@
       "ref": "main",
       "source": true,
       "url": "https://github.com/open-quantum-safe/liboqs.git"
+    },
+    {
+      "commit": "350d56194d86d9fde2bc66d97fcfe3f12706369a",
+      "dependencies": {"crypto": "pf039d7a776333200", "kryon": "p5591841976c9360a"},
+      "id": "pfd516d9433304a0e",
+      "name": "Apps",
+      "ref": "master",
+      "url": "https://github.com/waozixyz/apps.git"
     }
   ],
   "root": {
-    "dependencies": {"apps": "p1633df9bffecb8c0", "inbe": "p5c0224a91af1f909", "kryon": "p5591841976c9360a", "pushy": "pabbfe8e4107c8fe5"},
+    "dependencies": {"apps": "pfd516d9433304a0e", "inbe": "p5c0224a91af1f909", "kryon": "p5591841976c9360a", "pushy": "p2dba9980fb5bd21b"},
     "name": "Arcade"
   },
   "toolchain": {
