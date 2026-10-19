@@ -1,5 +1,9 @@
 # Arcade changelog
 
+## 0.5.2
+
+- No lines between Pushy's tiles in Inner Breeze, and new layouts for levels 2, 4 and 5.
+
 ## 0.5.1
 
 - Pushy Classic in pixel art like the original, with Pushy seen from above.

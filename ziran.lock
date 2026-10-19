@@ -11,6 +11,14 @@
       "url": "https://github.com/raysan5/rini.git"
     },
     {
+      "commit": "791ed8df729f093aaedefd62085c8959f7776405",
+      "dependencies": {"apps": "p1633df9bffecb8c0", "kryon": "p5591841976c9360a"},
+      "id": "p0b435743b135e5db",
+      "name": "Pushy",
+      "ref": "master",
+      "url": "https://github.com/waozixyz/pushy.git"
+    },
+    {
       "commit": "a8b9f53118bf20546001522170050330aa07ce5d",
       "dependencies": {},
       "id": "p0b6b819cc9834342",
@@ -38,7 +46,7 @@
     },
     {
       "commit": "2eed1f26ae27b18d247ac5d94ef7730cad3c9dff",
-      "dependencies": {"crypto": "pf039d7a776333200", "kryon": "p78b1a305e68ad5e2"},
+      "dependencies": {"crypto": "pf039d7a776333200", "kryon": "p5591841976c9360a"},
       "id": "p1633df9bffecb8c0",
       "name": "Apps",
       "ref": "master",
@@ -46,7 +54,7 @@
     },
     {
       "commit": "1cb9df183089a77c8a16448a556186f30b261a98",
-      "dependencies": {"kryon": "p78b1a305e68ad5e2"},
+      "dependencies": {"kryon": "p5591841976c9360a"},
       "id": "p1b13dda539ed2a39",
       "name": "Kss",
       "ref": "master",
@@ -54,11 +62,19 @@
     },
     {
       "commit": "bad2caaa84ef3eae61e40c99bf572d2b060d0ca2",
-      "dependencies": {"kryon": "p78b1a305e68ad5e2"},
+      "dependencies": {"kryon": "p5591841976c9360a"},
       "id": "p20eb23d3e6db3711",
       "name": "Game2D",
       "ref": "master",
       "url": "https://github.com/kryonlabs/game2d.git"
+    },
+    {
+      "commit": "828688710f774bede41c28836d58f56e37b087b4",
+      "dependencies": {"raylib": "p5a77c9c35110e925"},
+      "id": "p5591841976c9360a",
+      "name": "kryon",
+      "ref": "master",
+      "url": "https://github.com/kryonlabs/kryon.git"
     },
     {
       "commit": "fafa2cea97d0cb379d832086ba45a989fa6f9c8e",
@@ -71,7 +87,7 @@
     },
     {
       "commit": "c18e8b49e7f076c4e85301751c07beceddd5071a",
-      "dependencies": {"curl": "p0b6b819cc9834342", "daochi_client": "pb64e76ded5e7220b", "game2d": "p20eb23d3e6db3711", "kryon": "p78b1a305e68ad5e2", "kss": "p1b13dda539ed2a39", "liboqs": "pfb3df7cb222b1bdc", "mingcute": "pe1027b9d16704793", "monocypher": "p0bd527640057f7d4", "oqs": "p7098ac9cd92f7e5f", "plot": "pe8e21a1f2b5ff52c", "qrcode": "p0dfa70137405b096", "rini": "p09fa77e94b0dfc6c", "sqlite": "pb395e35475c1ca45"},
+      "dependencies": {"curl": "p0b6b819cc9834342", "daochi_client": "pb64e76ded5e7220b", "game2d": "p20eb23d3e6db3711", "kryon": "p5591841976c9360a", "kss": "p1b13dda539ed2a39", "liboqs": "pfb3df7cb222b1bdc", "mingcute": "pe1027b9d16704793", "monocypher": "p0bd527640057f7d4", "oqs": "p7098ac9cd92f7e5f", "plot": "pe8e21a1f2b5ff52c", "qrcode": "p0dfa70137405b096", "rini": "p09fa77e94b0dfc6c", "sqlite": "pb395e35475c1ca45"},
       "id": "p5c0224a91af1f909",
       "name": "Inbe",
       "ref": "master",
@@ -84,14 +100,6 @@
       "name": "Oqs",
       "ref": "master",
       "url": "https://github.com/ziranlang/oqs.git"
-    },
-    {
-      "commit": "ab04f4db12ecaf7b243ce903378cadf9b2b77fda",
-      "dependencies": {"raylib": "p5a77c9c35110e925"},
-      "id": "p78b1a305e68ad5e2",
-      "name": "kryon",
-      "ref": "master",
-      "url": "https://github.com/kryonlabs/kryon.git"
     },
     {
       "commit": "b7defd99b3b4438b250ee9489036f1048e698ef9",
@@ -111,14 +119,6 @@
       "url": "https://github.com/ziranlang/daochi-client.git"
     },
     {
-      "commit": "d96c39f7439739563c0fecc84e1e99f7f9e2e34d",
-      "dependencies": {"apps": "p1633df9bffecb8c0", "kryon": "p78b1a305e68ad5e2"},
-      "id": "pc73bb8c47dec0a6e",
-      "name": "Pushy",
-      "ref": "master",
-      "url": "https://github.com/waozixyz/pushy.git"
-    },
-    {
       "commit": "9cc6872f75447c3a24c16764f9829d0f58751cb0",
       "dependencies": {},
       "id": "pe1027b9d16704793",
@@ -128,7 +128,7 @@
     },
     {
       "commit": "4b0e25bd2df86b54a8f5af3db48282bd41daab1a",
-      "dependencies": {"kryon": "p78b1a305e68ad5e2"},
+      "dependencies": {"kryon": "p5591841976c9360a"},
       "id": "pe8e21a1f2b5ff52c",
       "name": "plot",
       "ref": "master",
@@ -153,7 +153,7 @@
     }
   ],
   "root": {
-    "dependencies": {"apps": "p1633df9bffecb8c0", "inbe": "p5c0224a91af1f909", "kryon": "p78b1a305e68ad5e2", "pushy": "pc73bb8c47dec0a6e"},
+    "dependencies": {"apps": "p1633df9bffecb8c0", "inbe": "p5c0224a91af1f909", "kryon": "p5591841976c9360a", "pushy": "p0b435743b135e5db"},
     "name": "Arcade"
   },
   "toolchain": {
