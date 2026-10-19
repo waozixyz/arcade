@@ -19,6 +19,12 @@ Draw :: (session: Session) -> bool {
         if TestDriverKeyPressed(candidate) { key = candidate; break }
     }
     KeyboardSend(session, key)
+    // Text typed on the keyboard reaches the game's focused field.
+    codepoint := DesktopTypedCodepoint()
+    while codepoint != 0 {
+        unused TypedCodepointSend(session, codepoint)
+        codepoint = DesktopTypedCodepoint()
+    }
     viewport := DesktopViewport()
     pointer := TestDriverPointer(session, PollPointer())
     TreePointerUpdate(session, pointer)

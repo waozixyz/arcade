@@ -25,6 +25,8 @@
 #import "kryon/app_files"
 #import "kryon/app_protocol"
 #import "kryon/app_context_host"
+#import "kryon/key_input"
+#import "kryon/system_clipboard"
 #import "apps/host"
 #import "apps/tree"
 #import "apps/catalog"
@@ -402,6 +404,9 @@ CollectionOpenChild :: (id: string) -> bool {
     AppHostRoute(*collection_host)
 }
 
+collection_typed: [1024]u8;
+collection_pasted: [16384]u8;
+
 CollectionFrame :: (session: Session, viewport: Rectangle, key: s32, modifiers: s32) -> bool {
     runtime := AppHostActiveRuntime(*collection_host)
     if runtime == null { return false }
@@ -414,6 +419,16 @@ CollectionFrame :: (session: Session, viewport: Rectangle, key: s32, modifiers: 
     runtime.app.font = 16
     runtime.app.key = key
     runtime.app.modifiers = modifiers
+    // A focused text field in the game edits with what was typed this frame,
+    // as a native Kryon field does: text, editing keys and paste.
+    typed := TypedTextTake(session, collection_typed[:])
+    runtime.app.input = TextFieldInputFor(key, modifiers, typed)
+    runtime.app.area_input = TextAreaInputFor(key, modifiers, typed)
+    if runtime.app.input.paste {
+        pasted := SystemClipboardText(collection_pasted[:])
+        runtime.app.input.paste_text = pasted
+        runtime.app.area_input.paste_text = pasted
+    }
     if runtime.protocol == APPS_NODE_PROTOCOL {
         runtime.legacy.message = Node.AppMessage.{.locale = TextUntilNul(collection_host.locale[:]),
             .shared_status = Node.APP_SHARED_UNAVAILABLE, .time = UnixNow()}
