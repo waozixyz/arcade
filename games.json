@@ -5,11 +5,11 @@
       "manifest": "apps/chess/catalog.json"
     },
     {
-      "package": "self",
+      "package": "pushy",
       "manifest": "apps/pushy/catalog.json"
     },
     {
-      "package": "self",
+      "package": "pushy",
       "manifest": "apps/pushy/island/catalog.json"
     }
   ]

@@ -3,7 +3,7 @@
 // a copy of the pieces to draw, since a search moves the engine's pieces.
 #import "vec"
 #import, file "engine.zi";
-#import "inbe/node_app_types"
+#import "apps/node_types"
 host_api :: #system_library "host_api";
 // The account's private records of this app, synced between its devices.
 AppRecordHost :: (name: string) -> string #foreign host_api;

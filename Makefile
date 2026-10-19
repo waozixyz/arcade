@@ -14,7 +14,7 @@ BIN_DIR ?= $(HOME)/.local/bin
 LIB_DIR ?= $(HOME)/.local/lib/arcade
 DATA_DIR ?= $(if $(XDG_DATA_HOME),$(XDG_DATA_HOME),$(HOME)/.local/share)
 
-.PHONY: all build/arcade build/pushy source-map standalone-ui-test collection-ui-test games collection collection-test run test chess-engine-test chess-app-test pushy-engine-test pushy-ui-test ui-test inbe-ui-test compatibility-test install
+.PHONY: all build/arcade build/pushy source-map standalone-ui-test collection-ui-test games collection collection-test run test chess-engine-test chess-app-test ui-test inbe-ui-test compatibility-test install
 all: collection build/arcade build/pushy
 
 games: source-map
@@ -56,12 +56,6 @@ test: all
 	./build/arcade --list
 	sh tests/chess_engine_zi_test.sh '$(ZIRAN)'
 	sh tests/chess_app_test.sh '$(ZIRAN)'
-	$(ZIRAN) fmt --check apps/pushy/*.zi tests/pushy_engine_behavior.zi
-	python3 tests/pushy_levels_test.py
-	sh tests/pushy_engine_test.sh '$(ZIRAN)'
-	python3 tests/pushy_island_levels_test.py
-	python3 tests/pushy_island_assets_test.py
-	sh tests/pushy_island_engine_test.sh '$(ZIRAN)'
 	TOOLCHAIN_SOURCE='$(ZIRAN_ROOT)' APPS_SOURCE='$(APPS_SOURCE)' python3 tests/sound_test.py
 
 chess-engine-test:
@@ -69,14 +63,6 @@ chess-engine-test:
 
 chess-app-test: all
 	sh tests/chess_app_test.sh '$(ZIRAN)'
-
-pushy-engine-test:
-	sh tests/pushy_engine_test.sh '$(ZIRAN)'
-
-pushy-ui-test: all
-	env -u DISPLAY -u WAYLAND_DISPLAY -u XAUTHORITY -u DBUS_SESSION_BUS_ADDRESS \
-		-u SESSION_MANAGER -u GDK_DISPLAY YUE_DESKTOP_RECOVERY=0 SDL_AUDIODRIVER=dummy INBE_SOURCE='$(INBE_SOURCE)' \
-		timeout 180s xvfb-run -a -n 400 -s '-screen 0 1280x1000x24' python3 tests/pushy_ui_test.py
 
 ui-test: all
 	env -u DISPLAY -u WAYLAND_DISPLAY -u XAUTHORITY -u DBUS_SESSION_BUS_ADDRESS \
@@ -96,7 +82,7 @@ compatibility-test:
 standalone-ui-test: all
 	env -u DISPLAY -u WAYLAND_DISPLAY -u XAUTHORITY -u DBUS_SESSION_BUS_ADDRESS \
 		-u SESSION_MANAGER -u GDK_DISPLAY YUE_DESKTOP_RECOVERY=0 SDL_AUDIODRIVER=dummy \
-		timeout 240s xvfb-run -a -n 400 -s '-screen 0 1280x1000x24' python3 tests/pushy_standalone_ui_test.py --inbe-source '$(INBE_SOURCE)' --toolchain '$(ZIRAN_ROOT)'
+		timeout 240s xvfb-run -a -n 400 -s '-screen 0 1280x1000x24' python3 tests/pushy_standalone_ui_test.py --binary '$(CURDIR)/build/pushy' --inbe-source '$(INBE_SOURCE)'
 
 collection-ui-test: all
 	env -u DISPLAY -u WAYLAND_DISPLAY -u XAUTHORITY -u DBUS_SESSION_BUS_ADDRESS \

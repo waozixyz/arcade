@@ -3,16 +3,25 @@
 import json
 from pathlib import Path
 import re
+import subprocess
 
 ROOT = Path(__file__).resolve().parents[1]
+
+
+def package_root(name):
+    """Arcade's own games live here; others come from their packages."""
+    if name == 'self':
+        return ROOT
+    return Path(subprocess.check_output([str(ROOT / 'scripts/ziran.sh'), 'pkg', 'path', name],
+                                        cwd=ROOT, text=True).strip())
 
 
 def check():
     standard = json.loads((ROOT / 'standards/game-v1.json').read_text())
     ledger = json.loads((ROOT / 'apps/versions.json').read_text())
     for registration in json.loads((ROOT / 'games.json').read_text())['games']:
-        assert registration['package'] == 'self', 'Game source must be owned by Arcade'
-        game = json.loads((ROOT / registration['manifest']).read_text())
+        source = package_root(registration['package'])
+        game = json.loads((source / registration['manifest']).read_text())
         for field in ['contract_version', 'module_api', 'host_api']:
             assert game[field] == standard[field], f'{game["name"]}: incompatible {field}'
         component = ledger['node_apps'][game['name']]
@@ -20,16 +29,16 @@ def check():
         assert game['kind'] == 'game' and 'arcade' in game['harnesses']
         assert set(game['harnesses']) <= {'arcade', 'inbe'}
         assert game['save_schema'] == 1
-        assert (ROOT / game['source']).is_file() and (ROOT / game['preview']).is_file()
-        changelog = (ROOT / registration['manifest']).with_name('CHANGELOG.md').read_text()
+        assert (source / game['source']).is_file() and (source / game['preview']).is_file()
+        changelog = (source / registration['manifest']).with_name('CHANGELOG.md').read_text()
         version = re.search(r'^## \[(\d+\.\d+\.\d+)\] - \d{4}-\d{2}-\d{2}$', changelog, re.M)
         assert version and version[1] == component['version'], 'Run ./update_version.sh'
         assert component['sequence'] > 0
         locales = {}
-        for file in (ROOT / game['locales']).glob('*.txt'):
+        for file in (source / game['locales']).glob('*.txt'):
             locales[file.stem] = {match[1] for match in re.finditer(r'^\[([^\]]+)\]$', file.read_text(), re.M)}
         required = set()
-        for file in (ROOT / registration['manifest']).parent.glob('*.zi'):
+        for file in (source / registration['manifest']).parent.glob('*.zi'):
             required.update(re.findall(r'"(' + re.escape(game['locale_prefix']) + r'[a-z0-9_]+)"', file.read_text()))
         assert len(locales) >= 12
         for language, keys in locales.items():
@@ -39,4 +48,4 @@ def check():
 
 if __name__ == '__main__':
     check()
-    print('Game contract, owned source, translated text and independent version ledger passed')
+    print('Game contract, package sources, translated text and independent version ledger passed')

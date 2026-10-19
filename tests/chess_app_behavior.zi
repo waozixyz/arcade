@@ -14,9 +14,8 @@
 #import "button_props"
 #import "press_props"
 #import "scroll_props"
-#import "inbe/module_types"
-#import "inbe/node_app_types"
-#import "inbe/node_app_codec"
+#import "apps/node_types"
+#import "apps/node_codec"
 #import "translations"
 
 using HostValueKind;

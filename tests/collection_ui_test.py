@@ -107,8 +107,6 @@ def main():
             driver.wait(label="Your move")
             assert record.read_bytes() == saved, "The unchanged Chess record did not survive restart"
         with application(profile, "pushy", "--app", "arcade.pushy") as child:
-            driver.wait(label="Continue", role="button")
-            driver.press(label="Continue", role="button")
             driver.wait(label="Level 1 / 175")
             driver.wait(label="Pushy", role="button")
             capture(child, "pushy")

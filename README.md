@@ -36,10 +36,6 @@ vertical options menu can mark an app installed or favorite without deleting
 its saves. The local player does not offer node updates or OS actions it
 cannot perform. Inbe supplies its own account and package policy.
 
-Island includes all 175 original boards and names with the original layered
-sprites. Original animation timing/audio and complete campaign solution
-verification remain incomplete; it is not claimed to be an exact replica.
-
 ## One Chess game
 
 Chess remains an installable app in Inner Breeze, where it also fits thoughtful
@@ -106,7 +102,6 @@ filesystem access. `ARCADE_DATA` chooses a disposable profile for tests.
 ```sh
 make test
 make ui-test
-make pushy-ui-test
 make standalone-ui-test
 make collection-ui-test
 make inbe-ui-test INBE_BINARY=/absolute/path/to/intended/inbe
@@ -134,18 +129,11 @@ public Inbe 2.1.34 is API 11 and outside this game's supported range. The
 current dependency graph also includes local, unpublished Self source.
 Building or installing never publishes.
 
-## Pushy Classic
+## Pushy
 
-Pushy is Arcade's second game, with new graphics and the original 175
-numbered Classic layouts from Lernwerkstatt. Move with arrow keys, WASD or
-the on-screen arrows. Restart with R, open the illustrated guide with H,
-and throw a collected projectile with Space. The same position survives
-returning to the library or restarting Arcade.
-
-The set contains 174 puzzles and the original ENDE finale at 175. Winning
-automatically starts the next puzzle. Choosing a level starts it from the
-beginning; Continue resumes unfinished play or advances past a completed save.
-The two shadow puzzles, 165–166, use the original mirrored movement. Some later interactions still need comparison
-with the original game; complete layout coverage does not establish exact
-gameplay equivalence. See [Pushy research and limitations](docs/PUSHY.md).
-Pushy currently runs in Arcade; it does not change or require an Inbe release.
+[Pushy](https://github.com/waozixyz/pushy) has its own repository: its
+two editions, Classic and Island, their artwork, puzzles and tests live
+there. Arcade installs Pushy by default, like Chess, and builds it from that
+package. Opening Classic or Island goes straight to your newest unlocked
+level; Levels lets you replay any unlocked puzzle. Pushy also runs as its own
+desktop app.

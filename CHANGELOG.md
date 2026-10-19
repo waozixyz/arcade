@@ -1,5 +1,11 @@
 # Arcade changelog
 
+## 0.5.0
+
+- Pushy has new artwork and new puzzle layouts in both Classic and Island,
+  and every island has a new name.
+- Opening Pushy Classic or Island goes straight to your newest unlocked level.
+
 ## 0.4.0
 
 - Choose Pushy Classic or Pushy Island from Pushy, including the standalone desktop app.
@@ -11,7 +17,7 @@
 
 - Pushy automatically continues after a win and starts selected puzzles from the beginning.
 - Continue recovers saves left at a completed puzzle.
-- Pushy shadow puzzles and several original board interactions now work correctly.
+- Pushy shadow puzzles and several board interactions now work correctly.
 
 ## 0.3.0
 
@@ -32,11 +38,11 @@
 
 ## 0.1.2
 
-- Open Pushy from the game library with the original Classic layouts, new
-  graphics, keyboard and on-screen controls, restart, and an object guide.
+- Open Pushy from the game library with keyboard and on-screen controls,
+  restart, and an object guide.
 - Continue the same Pushy position after leaving the game or restarting.
 - The two shadow puzzles at 165–166 can be viewed but remain paused while
-  their original rules are being verified.
+  their rules are being verified.
 
 ## 0.1.1
 

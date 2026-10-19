@@ -4,7 +4,7 @@
 #import "std/timer_linux"
 #import "games"
 #import "catalog"
-#import "inbe/node_app_types"
+#import "apps/node_types"
 #import "platform"
 
 open_game: s32 = -1;

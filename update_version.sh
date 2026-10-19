@@ -17,8 +17,11 @@ if ledger_path.exists():
     registrations = json.loads(Path('games.json').read_text())['games']
     changelogs = {}
     for registration in registrations:
-        game = json.loads(Path(registration['manifest']).read_text())
-        changelogs[game['name']] = Path(registration['manifest']).parent / 'CHANGELOG.md'
+        # Games from other packages (Pushy) keep their changelog there.
+        source = Path('.') if registration['package'] == 'self' else Path(subprocess.check_output(
+            ['scripts/ziran.sh', 'pkg', 'path', registration['package']], text=True).strip())
+        game = json.loads((source / registration['manifest']).read_text())
+        changelogs[game['name']] = (source / registration['manifest']).parent / 'CHANGELOG.md'
         if game['name'] not in ledger['node_apps']:
             entry = re.search(r'^## \[(\d+\.\d+\.\d+)\] - \d{4}-\d{2}-\d{2}$',
                               changelogs[game['name']].read_text(), re.M)

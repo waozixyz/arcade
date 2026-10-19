@@ -26,7 +26,7 @@
 #import, file "game.zi";
 #import, file "notation.zi";
 #import, file "import.zi";
-#import "inbe/node_app_types"
+#import "apps/node_types"
 host_api :: #system_library "host_api";
 ReadAppUiHost :: () -> AppUiFrame #foreign host_api;
 AppLocaleHost :: (key: string) -> string #foreign host_api;

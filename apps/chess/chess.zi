@@ -1,8 +1,7 @@
 // Chess: play the computer at three levels, or a friend from the account's
 // friend list. It is one of the apps the node offers; the host runs it
 // through the generic app interface and never needs code of its own for it.
-#import "inbe/module_types"
-#import "inbe/node_app_types"
+#import "apps/node_types"
 #import, file "chess_view.zi";
 host_api :: #system_library "host_api";
 ReadAppHost :: () -> AppMessage #foreign host_api;

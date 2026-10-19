@@ -5,6 +5,7 @@ import os
 import json
 import shutil
 import subprocess
+import tomllib
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -16,10 +17,19 @@ def build(ziran, lock_flags, module_map=None, compiler_dir=None):
         if module_map:
             if name == 'ziran':
                 return compiler_dir.parent.parent
-            identity = next(row.split('\t')[3] for row in rows
-                            if row.startswith('D\troot\t' + name + '/'))
-            return Path(next(row.split('\t')[2] for row in rows
-                             if row.startswith('P\t' + identity + '\t')))
+            identity = next((row.split('\t')[3] for row in rows
+                             if row.startswith('D\troot\t' + name + '/')), None)
+            if identity:
+                return Path(next(row.split('\t')[2] for row in rows
+                                 if row.startswith('P\t' + identity + '\t')))
+            # Packages without exports, such as Pushy, are found by name.
+            for row in rows:
+                fields = row.split('\t')
+                manifest = Path(fields[2]) / 'ziran.toml' if fields[0] == 'P' else None
+                if manifest and manifest.exists() and \
+                        tomllib.loads(manifest.read_text())['package']['name'].lower() == name:
+                    return Path(fields[2])
+            raise ValueError('Package is absent from the source map: ' + name)
         return Path(subprocess.check_output(
             [ziran, "pkg", "path", name, *lock_flags], cwd=ROOT, text=True).strip())
 
@@ -85,7 +95,7 @@ def build(ziran, lock_flags, module_map=None, compiler_dir=None):
             "--module-path", "kryon=" + str(kryon / "src/backend"),
             "--module-path", "std=" + str(toolchain / "std"),
             "--module-path", str(toolchain / "std"),
-            "--module-path", "inbe=" + str(package("inbe") / "src/cells"),
+            "--module-path", "apps=" + str(package("apps") / "src"),
             "--define", "KRYON_HOSTED_UI", "--asset-dir", "assets=" + str(staged / "assets"),
             "--entry", descriptor["entry"], "-o", str(bundle),
             str(source / descriptor["source"])], cwd=ROOT, env=env, check=True)

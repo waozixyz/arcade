@@ -12,9 +12,8 @@
 #import "kryon/widget_host"
 #import "kryon/app_files"
 #import "kryon/tree_input"
-#import "inbe/node_app_types"
-#import "inbe/node_app_codec"
-#import "inbe/module_types"
+#import "apps/node_types"
+#import "apps/node_codec"
 #import "platform"
 #import "catalog"
 
