@@ -61,12 +61,12 @@ wrapper uses the resolved compiler for both bundles and the host runtime.
 Local development uses ignored `ziran.local.toml` overrides pointing to the
 real source repositories. Without that file, package resolution uses the lock.
 
-Apps currently has no public dependency source. Local integration builds need
-the reviewed Apps checkout, its exact controller digest, and retained compiler:
+Apps is an ordinary dependency. `make` builds the shared Apps controller
+from the locked Apps package and accepts it only when its digest matches the
+reviewed one in `apps-controller.sha256`:
 
 ```sh
-make APPS_SOURCE=/path/to/apps TOOLCHAIN_SOURCE=/path/to/retained/toolchain \
-  APPS_SHA256="$(cat /path/to/reviewed/apps.sha256)"
+make
 ./build/arcade
 ./build/arcade --app chess
 ./build/arcade --app pushy
@@ -74,10 +74,7 @@ make APPS_SOURCE=/path/to/apps TOOLCHAIN_SOURCE=/path/to/retained/toolchain \
 ./build/pushy
 ```
 
-Pass the same handoff variables to `make test`, `make install` and the UI
-targets. `make install` installs both commands and desktop entries. This local
-source mapping leaves production manifests and locks unchanged and is not a
-published dependency graph.
+`make install` installs both commands and desktop entries.
 
 Desktop builds need SDL2, Cairo, FreeType, Fontconfig and Pango development
 packages, a C compiler, Python 3 and Ziran. `make install` installs the command

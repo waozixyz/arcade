@@ -4,9 +4,11 @@ CC ?= cc
 LOCK_FLAGS := $(if $(wildcard ziran.local.toml),,--locked)
 ZIRAN_ROOT = $(if $(TOOLCHAIN_SOURCE),$(TOOLCHAIN_SOURCE),$(shell $(ZIRAN) pkg path ziran $(LOCK_FLAGS)))
 KRYON_DIR = $(shell $(ZIRAN) pkg path kryon $(LOCK_FLAGS))
-APPS_BUNDLE ?= $(APPS_SOURCE)/build/ui/apps.zib
-HANDOFF_MAP := $(abspath build/collection-source-check/module-map.tsv)
-HANDOFF_FLAGS = --module-map $(HANDOFF_MAP) --compiler-dir $(ZIRAN_ROOT)/build/bin
+# The shared Apps controller is built from the locked Apps package. Arcade
+# trusts only the reviewed digest committed in apps-controller.sha256.
+APPS_DIR = $(shell $(ZIRAN) pkg path apps $(LOCK_FLAGS))
+APPS_BUNDLE := build/apps-ui/apps.zib
+APPS_SHA256 := $(shell cat apps-controller.sha256)
 INBE_SOURCE ?= $(shell $(ZIRAN) pkg path inbe $(LOCK_FLAGS))
 RUNTIME_SOURCES = $(wildcard $(ZIRAN_ROOT)/cmd/zir/*.[ch] $(ZIRAN_ROOT)/include/*.h $(ZIRAN_ROOT)/cmd/compiler*.zi)
 PROJECT := --project $(LOCK_FLAGS)
@@ -14,21 +16,21 @@ BIN_DIR ?= $(HOME)/.local/bin
 LIB_DIR ?= $(HOME)/.local/lib/arcade
 DATA_DIR ?= $(if $(XDG_DATA_HOME),$(XDG_DATA_HOME),$(HOME)/.local/share)
 
-.PHONY: all build/arcade build/pushy source-map standalone-ui-test collection-ui-test games collection collection-test run test chess-engine-test chess-app-test ui-test inbe-ui-test compatibility-test install
+.PHONY: all build/arcade build/pushy standalone-ui-test collection-ui-test games collection collection-test run test chess-engine-test chess-app-test ui-test inbe-ui-test compatibility-test install
 all: collection build/arcade build/pushy
 
-games: source-map
+games:
 	python3 scripts/check-games.py
-	python3 scripts/build-games.py --ziran '$(ZIRAN)' $(LOCK_FLAGS) $(HANDOFF_FLAGS)
+	python3 scripts/build-games.py --ziran '$(ZIRAN)' $(LOCK_FLAGS)
 
-# Apps currently has no public source pin. This explicit handoff mode never
-# edits production locks or treats a locally mapped graph as a release graph.
-source-map:
-	@test -n "$(APPS_SOURCE)" -a -n "$(APPS_SHA256)" || { echo 'Set APPS_SOURCE and the reviewed APPS_SHA256'; exit 2; }
-	python3 scripts/local-apps-map.py --consumer '$(CURDIR)' --apps '$(APPS_SOURCE)' --output '$(HANDOFF_MAP)'
+$(APPS_BUNDLE): ziran.lock apps-controller.sha256
+	$(ZIRAN) version > /dev/null
+	env -u DISPLAY -u WAYLAND_DISPLAY \
+		PATH="$(if $(wildcard $(ZIRAN_ROOT)/build/bin/ziran),$(ZIRAN_ROOT)/build/bin,$(CURDIR)/build/toolchain/bin):$$PATH" \
+		python3 '$(APPS_DIR)/scripts/build-ui.py' --output '$(abspath $(dir $@))'
 
-collection: games
-	python3 scripts/build-collection.py --ziran '$(ZIRAN)' $(LOCK_FLAGS) $(HANDOFF_FLAGS) \
+collection: games $(APPS_BUNDLE)
+	python3 scripts/build-collection.py --ziran '$(ZIRAN)' $(LOCK_FLAGS) \
 		--apps-bundle '$(APPS_BUNDLE)' --apps-sha256 '$(APPS_SHA256)'
 
 collection-test:
@@ -39,11 +41,11 @@ src/catalog.zi: games
 build/ziran/libziran.a: ziran.lock $(RUNTIME_SOURCES)
 	$(MAKE) -C '$(ZIRAN_ROOT)' BUILD_DIR='$(abspath build/ziran)' '$(abspath $@)'
 
-build/arcade: $(wildcard src/*.zi) src/catalog.zi ziran.toml ziran.lock Makefile scripts/build-desktop.py scripts/local-apps-map.py build/ziran/libziran.a
-	python3 scripts/build-desktop.py --apps-source '$(APPS_SOURCE)' --toolchain '$(ZIRAN_ROOT)' --output '$@'
+build/arcade: $(wildcard src/*.zi) src/catalog.zi ziran.toml ziran.lock Makefile scripts/build-desktop.py build/ziran/libziran.a
+	python3 scripts/build-desktop.py --output '$@'
 
-build/pushy: $(wildcard src/*.zi) src/catalog.zi ziran.toml ziran.lock Makefile scripts/build-desktop.py scripts/local-apps-map.py build/ziran/libziran.a
-	python3 scripts/build-desktop.py --apps-source '$(APPS_SOURCE)' --toolchain '$(ZIRAN_ROOT)' --standalone-pushy --output '$@'
+build/pushy: $(wildcard src/*.zi) src/catalog.zi ziran.toml ziran.lock Makefile scripts/build-desktop.py build/ziran/libziran.a
+	python3 scripts/build-desktop.py --standalone-pushy --output '$@'
 
 run: all
 	./build/arcade
@@ -56,7 +58,7 @@ test: all
 	./build/arcade --list
 	sh tests/chess_engine_zi_test.sh '$(ZIRAN)'
 	sh tests/chess_app_test.sh '$(ZIRAN)'
-	TOOLCHAIN_SOURCE='$(ZIRAN_ROOT)' APPS_SOURCE='$(APPS_SOURCE)' python3 tests/sound_test.py
+	python3 tests/sound_test.py
 
 chess-engine-test:
 	sh tests/chess_engine_zi_test.sh '$(ZIRAN)'

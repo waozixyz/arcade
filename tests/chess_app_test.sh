@@ -6,7 +6,7 @@ set -eu
 # a fake node that keeps shared records as Daochi's shared lists do.
 root=$(CDPATH= cd -- "$(dirname -- "$0")/.." && pwd)
 ziran=${1:-"$root/scripts/ziran.sh"}
-inbe=$("$ziran" pkg path inbe)
+apps=$("$ziran" pkg path apps)
 kryon=$("$ziran" pkg path kryon)
 toolchain=$("$ziran" pkg path ziran)
 work=${CHESS_APP_TEST_DIR:-"$root/build/chess-app-test"}
@@ -15,7 +15,7 @@ rm -rf "$work"
 mkdir -p "$work/c"
 cp "$root/build/games/chess.zib" "$work/chess.zib"
 "$ziran" build --target=c --no-main --entry chess_app_behavior:main --root "$root/tests" \
-    --module-path "$root/src" --module-path "inbe=$inbe/src/cells" \
+    --module-path "$root/src" --module-path "apps=$apps/src" \
     --module-path "$root/build/game-generated/chess" \
     --module-path "$kryon/src/backend" --module-path "$kryon/src/ui" \
     --module-path "$toolchain/std" -o "$work/c" "$root/tests/chess_app_behavior.zi"

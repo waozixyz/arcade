@@ -92,20 +92,11 @@ def main():
     parser.add_argument("--locked", action="store_true")
     parser.add_argument("--apps-bundle", type=Path, required=True)
     parser.add_argument("--apps-sha256", required=True)
-    parser.add_argument("--module-map", type=Path,
-                        help="Explicit local source handoff import map; never a release lock")
-    parser.add_argument("--compiler-dir", type=Path,
-                        help="Exact retained compiler directory for a local source handoff")
     args = parser.parse_args()
-    if bool(args.module_map) != bool(args.compiler_dir):
-        parser.error("--module-map and --compiler-dir must be supplied together")
     output = ROOT / "build/collection"
     catalog = stage(ROOT, args.apps_bundle, args.apps_sha256, output)
     command = [args.ziran, "bundle", "--project", *(["--locked"] if args.locked else [])]
     env = os.environ.copy()
-    if args.module_map:
-        command = [str(args.compiler_dir / "zi2zib"), "bundle"]
-        env["ZIRAN_PACKAGE_MAP"] = str(args.module_map.resolve())
     def bundle(source, entry, assets, target):
         subprocess.run([*command, "--root", str(ROOT / "src"), "--entry", entry,
             "--asset-dir", "assets=" + str(assets), "-o", str(target),
@@ -138,7 +129,7 @@ def main():
     bundle("pushy_collection.zi", "pushy_collection:Main", assets, ROOT / "build/pushy.zib")
     pushy_metadata = dict(id="arcade.pushy-player", version=(ROOT / "VERSION").read_text().strip(),
         sha256=digest(ROOT / "build/pushy.zib"), apps_sha256=args.apps_sha256,
-        children=editions, source_mode="local-handoff" if args.module_map else "project")
+        children=editions, source_mode="project")
     (ROOT / "build/pushy.json").write_text(json.dumps(pushy_metadata, indent=2) + "\n")
     parent_entry = dict(id="arcade.pushy-player", title="Pushy",
         bundle="assets/arcade/games/pushy-player.zib", protocol="collection/1",
@@ -157,7 +148,7 @@ def main():
     receipt = dict(id=COLLECTION_ID, version=(ROOT / "VERSION").read_text().strip(),
                    sha256=digest(ROOT / "build/arcade.zib"),
                    apps_sha256=args.apps_sha256, children=catalog["children"],
-                   source_mode="local-handoff" if args.module_map else "project")
+                   source_mode="project")
     (output / "receipt.json").write_text(json.dumps(receipt, indent=2) + "\n")
     (ROOT / "build/arcade.json").write_text(json.dumps(receipt, indent=2) + "\n")
     print("Arcade collection built with unchanged game bundles and verified Apps controller")

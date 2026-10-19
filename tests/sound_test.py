@@ -3,7 +3,6 @@
 SDL's dummy driver accepts audio without a device, so this never sounds on
 the desktop. The fixture tones are generated here, not taken from a game.
 """
-from importlib.machinery import SourceFileLoader
 import math
 import os
 from pathlib import Path
@@ -18,10 +17,9 @@ WORK = ROOT / 'build/sound-test'
 
 
 def main():
-    toolchain = os.environ.get('TOOLCHAIN_SOURCE')
-    apps = os.environ.get('APPS_SOURCE')
-    if not toolchain or not apps:
-        raise SystemExit('Set TOOLCHAIN_SOURCE and APPS_SOURCE as for the Arcade build')
+    ziran = str(ROOT / 'scripts/ziran.sh')
+    lock = [] if (ROOT / 'ziran.local.toml').exists() else ['--locked']
+    toolchain = subprocess.check_output([ziran, 'pkg', 'path', 'ziran', *lock], cwd=ROOT, text=True).strip()
     WORK.mkdir(parents=True, exist_ok=True)
     pcm = WORK / 'tone.wav'
     with wave.open(str(pcm), 'wb') as tone:
@@ -32,17 +30,12 @@ def main():
     adpcm = WORK / 'tone-adpcm.wav'
     subprocess.run(['ffmpeg', '-loglevel', 'error', '-y', '-i', str(pcm), '-ar', '44100', '-ac', '1',
                     '-c:a', 'adpcm_ima_wav', str(adpcm)], check=True)
-    module_map = WORK / 'module-map.tsv'
-    helper = SourceFileLoader('apps_map', str(ROOT / 'scripts/local-apps-map.py')).load_module()
-    helper.build(ROOT, Path(apps).resolve(), module_map)
-    with module_map.open('a') as stream:
-        stream.write('M\troot\tsound_behavior\t' + str(ROOT / 'tests/sound_behavior.zi') + '\n')
     generated = WORK / 'c'
     if generated.exists():
         shutil.rmtree(generated)
-    subprocess.run([str(Path(toolchain) / 'build/bin/zi2c'), '--no-main', '--root', str(ROOT),
+    subprocess.run([ziran, 'build', '--project', *lock, '--target=c', '--no-main',
                     '--entry', 'sound_behavior:Check', '-o', str(generated), 'tests/sound_behavior.zi'],
-                   cwd=ROOT, env=os.environ | {'ZIRAN_PACKAGE_MAP': str(module_map)}, check=True)
+                   cwd=ROOT, check=True)
     (generated / 'main.c').write_text('#include "sound_behavior.h"\nint main(void) { return Check(); }\n')
     libraries = subprocess.check_output(['pkg-config', '--libs', 'sdl2'], text=True).split()
     subprocess.run([os.environ.get('CC', 'cc'), '-std=c11', '-O2', '-I' + str(Path(toolchain) / 'include'),

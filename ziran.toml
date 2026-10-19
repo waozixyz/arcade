@@ -1,11 +1,11 @@
 [package]
 name = "Arcade"
 entry = "src/desktop.zi"
-module_roots = ["src"]
+module_roots = ["src", "apps", "tests"]
 
 [toolchain]
 git = "https://github.com/ziranlang/ziran.git"
-ref = "28c331e3a4095a45388fecdff44698aae05ebed5"
+ref = "master"
 
 [install]
 bin = "arcade"
@@ -14,6 +14,11 @@ bin = "arcade"
 git = "https://github.com/kryonlabs/kryon.git"
 ref = "master"
 
+[dependencies.apps]
+git = "https://github.com/waozixyz/apps.git"
+ref = "master"
+
+# Release and compatibility tooling runs Inner Breeze's publisher and host checks.
 [dependencies.inbe]
 git = "https://github.com/waozixyz/inbe.git"
 ref = "master"
