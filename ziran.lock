@@ -86,20 +86,20 @@
       "url": "https://github.com/waozixyz/inbe.git"
     },
     {
-      "commit": "605f5c6999e6a4af7194cc40ba632361756593b6",
-      "dependencies": {"apps": "p1633df9bffecb8c0", "kryon": "p5591841976c9360a"},
-      "id": "p6258f030e2a8bbcf",
-      "name": "Pushy",
-      "ref": "master",
-      "url": "https://github.com/waozixyz/pushy.git"
-    },
-    {
       "commit": "22d2ddbdc236796953c905a05a2cebf5ab1b4ff3",
       "dependencies": {"liboqs": "pfb3df7cb222b1bdc"},
       "id": "p7098ac9cd92f7e5f",
       "name": "Oqs",
       "ref": "master",
       "url": "https://github.com/ziranlang/oqs.git"
+    },
+    {
+      "commit": "45c2e619f8dc21b641a50f7035b9243bddf2193f",
+      "dependencies": {"apps": "p1633df9bffecb8c0", "kryon": "p5591841976c9360a"},
+      "id": "pabbfe8e4107c8fe5",
+      "name": "Pushy",
+      "ref": "master",
+      "url": "https://github.com/waozixyz/pushy.git"
     },
     {
       "commit": "b7defd99b3b4438b250ee9489036f1048e698ef9",
@@ -153,7 +153,7 @@
     }
   ],
   "root": {
-    "dependencies": {"apps": "p1633df9bffecb8c0", "inbe": "p5c0224a91af1f909", "kryon": "p5591841976c9360a", "pushy": "p6258f030e2a8bbcf"},
+    "dependencies": {"apps": "p1633df9bffecb8c0", "inbe": "p5c0224a91af1f909", "kryon": "p5591841976c9360a", "pushy": "pabbfe8e4107c8fe5"},
     "name": "Arcade"
   },
   "toolchain": {
