@@ -1,5 +1,12 @@
 # Arcade changelog
 
+## 0.5.1
+
+- Pushy Classic in pixel art like the original, with Pushy seen from above.
+- Soft sound effects in Pushy on desktop.
+- Restart always restarts the puzzle you see; no move counters.
+- Arcade opens in Inner Breeze again and shows a gamepad icon.
+
 ## 0.5.0
 
 - Pushy has new artwork and new puzzle layouts in both Classic and Island,

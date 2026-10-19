@@ -13,22 +13,22 @@
     "pushy": {
       "id": "arcade.pushy",
       "title": "Pushy",
-      "version": "0.4.0",
-      "sequence": 5,
+      "version": "0.5.0",
+      "sequence": 6,
       "host_api": 12
     },
     "pushy-island": {
       "id": "arcade.pushy-island",
       "title": "Pushy Island",
-      "version": "0.2.0",
-      "sequence": 2,
+      "version": "0.3.0",
+      "sequence": 3,
       "host_api": 12
     },
     "arcade": {
       "id": "inbe.arcade",
       "title": "Arcade",
-      "version": "0.5.0",
-      "sequence": 1,
+      "version": "0.5.1",
+      "sequence": 2,
       "host_api": 18
     }
   }
