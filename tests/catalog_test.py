@@ -13,7 +13,8 @@ inbe = Path(os.environ['INBE_SOURCE']) if 'INBE_SOURCE' in os.environ else Path(
 catalog = json.loads((ROOT / "build/catalog.json").read_text())["games"]
 chess = next(game for game in catalog if game["name"] == "chess")
 assert chess["id"] == "inbe.chess"
-assert "chess" not in json.loads((inbe / "apps/versions.json").read_text())["node_apps"]
+# Inbe releases before its node apps have no node_apps ledger at all.
+assert "chess" not in json.loads((inbe / "apps/versions.json").read_text()).get("node_apps", {})
 assert set(chess["harnesses"]) == {"arcade", "inbe"}
 assert chess["kind"] == "game"
 assert (ROOT / "apps/chess/engine.zi").is_file(), "Arcade must own the game"

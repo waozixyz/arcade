@@ -1,4 +1,4 @@
-"""Exercise the existing signed publisher with Arcade-owned inputs, offline."""
+"""Exercise the Apps package's signed publisher with Arcade-owned inputs, offline."""
 from hashlib import sha256
 import importlib.util
 import json
@@ -10,9 +10,9 @@ from cryptography.hazmat.primitives import serialization
 from cryptography.hazmat.primitives.asymmetric.ed25519 import Ed25519PrivateKey
 
 ROOT = Path(__file__).resolve().parents[1]
-inbe = Path(subprocess.check_output([str(ROOT / 'scripts/ziran.sh'), 'pkg', 'path', 'inbe'],
+apps = Path(subprocess.check_output([str(ROOT / 'scripts/ziran.sh'), 'pkg', 'path', 'apps'],
                                    cwd=ROOT, text=True).strip())
-spec = importlib.util.spec_from_file_location('publisher', inbe / 'scripts/package-release.py')
+spec = importlib.util.spec_from_file_location('publisher', apps / 'scripts/node_release.py')
 publisher = importlib.util.module_from_spec(spec)
 spec.loader.exec_module(publisher)
 
@@ -43,8 +43,9 @@ with tempfile.TemporaryDirectory(prefix='arcade-publisher-') as directory:
     assert value['app_id'] == 'inbe.chess'
     assert value['artifacts'][0]['sha256'] == sha256((ROOT / 'build/games/chess.zib').read_bytes()).hexdigest()
     key.public_key().verify(bytes.fromhex(value['signature']), publisher.signing_message(value))
-    entries = {str(path.relative_to(store)): path.read_bytes()
-               for path in store.rglob('*') if path.is_file() and path.name != '.publish.lock'}
+    # The upload carries the release files; the node writes its own history.
+    entries = {str(path.relative_to(store)): path.read_bytes() for path in store.rglob('*')
+               if path.is_file() and path.name not in ('.publish.lock', 'history-v2.json')}
     remote = work / 'receiver'
     publisher.import_node_app(entries, remote, json.loads(pins.read_text()), 'inbe.chess')
     assert json.loads((remote / 'inbe.chess/latest-v2.json').read_bytes()) == value

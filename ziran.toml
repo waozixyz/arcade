@@ -18,7 +18,7 @@ ref = "master"
 git = "https://github.com/waozixyz/apps.git"
 ref = "master"
 
-# Release and compatibility tooling runs Inner Breeze's publisher and host checks.
+# Compatibility tooling runs Inner Breeze's host checks; releases check its publisher pins.
 [dependencies.inbe]
 git = "https://github.com/waozixyz/inbe.git"
 ref = "master"

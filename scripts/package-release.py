@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Release Arcade-owned games through the existing signed Daochi publisher."""
+"""Release Arcade-owned games through the Apps package's signed Daochi publisher."""
 from pathlib import Path
 from hashlib import sha256
 import json
@@ -23,12 +23,16 @@ if __name__ == '__main__':
         if not valid:
             raise SystemExit('Node publication requires this exact Chess bundle to pass Arcade, intended Inbe and oldest supported Inbe checks')
     flags = [] if (ROOT / 'ziran.local.toml').exists() else ['--locked']
-    inbe = Path(subprocess.check_output(
-        [str(ROOT / 'scripts/ziran.sh'), 'pkg', 'path', 'inbe', *flags],
-        cwd=ROOT, text=True).strip())
-    # The publisher retains its signed IDs, release sequence checks, pinned
-    # keys and receiver. Source and build outputs belong to Arcade.
-    command = [sys.executable, str(inbe / 'scripts/package-release.py'),
+
+    def package(name):
+        return Path(subprocess.check_output(
+            [str(ROOT / 'scripts/ziran.sh'), 'pkg', 'path', name, *flags],
+            cwd=ROOT, text=True).strip())
+    # The publisher retains its signed IDs, release sequence checks and
+    # receiver; released Inbe's pins name the key that may sign node apps.
+    # Source and build outputs belong to Arcade.
+    command = [sys.executable, str(package('apps') / 'scripts/node_release.py'),
                '--node-app', 'chess', '--app-ledger', str(ROOT / 'apps/versions.json'),
-               '--bundle-directory', str(ROOT / 'build/games'), *sys.argv[1:]]
+               '--bundle-directory', str(ROOT / 'build/games'),
+               '--publishers', str(package('inbe') / 'apps/publishers.json'), *sys.argv[1:]]
     raise SystemExit(subprocess.run(command, cwd=ROOT).returncode)

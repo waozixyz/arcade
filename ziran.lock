@@ -28,14 +28,6 @@
       "url": "https://github.com/LoupVaillant/Monocypher.git"
     },
     {
-      "commit": "c174c4c9924fa945fe2c7dfbbe2662f3b879cbea",
-      "dependencies": {"crypto": "p7a547cc31d71f0e5", "kryon": "pe36a130dad1424fc"},
-      "id": "p41f45fa3517a0d81",
-      "name": "Apps",
-      "ref": "master",
-      "url": "https://github.com/waozixyz/apps.git"
-    },
-    {
       "commit": "5cc7677b290f0448462410f7c7e85f518664b943",
       "dependencies": {"liboqs": "pfb3df7cb222b1bdc"},
       "id": "p55635fc8976895a9",
@@ -101,6 +93,14 @@
       "url": "https://github.com/kryonlabs/game2d.git"
     },
     {
+      "commit": "6b555bedf0a0337499b60f0962f52b22455b7a71",
+      "dependencies": {"crypto": "p7a547cc31d71f0e5", "kryon": "pe36a130dad1424fc"},
+      "id": "pc7c8c9d507d309e0",
+      "name": "Apps",
+      "ref": "master",
+      "url": "https://github.com/waozixyz/apps.git"
+    },
+    {
       "commit": "9ef1a3a130450d603abd029772422abd40cfcde0",
       "dependencies": {},
       "id": "pd4bcd11b7d623073",
@@ -145,7 +145,7 @@
     }
   ],
   "root": {
-    "dependencies": {"apps": "p41f45fa3517a0d81", "inbe": "p83febc3771491985", "kryon": "pe36a130dad1424fc"},
+    "dependencies": {"apps": "pc7c8c9d507d309e0", "inbe": "p83febc3771491985", "kryon": "pe36a130dad1424fc"},
     "name": "Arcade"
   },
   "toolchain": {

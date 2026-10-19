@@ -57,8 +57,9 @@ Chess's numeric changelog and `apps/versions.json` live in Arcade. Run
 `./update_version.sh` after adding a release entry; it advances the game
 version and sequence together. No release tags are created manually.
 
-`scripts/package-release.py` invokes the existing signed Daochi publisher
-with Arcade's ledger and bundle directory. It preserves the existing
+`scripts/package-release.py` invokes the Apps package's signed Daochi
+publisher, `scripts/node_release.py`, with Arcade's ledger and bundle
+directory and the publisher pins released Inbe ships. It preserves the existing
 publisher key, `inbe.chess` identity, immutable payloads, increasing release
 sequence and node receiver. No second update protocol is introduced.
 
