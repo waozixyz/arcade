@@ -26,8 +26,10 @@ def build(ziran, lock_flags):
         if not name.isascii() or not name.replace("-", "").isalnum():
             raise ValueError("Invalid game name")
         staged = ROOT / "build/game-assets" / name
+        # Start empty: files a game no longer has must not reach its bundle.
+        shutil.rmtree(staged, ignore_errors=True)
         resources = staged / "assets" / name
-        resources.mkdir(parents=True, exist_ok=True)
+        resources.mkdir(parents=True)
         shutil.copytree(source / descriptor["assets"], resources, dirs_exist_ok=True)
         shutil.copyfile(source / registration["manifest"], resources / "catalog.json")
         locales = resources / "locales"
@@ -61,7 +63,8 @@ def build(ziran, lock_flags):
         bundle.parent.mkdir(parents=True, exist_ok=True)
         subprocess.run([
             ziran, "bundle", "--root", str(source),
-            "--module-path", str(source / "src"),
+            # Game packages without a src folder (Pushy) keep sources beside their catalogs.
+            *(["--module-path", str(source / "src")] if (source / "src").is_dir() else []),
             "--module-path", str(generated),
             "--module-path", str(kryon / "src/ui"),
             "--module-path", "kryon=" + str(kryon / "src/ui"),

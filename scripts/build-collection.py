@@ -33,9 +33,10 @@ def stage(root, controller, expected_controller_digest, output):
     children, copies, identities = [], [], set()
     total = len(controller_bytes)
     for registration in registrations:
-        if registration["package"] != "self":
-            raise ValueError("Arcade must own each registered game")
-        manifest = root / registration["manifest"]
+        # Arcade's own games live here; Pushy comes from its package.
+        source = root if registration["package"] == "self" else Path(subprocess.check_output(
+            [str(root / "scripts/ziran.sh"), "pkg", "path", registration["package"]], cwd=root, text=True).strip())
+        manifest = source / registration["manifest"]
         game = json.loads(manifest.read_text())
         name, identifier = game["name"], game["id"]
         if not re.fullmatch(r"[a-z0-9][a-z0-9-]*", name):

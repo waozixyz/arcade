@@ -18,6 +18,7 @@ cp "$root/build/games/chess.zib" "$work/chess.zib"
     --module-path "$root/src" --module-path "apps=$apps/src" \
     --module-path "$root/build/game-generated/chess" \
     --module-path "$kryon/src/backend" --module-path "$kryon/src/ui" \
+    --module-path "kryon=$kryon/src/ui" --module-path "kryon=$kryon/src/backend" \
     --module-path "$toolchain/std" -o "$work/c" "$root/tests/chess_app_behavior.zi"
 # Modules imported by file keep their directories in the generated C.
 includes=$(find "$work/c" -type d -printf ' -iquote %p')

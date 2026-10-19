@@ -1,6 +1,9 @@
 #import "std/c_string"
 #import "std/byte_text_linux"
 #import "std/vec"
+#if #defined(ANDROID_BUILD) {
+    #import "kryon/android_jni"
+}
 
 libc :: #system_library "libc";
 GetEnvironment :: (key: *u8) -> *u8 #foreign libc "getenv";
@@ -35,6 +38,16 @@ ExecutableDirectory :: () -> string {
 }
 
 DataDirectory :: () -> string {
+    // Android keeps saves directly in the app's private files folder,
+    // which Android creates for the app.
+    #if #defined(ANDROID_BUILD) {
+        resolved: [4096]u8
+        private := AndroidPrivateDataPath(resolved[:])
+        if private == "" { return "" }
+        result: Vec(u8)
+        BuilderPrint(*result, "%", private)
+        return BuilderFinish(result)
+    }
     exact := EnvironmentText("ARCADE_DATA")
     if exact != "" { return exact }
     base := EnvironmentText("XDG_DATA_HOME")
@@ -51,9 +64,21 @@ EnterDirectory :: (path: string) -> bool {
     return CopyCString(path, bytes[:]) && ChangeDirectory(*bytes[0]) == 0
 }
 
+#if #defined(ANDROID_BUILD) {
+    android_log :: #system_library "log";
+    AndroidLogWrite :: (priority: s32, tag: *u8, message: *u8) -> s32 #foreign android_log "__android_log_write";
+}
+
 Report :: (message: string) {
     bytes: [1024]u8
     if CopyCString(message, bytes[:]) {
-        unused WriteError(2, *bytes[0], cast(usize)message.count)
+        // Android shows the system log (adb logcat), not standard error.
+        #if #defined(ANDROID_BUILD) {
+            tag: [8]u8
+            unused CopyCString("Arcade", tag[:])
+            unused AndroidLogWrite(6, *tag[0], *bytes[0])
+        } else {
+            unused WriteError(2, *bytes[0], cast(usize)message.count)
+        }
     }
 }

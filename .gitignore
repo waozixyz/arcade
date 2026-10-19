@@ -3,3 +3,8 @@
 /ziran.local.toml
 __pycache__/
 *.pyc
+/droid/.gradle/
+/droid/app/.cxx/
+/droid/app/build/
+/droid/build/
+/droid/local.properties

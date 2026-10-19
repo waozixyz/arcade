@@ -1,0 +1,44 @@
+// Android: Kryon's canonical host (kryon/android_run) draws this Frame. The
+// collection comes from the APK's assets; saves and game resources live in
+// the app's private files folder.
+#import "kryon/session"
+#import "kryon/geometry"
+#import "kryon/tree_input"
+#import "kryon/app_asset"
+#import "collection_host"
+#import "platform"
+
+// Android's Back key as raylib reports it.
+ARCADE_BACK_KEY :: 4
+
+// 0 until the first frame opens the collection, then 1, or 2 when it failed.
+arcade_state: s32;
+
+ArcadeStart :: () -> bool {
+    data := DataDirectory()
+    bundle := ReadAppAsset("arcade.zib")
+    metadata := ReadAppAsset("arcade.json")
+    defer { FreeAppAsset(bundle); FreeAppAsset(metadata) }
+    if data == "" || bundle.count == 0 || metadata.count == 0 {
+        Report("Arcade: the collection is missing from the app")
+        return false
+    }
+    if !CollectionOpenBytes(bundle, metadata, data) {
+        Report("Arcade: could not open the collection")
+        return false
+    }
+    return true
+}
+
+Frame :: (session: Session, viewport: Rectangle) -> s32 {
+    if arcade_state == 0 { arcade_state = ifx ArcadeStart() then 1 else 2 }
+    if arcade_state != 1 { return 1 }
+    // Back leaves a game for its library. At the library it stays unused,
+    // so the host closes the app as Android users expect.
+    key := KeyboardTake(session)
+    if key == ARCADE_BACK_KEY && CollectionBack() { key = 0 }
+    unused KeyboardSend(session, key)
+    if !CollectionFrame(session, viewport, key, 0) { return 1 }
+    CollectionCollect()
+    return 0
+}

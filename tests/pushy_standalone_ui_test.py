@@ -3,6 +3,7 @@ editions opening straight on their newest level with picture sprites,
 independent saves, and the same level after a restart."""
 import argparse
 import contextlib
+import json
 import os
 from pathlib import Path
 import subprocess
@@ -20,6 +21,10 @@ def main():
     assert os.environ['YUE_DESKTOP_RECOVERY'] == '0'
     root = Path(__file__).resolve().parents[1]
     output = root / 'build/pushy-standalone-ui-test'
+    # Each heading counts the edition's levels, which Pushy's level files list.
+    pushy = Path(subprocess.check_output([str(root / 'scripts/ziran.sh'), 'pkg', 'path', 'pushy'], text=True).strip())
+    classic_levels, island_levels = (len(json.loads((pushy / 'levels' / f'{edition}.json').read_text())['levels'])
+                       for edition in ('classic', 'island'))
     output.mkdir(parents=True, exist_ok=True)
     sys.path.insert(0, str(args.inbe_source / 'tests'))
     from ui_driver import UiDriver
@@ -61,24 +66,24 @@ def main():
         with application(profile, 'play'):
             assert not driver.find(label='Arcade', role='text')
             driver.press(label='Pushy Classic', role='button')
-            driver.wait(label='Level 1 / 175')
+            driver.wait(label=f'Level 1 / {classic_levels}')
             assert not driver.find(label='Continue', role='button'), 'Classic must open straight on a level'
             assert driver.find(label='Pushy', role='image', visible=True), 'Pushy must be drawn as a picture'
             classic_saved = move_until_saved(classic)
             driver.press(label='Back', role='button')
             driver.press(label='Pushy Island', role='button')
-            driver.wait(label='Island 1 / 175')
+            driver.wait(label=f'Island 1 / {island_levels}')
             assert not driver.find(label='Continue', role='button'), 'Island must open straight on a level'
             assert driver.find(label='Pushy', role='image', visible=True)
             island_saved = move_until_saved(island)
             assert classic.read_bytes() == classic_saved, 'Island changed the Classic save'
         with application(profile, 'restore'):
             driver.press(label='Pushy Island', role='button')
-            driver.wait(label='Island 1 / 175')
+            driver.wait(label=f'Island 1 / {island_levels}')
             assert island.read_bytes() == island_saved, 'Reopening the newest island must keep its position'
             driver.press(label='Back', role='button')
             driver.press(label='Pushy Classic', role='button')
-            driver.wait(label='Level 1 / 175')
+            driver.wait(label=f'Level 1 / {classic_levels}')
             assert classic.read_bytes() == classic_saved
     print('Standalone Pushy: chooser, both editions opening on their newest level with sprites, and independent saves passed')
 

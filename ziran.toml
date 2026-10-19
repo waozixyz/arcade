@@ -2,6 +2,8 @@
 name = "Arcade"
 entry = "src/desktop.zi"
 module_roots = ["src", "apps", "tests"]
+# Kryon's Android host draws the Frame in src/app.zi.
+bridge_modules = ["app"]
 
 [toolchain]
 git = "https://github.com/ziranlang/ziran.git"
@@ -10,12 +12,32 @@ ref = "master"
 [install]
 bin = "arcade"
 
+# Android: Kryon's canonical host draws src/app.zi's Frame. The desktop
+# build keeps its own entry, src/desktop.zi.
+[tool.kryon]
+entry = "src/app.zi"
+default_profile = "android"
+
+[tool.kryon.profiles.android]
+backend = "android"
+
+[tool.kryon.android]
+package = "xyz.waozi.arcade"
+activity = "ArcadeActivity"
+min_sdk = "28"
+abis = "arm64-v8a,x86_64"
+
 [dependencies.kryon]
 git = "https://github.com/kryonlabs/kryon.git"
 ref = "master"
 
 [dependencies.apps]
 git = "https://github.com/waozixyz/apps.git"
+ref = "master"
+
+# Pushy's two editions are games Arcade installs by default.
+[dependencies.pushy]
+git = "https://github.com/waozixyz/pushy.git"
 ref = "master"
 
 # Compatibility tooling runs Inner Breeze's host checks; releases check its publisher pins.

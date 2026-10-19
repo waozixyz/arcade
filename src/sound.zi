@@ -3,86 +3,95 @@
 // calling game. Without an audio device the games stay silent and run on.
 #import "std/byte_text_linux"
 
-sound_sdl :: #system_library "SDL2";
-sound_c :: #system_library "c";
-
-SoundSpec :: struct {
-    freq: s32
-    format: u16
-    channels: u8
-    silence: u8
-    samples: u16
-    padding: u16
-    size: u32
-    callback: *void
-    userdata: *void
-}
-
-SoundInit :: (flags: u32) -> s32 #foreign sound_sdl "SDL_InitSubSystem";
-SoundOpenDevice :: (device: *u8, capture: s32, desired: *SoundSpec, obtained: *SoundSpec,
-    changes: s32) -> u32 #foreign sound_sdl "SDL_OpenAudioDevice";
-SoundPause :: (device: u32, paused: s32) #foreign sound_sdl "SDL_PauseAudioDevice";
-SoundQueue :: (device: u32, data: *u8, length: u32) -> s32 #foreign sound_sdl "SDL_QueueAudio";
-SoundClear :: (device: u32) #foreign sound_sdl "SDL_ClearQueuedAudio";
-SoundFromMemory :: (bytes: *u8, count: s32) -> *void #foreign sound_sdl "SDL_RWFromConstMem";
-SoundLoadWave :: (source: *void, free_source: s32, spec: *SoundSpec, buffer: **u8,
-    length: *u32) -> *SoundSpec #foreign sound_sdl "SDL_LoadWAV_RW";
-SoundFreeWave :: (buffer: *u8) #foreign sound_sdl "SDL_FreeWAV";
-SoundNewStream :: (source_format: u16, source_channels: u8, source_rate: s32,
-    format: u16, channels: u8, rate: s32) -> *void #foreign sound_sdl "SDL_NewAudioStream";
-SoundStreamPut :: (stream: *void, data: *u8, length: s32) -> s32 #foreign sound_sdl "SDL_AudioStreamPut";
-SoundStreamFlush :: (stream: *void) -> s32 #foreign sound_sdl "SDL_AudioStreamFlush";
-SoundStreamAvailable :: (stream: *void) -> s32 #foreign sound_sdl "SDL_AudioStreamAvailable";
-SoundStreamGet :: (stream: *void, data: *u8, length: s32) -> s32 #foreign sound_sdl "SDL_AudioStreamGet";
-SoundFreeStream :: (stream: *void) #foreign sound_sdl "SDL_FreeAudioStream";
-SoundAllocate :: (count: usize, size: usize) -> *u8 #foreign sound_c "calloc";
-SoundRelease :: (bytes: *u8) #foreign sound_c "free";
-
-SOUND_INIT_AUDIO :: 16
-// AUDIO_S16LSB
-SOUND_S16 :: 32784
-SOUND_RATE :: 44100
-SOUND_BYTE_LIMIT :: 16777216
-
-sound_device: u32;
-sound_unavailable: bool;
-
-SoundOpen :: () -> bool {
-    if sound_device != cast(u32)0 { return true }
-    if sound_unavailable || SoundInit(cast(u32)SOUND_INIT_AUDIO) != 0 { sound_unavailable = true; return false }
-    desired := SoundSpec.{.freq = SOUND_RATE, .format = cast(u16)SOUND_S16, .channels = cast(u8)1, .samples = cast(u16)1024}
-    obtained: SoundSpec
-    sound_device = SoundOpenDevice(null, 0, *desired, *obtained, 0)
-    if sound_device == cast(u32)0 { sound_unavailable = true; return false }
-    SoundPause(sound_device, 0)
-    return true
-}
-
-// Decodes and converts the whole sound before it replaces the playing one,
-// so a damaged file never interrupts the current sound.
-SoundPlay :: (bytes: string) -> bool {
-    if bytes.count <= 0 || bytes.count > SOUND_BYTE_LIMIT || !SoundOpen() { return false }
-    descriptor := cast(*TextDescriptor)(*bytes)
-    source := SoundFromMemory(descriptor.data, cast(s32)bytes.count)
-    if source == null { return false }
-    spec: SoundSpec
-    wave: *u8
-    length: u32
-    if SoundLoadWave(source, 1, *spec, *wave, *length) == null { return false }
-    stream := SoundNewStream(spec.format, spec.channels, spec.freq, cast(u16)SOUND_S16, cast(u8)1, SOUND_RATE)
-    ready := stream != null && SoundStreamPut(stream, wave, cast(s32)length) == 0 && SoundStreamFlush(stream) == 0
-    SoundFreeWave(wave)
-    played := false
-    if ready {
-        available := SoundStreamAvailable(stream)
-        pcm: *u8 = null
-        if available > 0 { pcm = SoundAllocate(cast(usize)available, cast(usize)1) }
-        if pcm != null && SoundStreamGet(stream, pcm, available) == available {
-            SoundClear(sound_device)
-            played = SoundQueue(sound_device, pcm, cast(u32)available) == 0
-        }
-        if pcm != null { SoundRelease(pcm) }
+#if #defined(ANDROID_BUILD) {
+    // Android has no SDL audio; games stay silent there and run on.
+    SoundPlay :: (bytes: string) -> bool {
+        unused bytes
+        return false
     }
-    if stream != null { SoundFreeStream(stream) }
-    return played
+} else {
+
+    sound_sdl :: #system_library "SDL2";
+    sound_c :: #system_library "c";
+
+    SoundSpec :: struct {
+        freq: s32
+        format: u16
+        channels: u8
+        silence: u8
+        samples: u16
+        padding: u16
+        size: u32
+        callback: *void
+        userdata: *void
+    }
+
+    SoundInit :: (flags: u32) -> s32 #foreign sound_sdl "SDL_InitSubSystem";
+    SoundOpenDevice :: (device: *u8, capture: s32, desired: *SoundSpec, obtained: *SoundSpec,
+        changes: s32) -> u32 #foreign sound_sdl "SDL_OpenAudioDevice";
+    SoundPause :: (device: u32, paused: s32) #foreign sound_sdl "SDL_PauseAudioDevice";
+    SoundQueue :: (device: u32, data: *u8, length: u32) -> s32 #foreign sound_sdl "SDL_QueueAudio";
+    SoundClear :: (device: u32) #foreign sound_sdl "SDL_ClearQueuedAudio";
+    SoundFromMemory :: (bytes: *u8, count: s32) -> *void #foreign sound_sdl "SDL_RWFromConstMem";
+    SoundLoadWave :: (source: *void, free_source: s32, spec: *SoundSpec, buffer: **u8,
+        length: *u32) -> *SoundSpec #foreign sound_sdl "SDL_LoadWAV_RW";
+    SoundFreeWave :: (buffer: *u8) #foreign sound_sdl "SDL_FreeWAV";
+    SoundNewStream :: (source_format: u16, source_channels: u8, source_rate: s32,
+        format: u16, channels: u8, rate: s32) -> *void #foreign sound_sdl "SDL_NewAudioStream";
+    SoundStreamPut :: (stream: *void, data: *u8, length: s32) -> s32 #foreign sound_sdl "SDL_AudioStreamPut";
+    SoundStreamFlush :: (stream: *void) -> s32 #foreign sound_sdl "SDL_AudioStreamFlush";
+    SoundStreamAvailable :: (stream: *void) -> s32 #foreign sound_sdl "SDL_AudioStreamAvailable";
+    SoundStreamGet :: (stream: *void, data: *u8, length: s32) -> s32 #foreign sound_sdl "SDL_AudioStreamGet";
+    SoundFreeStream :: (stream: *void) #foreign sound_sdl "SDL_FreeAudioStream";
+    SoundAllocate :: (count: usize, size: usize) -> *u8 #foreign sound_c "calloc";
+    SoundRelease :: (bytes: *u8) #foreign sound_c "free";
+
+    SOUND_INIT_AUDIO :: 16
+    // AUDIO_S16LSB
+    SOUND_S16 :: 32784
+    SOUND_RATE :: 44100
+    SOUND_BYTE_LIMIT :: 16777216
+
+    sound_device: u32;
+    sound_unavailable: bool;
+
+    SoundOpen :: () -> bool {
+        if sound_device != cast(u32)0 { return true }
+        if sound_unavailable || SoundInit(cast(u32)SOUND_INIT_AUDIO) != 0 { sound_unavailable = true; return false }
+        desired := SoundSpec.{.freq = SOUND_RATE, .format = cast(u16)SOUND_S16, .channels = cast(u8)1, .samples = cast(u16)1024}
+        obtained: SoundSpec
+        sound_device = SoundOpenDevice(null, 0, *desired, *obtained, 0)
+        if sound_device == cast(u32)0 { sound_unavailable = true; return false }
+        SoundPause(sound_device, 0)
+        return true
+    }
+
+    // Decodes and converts the whole sound before it replaces the playing one,
+    // so a damaged file never interrupts the current sound.
+    SoundPlay :: (bytes: string) -> bool {
+        if bytes.count <= 0 || bytes.count > SOUND_BYTE_LIMIT || !SoundOpen() { return false }
+        descriptor := cast(*TextDescriptor)(*bytes)
+        source := SoundFromMemory(descriptor.data, cast(s32)bytes.count)
+        if source == null { return false }
+        spec: SoundSpec
+        wave: *u8
+        length: u32
+        if SoundLoadWave(source, 1, *spec, *wave, *length) == null { return false }
+        stream := SoundNewStream(spec.format, spec.channels, spec.freq, cast(u16)SOUND_S16, cast(u8)1, SOUND_RATE)
+        ready := stream != null && SoundStreamPut(stream, wave, cast(s32)length) == 0 && SoundStreamFlush(stream) == 0
+        SoundFreeWave(wave)
+        played := false
+        if ready {
+            available := SoundStreamAvailable(stream)
+            pcm: *u8 = null
+            if available > 0 { pcm = SoundAllocate(cast(usize)available, cast(usize)1) }
+            if pcm != null && SoundStreamGet(stream, pcm, available) == available {
+                SoundClear(sound_device)
+                played = SoundQueue(sound_device, pcm, cast(u32)available) == 0
+            }
+            if pcm != null { SoundRelease(pcm) }
+        }
+        if stream != null { SoundFreeStream(stream) }
+        return played
+    }
 }

@@ -5,6 +5,7 @@ python3 - <<'PY'
 from pathlib import Path
 import re
 import json
+import subprocess
 version = re.search(r'^## (\d+\.\d+\.\d+)\s*$', Path('CHANGELOG.md').read_text(), re.M)
 if version is None:
     raise SystemExit('CHANGELOG.md needs a numeric release entry')
@@ -30,16 +31,21 @@ if ledger_path.exists():
             ledger['node_apps'][game['name']] = dict(
                 id=game['id'], title=game['title'], version=entry[1], sequence=1, host_api=game['host_api'])
     for name, component in ledger['node_apps'].items():
-        entry = re.search(r'^## \[(\d+\.\d+\.\d+)\] - \d{4}-\d{2}-\d{2}$',
-                          changelogs[name].read_text(), re.M)
-        if entry is None:
-            raise SystemExit(f'{name} needs a numeric changelog entry')
-        if component['version'] != entry[1]:
+        # Arcade itself is released at the version of the root changelog.
+        if name == 'arcade':
+            current = version[1]
+        else:
+            entry = re.search(r'^## \[(\d+\.\d+\.\d+)\] - \d{4}-\d{2}-\d{2}$',
+                              changelogs[name].read_text(), re.M)
+            if entry is None:
+                raise SystemExit(f'{name} needs a numeric changelog entry')
+            current = entry[1]
+        if component['version'] != current:
             old = tuple(map(int, component['version'].split('.')))
-            new = tuple(map(int, entry[1].split('.')))
+            new = tuple(map(int, current.split('.')))
             if new <= old:
                 raise SystemExit(f'{name} version must increase')
-            component['version'] = entry[1]
+            component['version'] = current
             component['sequence'] += 1
     ledger_path.write_text(json.dumps(ledger, indent=2) + '\n')
 PY

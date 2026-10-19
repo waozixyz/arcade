@@ -273,12 +273,13 @@ CollectionOpen :: (bundle: string, digest: string, harness_digest: string,
     collection_directory = data
     collection_resource_root = Join(data, "resources")
     opened := AppFilesOpen(*collection_resources, collection_resource_root)
-    if !opened { return false }
+    if !opened { Report("Arcade: cannot open the private resources folder"); return false }
     platform := AppPlatform.{.allows = CollectionAllows, .call = CollectionCall,
         .widgets = CollectionWidgets, .save = CollectionSave, .state = CollectionState,
         .effect = CollectionEffect}
     collection_ready = AppHostStart(*collection_host, bundle, "arcade.local", "inbe.arcade",
         "arcade", digest, "local", platform, harness_digest, locale)
+    if !collection_ready { Report("Arcade: the shared Apps host refused the collection") }
     return collection_ready
 }
 
@@ -290,13 +291,22 @@ CollectionOpenFiles :: (directory: string, data: string) -> bool {
     defer { AppFileFree(bytes) }
     metadata, metadata_found := ReadEntireFile(metadata_path)
     defer { AppFileFree(metadata) }
-    if !found || !metadata_found || bytes.count > 67108864 || metadata.count > 65536 { return false }
+    return found && metadata_found && CollectionOpenBytes(bytes, metadata, data)
+}
+
+// The collection and its receipt as bytes: files on desktop, APK assets on
+// Android. Saves and game resources go under data.
+CollectionOpenBytes :: (bytes: string, metadata: string, data: string) -> bool {
+    if bytes.count > 67108864 || metadata.count > 65536 { return false }
     id: [128]u8
     digest: [65]u8
     harness: [65]u8
     if !AppsReadText(metadata, 0, "id", id[:]) || TextUntilNul(id[:]) != "inbe.arcade" ||
     !AppsReadText(metadata, 0, "sha256", digest[:]) ||
-    !AppsReadText(metadata, 0, "apps_sha256", harness[:]) { return false }
+    !AppsReadText(metadata, 0, "apps_sha256", harness[:]) {
+        Report("Arcade: the collection receipt is not Arcade's")
+        return false
+    }
     locale := EnvironmentText("LANG")
     language := ifx locale.count >= 2 then locale[:2] else "en"
     return CollectionOpen(bytes, TextUntilNul(digest[:]), TextUntilNul(harness[:]), data, language)
@@ -331,6 +341,9 @@ CollectionOpenPushy :: (directory: string, data: string) -> bool {
         "pushy", TextUntilNul(digest[:]), "local", platform, TextUntilNul(harness[:]), language)
     return collection_ready
 }
+
+// Steps back from a game to its library, as Android's Back key does.
+CollectionBack :: () -> bool { return AppHostBack(*collection_host) > 0 }
 
 CollectionCollect :: () {
     AppHostCollect(*collection_host)
@@ -396,7 +409,7 @@ CollectionFrame :: (session: Session, viewport: Rectangle, key: s32, modifiers: 
     top: s32 = ifx nested then 56 else 0
     now := cast(float64)MonotonicMilliseconds() / 1000.0
     runtime.app.session = session
-    runtime.app.bounds = Rectangle.{0.0, cast(float32)top, viewport.width, viewport.height - cast(float32)top}
+    runtime.app.bounds = Rectangle.{viewport.x, viewport.y + cast(float32)top, viewport.width, viewport.height - cast(float32)top}
     runtime.app.scale = 1.0
     runtime.app.font = 16
     runtime.app.key = key
@@ -405,10 +418,10 @@ CollectionFrame :: (session: Session, viewport: Rectangle, key: s32, modifiers: 
         runtime.legacy.message = Node.AppMessage.{.locale = TextUntilNul(collection_host.locale[:]),
             .shared_status = Node.APP_SHARED_UNAVAILABLE, .time = UnixNow()}
         runtime.legacy.frame = Node.AppUiFrame.{.session = session,
-            .width = cast(s32)viewport.width, .height = cast(s32)viewport.height, .top = top,
+            .width = cast(s32)(viewport.x + viewport.width), .height = cast(s32)(viewport.y + viewport.height),
+            .top = cast(s32)viewport.y + top,
             .scale = 1.0, .font = 16, .now = now}
     }
-    Box(session, BoxProps.{.key = cast(u64)2, .bounds = viewport, .fill = Color.{239, 246, 244, 255}})
     WidgetHostBegin(session, CollectionAssetAllowed, CollectionAssetPath)
     drawn := AppHostRun(*collection_host, APP_FRAME)
     WidgetHostEnd()
@@ -418,16 +431,16 @@ CollectionFrame :: (session: Session, viewport: Rectangle, key: s32, modifiers: 
         BuilderPrint(*title_bytes, "%", TextUntilNul(runtime.node.entry.title[:]))
         title := BuilderFinish(title_bytes)
         if !VecPush(collection_frame_paths, title) { AppFileFree(title); return false }
-        Box(session, BoxProps.{.key = cast(u64)6, .bounds = Rectangle.{0.0, 0.0, viewport.width, 56.0},
-                .fill = Color.{221, 233, 229, 255}})
+        Box(session, BoxProps.{.key = cast(u64)6, .bounds = Rectangle.{viewport.x, viewport.y, viewport.width, 56.0},
+                .fill = Color.{128, 140, 136, 40}})
         if Button(session, ButtonProps.{.key = cast(u64)7, .id = 7, .label = "Back",
-                .bounds = Rectangle.{8.0, 6.0, 76.0, 44.0},
+                .bounds = Rectangle.{viewport.x + 8.0, viewport.y + 6.0, 76.0, 44.0},
                 .tone = ButtonTone.ButtonToneNeutral, .emphasis = ButtonEmphasis.ButtonEmphasisSoft}) != 0 {
             unused AppHostBack(*collection_host)
         }
         Text(session, TextProps.{.key = cast(u64)8,
                 .text = title, .font = 20,
-                .bounds = Rectangle.{100.0, 12.0, viewport.width - 116.0, 36.0}})
+                .bounds = Rectangle.{viewport.x + 100.0, viewport.y + 12.0, viewport.width - 116.0, 36.0}})
     }
     return true
 }
