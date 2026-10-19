@@ -62,6 +62,7 @@ test: all
 	python3 tests/pushy_island_levels_test.py
 	python3 tests/pushy_island_assets_test.py
 	sh tests/pushy_island_engine_test.sh '$(ZIRAN)'
+	TOOLCHAIN_SOURCE='$(ZIRAN_ROOT)' APPS_SOURCE='$(APPS_SOURCE)' python3 tests/sound_test.py
 
 chess-engine-test:
 	sh tests/chess_engine_zi_test.sh '$(ZIRAN)'

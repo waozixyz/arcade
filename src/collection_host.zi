@@ -33,6 +33,7 @@ Rules :: #import "apps/protocol";
 Node :: #import "apps/node_types";
 Codec :: #import "apps/node_codec";
 #import "platform"
+#import "sound"
 
 using HostValueKind;
 
@@ -96,7 +97,7 @@ CollectionAllows :: (context: *void, node: *AppNode, name: string) -> bool {
     return name == "AppRecordHost" || name == "SaveAppRecordHost" ||
     name == "AppFriendHost" || name == "AppSharedHost" || name == "AppSharedItemHost" ||
     name == "AppInvitationHost" || name == "RefreshAppSharedHost" || name == "SendAppSharedHost" ||
-    name == "SmoothFramesHost" || name == "AppLocaleHost"
+    name == "SmoothFramesHost" || name == "AppLocaleHost" || name == "AppSoundHost"
 }
 
 CollectionCall :: (context: *void, node: *AppNode, module: *u8, function: *u8,
@@ -122,6 +123,12 @@ CollectionCall :: (context: *void, node: *AppNode, module: *u8, function: *u8,
         ok := saved != null && AppFileNameValid(record) && record.count < 64 &&
         text.count < 65536 && AppFileWrite(*saved.files, record, text)
         result.* = HostScalar("bool", ifx ok then 1 else 0)
+        return 1
+    }
+    // A game plays only its own verified packed sounds.
+    if name == "AppSoundHost" && count == 1 && HostScalarValid(arguments[0], "string", cast(s32)HostString) {
+        asset := AppHostAsset(node, AppArgumentText(arguments[0]))
+        result.* = HostScalar("bool", ifx asset.found && SoundPlay(asset.data) then 1 else 0)
         return 1
     }
     if name == "SmoothFramesHost" && count == 1 {

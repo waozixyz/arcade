@@ -1,0 +1,27 @@
+#import "std/file"
+#import "std/c_string"
+#import "std/byte_text_linux"
+#import "sound"
+
+libc :: #system_library "libc";
+GetEnvironment :: (name: *u8) -> *u8 #foreign libc "getenv";
+
+Fixture :: (name: string) -> string {
+    key: [64]u8
+    if !CopyCString(name, key[:]) { return "" }
+    text, found := ReadEntireFile(TextFromCString(GetEnvironment(*key[0])))
+    return ifx found then text else ""
+}
+
+#program_export
+Check :: () -> s32 {
+    // Damaged and empty data never open or interrupt a sound.
+    if SoundPlay("") || SoundPlay("RIFF not a wave") { return 1 }
+    adpcm := Fixture("SOUND_TEST_ADPCM")
+    pcm := Fixture("SOUND_TEST_PCM")
+    if adpcm == "" || pcm == "" { return 2 }
+    if !SoundPlay(adpcm) { return 3 }
+    // A second sound replaces the first on the single effect channel.
+    if !SoundPlay(pcm) || !SoundPlay(adpcm) { return 4 }
+    return 0
+}
