@@ -84,6 +84,8 @@ def stage(root, controller, expected_controller_digest, output):
         destination = assets / relative
         destination.parent.mkdir(parents=True, exist_ok=True)
         destination.write_bytes(contents)
+    # Inbe draws Arcade's launcher icon from assets/arcade/sidebar.shape.
+    (assets / "arcade/sidebar.shape").write_bytes((root / "assets/arcade/sidebar.shape").read_bytes())
     return catalog
 
 

@@ -26,6 +26,8 @@ class CollectionTests(unittest.TestCase):
             (self.root / manifest).parent.mkdir(parents=True, exist_ok=True)
             shutil.copyfile(ROOT / manifest, self.root / manifest)
         shutil.copytree(ROOT / "build/games", self.root / "build/games")
+        (self.root / "assets/arcade").mkdir(parents=True)
+        shutil.copyfile(ROOT / "assets/arcade/sidebar.shape", self.root / "assets/arcade/sidebar.shape")
         # Only a native VM identity gate can trust a controller. This fixture
         # tests packing and its exact-content requirement, not that handshake.
         self.controller = self.root / "controller.zib"
@@ -39,6 +41,9 @@ class CollectionTests(unittest.TestCase):
     def test_unchanged_games_keep_canonical_identity_and_version(self):
         catalog = self.stage()
         self.assertEqual(catalog["id"], "inbe.arcade")
+        # Inbe draws the launcher icon from the collection's own assets.
+        self.assertEqual((self.output / "assets/arcade/sidebar.shape").read_bytes(),
+                         (ROOT / "assets/arcade/sidebar.shape").read_bytes())
         ledger = json.loads((ROOT / "apps/versions.json").read_text())["node_apps"]
         self.assertEqual({c["id"] for c in catalog["children"]},
                          {entry["id"] for entry in ledger.values()})

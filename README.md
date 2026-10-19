@@ -35,6 +35,7 @@ and the same nested child inside Arcade. Preview cards open directly; their
 vertical options menu can mark an app installed or favorite without deleting
 its saves. The local player does not offer node updates or OS actions it
 cannot perform. Inbe supplies its own account and package policy.
+Arcade's launcher icon is MingCute's `game_2` gamepad (Apache-2.0).
 
 ## One Chess game
 
