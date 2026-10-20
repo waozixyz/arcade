@@ -62,10 +62,10 @@ def main():
         """A swipe on the game screen moves Shovey even where the board is not."""
         nodes = driver.tree()
         screen = nodes[0]
-        # The board is the box Shovey stands in.
+        # The board is the box Shovey stands in, not the slate behind the screen.
         shovey_image = next(node for node in nodes if node['kind'] == 'image' and node['label'] == 'Shovey')
         sx, sy = shovey_image['x'] + shovey_image['width'] / 2, shovey_image['y'] + shovey_image['height'] / 2
-        board = max((node for node in nodes if node['kind'] == 'box' and node['visible'] and
+        board = max((node for node in nodes if node['kind'] == 'box' and node['visible'] and node['key'] != 19990 and
                      node['x'] <= sx <= node['x'] + node['width'] and node['y'] <= sy <= node['y'] + node['height']),
                     key=lambda node: node['width'] * node['height'])
         left_gap = board['x'] - screen['x']

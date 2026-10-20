@@ -3,6 +3,7 @@ import hashlib
 import importlib.util
 import json
 from pathlib import Path
+import shlex
 import shutil
 import tempfile
 import unittest
@@ -22,9 +23,16 @@ class CollectionTests(unittest.TestCase):
         shutil.copyfile(ROOT / "games.json", self.root / "games.json")
         shutil.copyfile(ROOT / "apps/versions.json", self.root / "apps/versions.json")
         for registration in json.loads((ROOT / "games.json").read_text())["games"]:
+            if registration["package"] != "self":
+                continue
             manifest = Path(registration["manifest"])
             (self.root / manifest).parent.mkdir(parents=True, exist_ok=True)
             shutil.copyfile(ROOT / manifest, self.root / manifest)
+        # Games from another package (Shovey) resolve through Arcade's own pins.
+        (self.root / "scripts").mkdir()
+        resolver = self.root / "scripts/ziran.sh"
+        resolver.write_text(f'#!/bin/sh\ncd {shlex.quote(str(ROOT))} && exec ./scripts/ziran.sh "$@"\n')
+        resolver.chmod(0o755)
         shutil.copytree(ROOT / "build/games", self.root / "build/games")
         (self.root / "assets/arcade").mkdir(parents=True)
         shutil.copyfile(ROOT / "assets/arcade/sidebar.shape", self.root / "assets/arcade/sidebar.shape")
@@ -44,9 +52,10 @@ class CollectionTests(unittest.TestCase):
         # Inbe draws the launcher icon from the collection's own assets.
         self.assertEqual((self.output / "assets/arcade/sidebar.shape").read_bytes(),
                          (ROOT / "assets/arcade/sidebar.shape").read_bytes())
+        # The ledger also versions Arcade itself, which is not one of its games.
         ledger = json.loads((ROOT / "apps/versions.json").read_text())["node_apps"]
         self.assertEqual({c["id"] for c in catalog["children"]},
-                         {entry["id"] for entry in ledger.values()})
+                         {entry["id"] for name, entry in ledger.items() if name != "arcade"})
         for child in catalog["children"]:
             name = child["expected_id"]
             packed = self.output / child["bundle"]

@@ -1,5 +1,10 @@
 # Arcade changelog
 
+## 0.6.2
+
+- Shovey keeps its own slate, stone and green look on every screen, not the app's theme.
+- Needs Inner Breeze 2.1.37 or later.
+
 ## 0.6.1
 
 - Swipe anywhere on Shovey's screen to move, not only on the board.
