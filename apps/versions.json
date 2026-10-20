@@ -13,29 +13,29 @@
     "shovey": {
       "id": "arcade.shovey",
       "title": "Shovey",
-      "version": "0.6.2",
-      "sequence": 10,
+      "version": "0.6.3",
+      "sequence": 11,
       "host_api": 12
     },
     "shovey-island": {
       "id": "arcade.shovey-island",
       "title": "Shovey Island \u2014 Coming Soon",
-      "version": "0.4.2",
-      "sequence": 6,
+      "version": "0.4.3",
+      "sequence": 7,
       "host_api": 12
     },
     "shovey-editor": {
       "id": "arcade.shovey-editor",
       "title": "Shovey Editor",
-      "version": "0.2.1",
-      "sequence": 3,
+      "version": "0.2.2",
+      "sequence": 4,
       "host_api": 12
     },
     "arcade": {
       "id": "inbe.arcade",
       "title": "Arcade",
-      "version": "0.6.2",
-      "sequence": 6,
+      "version": "0.6.3",
+      "sequence": 7,
       "host_api": 24
     }
   }

@@ -1,5 +1,10 @@
 # Arcade changelog
 
+## 0.6.3
+
+- Shovey Island uses Classic's original round green player.
+- Inner Breeze's bottom navigation stays visible while playing Shovey or testing an editor level.
+
 ## 0.6.2
 
 - Shovey keeps its own slate, stone and green look on every screen, not the app's theme.
