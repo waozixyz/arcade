@@ -99,12 +99,13 @@ def main():
         owner = subprocess.check_output(['xdotool', 'getwindowpid', window], text=True).strip()
         assert owner == str(child.pid)
         subprocess.run(['xdotool', 'windowsize', '--sync', window, str(width), str(height)], check=True)
+        subprocess.run(['xdotool', 'windowmove', window, '0', '0'], check=True)
         deadline = time.monotonic() + 5
         while time.monotonic() < deadline:
             screen = driver.tree()[0]
             if (screen['width'], screen['height']) == (width, height):
                 driver.wait_idle(frames=3)
-                return
+                return window
             time.sleep(.05)
         raise AssertionError('Shovey did not adopt the resized window')
 
@@ -142,12 +143,14 @@ def main():
             # Rotation changes presentation without replacing the saved game.
             for width, height, columns, rows in ((960, 600, 20, 12), (480, 820, 12, 20)):
                 saved = classic.read_bytes()
-                resize_owned_window(child, width, height)
+                window = resize_owned_window(child, width, height)
                 board, player = board_and_player()
                 assert abs(board['width'] / board['height'] - columns / rows) < .01
                 assert board['x'] >= 0 and board['y'] >= 0
                 assert board['x'] + board['width'] <= width and board['y'] + board['height'] <= height
                 assert classic.read_bytes() == saved, 'rotation changed or reset the saved game'
+                orientation = 'landscape' if width > height else 'portrait'
+                subprocess.run(['import', '-window', window, str(output / (orientation + '.png'))], check=True)
                 swipe_in_visible_direction()
             classic_saved = classic.read_bytes()
             assert not driver.find(label='Back', role='button'), 'Shovey must own all of its chrome'
