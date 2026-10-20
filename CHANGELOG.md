@@ -1,5 +1,9 @@
 # Arcade changelog
 
+## 0.6.5
+
+- Shovey Classic and Shovey Island share your solved levels with friends on Inner Breeze's Leaderboard.
+
 ## 0.6.4
 
 - Hold a press or touch on a Shovey board to keep walking.
