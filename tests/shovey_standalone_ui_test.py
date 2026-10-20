@@ -86,10 +86,52 @@ def main():
                 time.sleep(.05)
         raise AssertionError(f'A swipe beside the board at {x}, {y} moved nothing')
 
+    def board_and_player():
+        board = driver.find(key=22000, visible=True)[0]
+        player = driver.find(label='Shovey', role='image', visible=True)[0]
+        return board, player
+
+    def resize_owned_window(child, width, height):
+        windows = subprocess.check_output(
+            ['xdotool', 'search', '--onlyvisible', '--pid', str(child.pid)], text=True).split()
+        assert len(windows) == 1
+        window = windows[0]
+        owner = subprocess.check_output(['xdotool', 'getwindowpid', window], text=True).strip()
+        assert owner == str(child.pid)
+        subprocess.run(['xdotool', 'windowsize', '--sync', window, str(width), str(height)], check=True)
+        deadline = time.monotonic() + 5
+        while time.monotonic() < deadline:
+            screen = driver.tree()[0]
+            if (screen['width'], screen['height']) == (width, height):
+                driver.wait_idle(frames=3)
+                return
+            time.sleep(.05)
+        raise AssertionError('Shovey did not adopt the resized window')
+
+    def swipe_in_visible_direction():
+        board, player = board_and_player()
+        before = UiDriver.center(player)
+        start = (board['x'] + board['width'] / 2, board['y'] + board['height'] / 2)
+        for dx, dy in ((-100, 0), (0, -100), (100, 0), (0, 100)):
+            driver.drag(start, (start[0] + dx, start[1] + dy))
+            deadline = time.monotonic() + .8
+            while time.monotonic() < deadline:
+                _, player = board_and_player()
+                after = UiDriver.center(player)
+                moved_x, moved_y = after[0] - before[0], after[1] - before[1]
+                if abs(moved_x) + abs(moved_y) > 2:
+                    if dx:
+                        assert moved_x * dx > 0 and abs(moved_y) < 2, 'horizontal swipe moved in another direction'
+                    else:
+                        assert moved_y * dy > 0 and abs(moved_x) < 2, 'vertical swipe moved in another direction'
+                    return
+                time.sleep(.05)
+        raise AssertionError('No visible swipe direction moved Shovey')
+
     with tempfile.TemporaryDirectory(prefix='profile-', dir=output) as temporary:
         profile = Path(temporary)
         classic = profile / 'games/arcade.shovey/records/campaign'
-        with application(profile, 'play'):
+        with application(profile, 'play') as child:
             assert not driver.find(label='Arcade', role='text')
             driver.press(label='Shovey Classic', role='button')
             driver.wait(label=f'Level 1 / {classic_levels}')
@@ -97,6 +139,16 @@ def main():
             assert driver.find(label='Shovey', role='image', visible=True), 'Shovey must be drawn as a picture'
             move_until_saved(classic)
             swipe_beside_board_until_saved(classic)
+            # Rotation changes presentation without replacing the saved game.
+            for width, height, columns, rows in ((960, 600, 20, 12), (480, 820, 12, 20)):
+                saved = classic.read_bytes()
+                resize_owned_window(child, width, height)
+                board, player = board_and_player()
+                assert abs(board['width'] / board['height'] - columns / rows) < .01
+                assert board['x'] >= 0 and board['y'] >= 0
+                assert board['x'] + board['width'] <= width and board['y'] + board['height'] <= height
+                assert classic.read_bytes() == saved, 'rotation changed or reset the saved game'
+                swipe_in_visible_direction()
             classic_saved = classic.read_bytes()
             assert not driver.find(label='Back', role='button'), 'Shovey must own all of its chrome'
         with application(profile, 'restore'):
@@ -106,7 +158,7 @@ def main():
             driver.press(label='Shovey Classic', role='button')
             driver.wait(label=f'Level 1 / {classic_levels}')
             assert classic.read_bytes() == classic_saved
-    print('Standalone Shovey: chooser, direct openings, owned chrome, and independent saves passed')
+    print('Standalone Shovey: portrait/landscape boards, swipe directions, rotation saves, chooser and independent saves passed')
 
 
 if __name__ == '__main__':
