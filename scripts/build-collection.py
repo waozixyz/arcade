@@ -33,7 +33,7 @@ def stage(root, controller, expected_controller_digest, output):
     children, copies, identities = [], [], set()
     total = len(controller_bytes)
     for registration in registrations:
-        # Arcade's own games live here; Pushy comes from its package.
+        # Arcade's own games live here; Shovey comes from its package.
         source = root if registration["package"] == "self" else Path(subprocess.check_output(
             [str(root / "scripts/ziran.sh"), "pkg", "path", registration["package"]], cwd=root, text=True).strip())
         manifest = source / registration["manifest"]
@@ -105,43 +105,43 @@ def main():
             "--asset-dir", "assets=" + str(assets), "-o", str(target),
             str(ROOT / "src" / source)], cwd=ROOT, env=env, check=True)
 
-    # One Pushy edition collection is both the standalone payload and the
-    # exact child embedded in Arcade. Its Classic/Island leaves keep their IDs.
+    # One Shovey collection is both the standalone payload and the exact child
+    # embedded in Arcade. Its leaves keep their independent verified IDs.
     editions = [child.copy() for child in catalog["children"]
-                if child["id"] in {"arcade.pushy", "arcade.pushy-island"}]
-    if len(editions) != 2:
-        raise ValueError("Pushy requires both verified Classic and Island leaves")
+                if child["id"] in {"arcade.shovey", "arcade.shovey-island", "arcade.shovey-editor"}]
+    if len(editions) != 3:
+        raise ValueError("Shovey requires verified Classic, Island and Editor leaves")
     for child in editions:
-        if child["id"] == "arcade.pushy":
-            child["title"] = "Pushy Classic"
-    pushy_output = ROOT / "build/pushy-collection"
-    if pushy_output.exists():
-        shutil.rmtree(pushy_output)
-    assets = pushy_output / "assets"
+        if child["id"] == "arcade.shovey":
+            child["title"] = "Shovey Classic"
+    shovey_output = ROOT / "build/shovey-collection"
+    if shovey_output.exists():
+        shutil.rmtree(shovey_output)
+    assets = shovey_output / "assets"
     (assets / "apps").mkdir(parents=True)
     shutil.copyfile(output / "assets/apps/apps.zib", assets / "apps/apps.zib")
-    pushy_catalog = dict(schema=1, id="arcade.pushy-player", title="Pushy",
+    shovey_catalog = dict(schema=1, id="arcade.shovey-player", title="Shovey",
                          harness="assets/apps/apps.zib", children=editions)
-    (assets / "apps/catalog.json").write_text(json.dumps(pushy_catalog, indent=2) + "\n")
+    (assets / "apps/catalog.json").write_text(json.dumps(shovey_catalog, indent=2) + "\n")
     for child in editions:
         for field in ("bundle", "preview"):
             relative = child[field]
-            destination = pushy_output / relative
+            destination = shovey_output / relative
             destination.parent.mkdir(parents=True, exist_ok=True)
             shutil.copyfile(output / relative, destination)
-    bundle("pushy_collection.zi", "pushy_collection:Main", assets, ROOT / "build/pushy.zib")
-    pushy_metadata = dict(id="arcade.pushy-player", version=(ROOT / "VERSION").read_text().strip(),
-        sha256=digest(ROOT / "build/pushy.zib"), apps_sha256=args.apps_sha256,
+    bundle("shovey_collection.zi", "shovey_collection:Main", assets, ROOT / "build/shovey.zib")
+    shovey_metadata = dict(id="arcade.shovey-player", version=(ROOT / "VERSION").read_text().strip(),
+        sha256=digest(ROOT / "build/shovey.zib"), apps_sha256=args.apps_sha256,
         children=editions, source_mode="project")
-    (ROOT / "build/pushy.json").write_text(json.dumps(pushy_metadata, indent=2) + "\n")
-    parent_entry = dict(id="arcade.pushy-player", title="Pushy",
-        bundle="assets/arcade/games/pushy-player.zib", protocol="collection/1",
-        expected_id="pushy", version=pushy_metadata["version"], sha256=pushy_metadata["sha256"],
-        preview="assets/arcade/previews/pushy.png")
+    (ROOT / "build/shovey.json").write_text(json.dumps(shovey_metadata, indent=2) + "\n")
+    parent_entry = dict(id="arcade.shovey-player", title="Shovey",
+        bundle="assets/arcade/games/shovey-player.zib", protocol="collection/1",
+        expected_id="shovey", version=shovey_metadata["version"], sha256=shovey_metadata["sha256"],
+        preview="assets/arcade/previews/shovey.png")
     catalog["children"] = [child for child in catalog["children"]
-                           if child["id"] not in {"arcade.pushy", "arcade.pushy-island"}]
+                           if child["id"] not in {"arcade.shovey", "arcade.shovey-island", "arcade.shovey-editor"}]
     catalog["children"].append(parent_entry)
-    shutil.copyfile(ROOT / "build/pushy.zib", output / parent_entry["bundle"])
+    shutil.copyfile(ROOT / "build/shovey.zib", output / parent_entry["bundle"])
     for child in editions:
         (output / child["bundle"]).unlink()
         if child["preview"] != parent_entry["preview"]:

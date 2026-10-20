@@ -1,14 +1,14 @@
 # Arcade
 
 Games and entertainment, alongside Werkzeug for practical tools and Inner
-Breeze for personal growth. The library includes Chess and Pushy. Pushy opens
-an edition chooser for Classic and Island, and also runs as its own desktop app.
+Breeze for personal growth. The library includes Chess and Shovey. Shovey opens
+a chooser for Classic, Island and Editor, and also runs as its own desktop app.
 Each edition has a separate save and earned unlocks. Unlocked puzzles show
 their whole board; locked puzzles keep their lock until earned.
 
 Open Chess from the home screen, choose a side and one of four computer
 levels, and play. The library uses preview cards in a responsive grid; the
-top Back button returns from a game. A local game
+top Back button returns from Chess. A local game
 survives returning to the library and restarting the app. Ask for a hint, take
 back a complete turn, or flip the board. Expert searches more deeply without
 added evaluation noise; it has no claimed Elo rating.
@@ -30,7 +30,7 @@ review are not implemented.
 ## Shared Apps library
 
 Arcade embeds the shared `apps.zib` controller and exact game bundles in a
-verified collection. Pushy's edition collection is both the standalone payload
+verified collection. Shovey's edition collection is both the standalone payload
 and the same nested child inside Arcade. Preview cards open directly; their
 vertical options menu can mark an app installed or favorite without deleting
 its saves. The local player does not offer node updates or OS actions it
@@ -70,9 +70,9 @@ reviewed one in `apps-controller.sha256`:
 make
 ./build/arcade
 ./build/arcade --app chess
-./build/arcade --app pushy
+./build/arcade --app shovey
 ./build/arcade --list
-./build/pushy
+./build/shovey
 ```
 
 `make install` installs both commands and desktop entries.
@@ -94,6 +94,11 @@ Each game has its own directory under `$XDG_DATA_HOME/arcade/games/`, or
 `~/.local/share/arcade/games/`. Files are private, and only one process may
 write a game's profile at a time. A game receives named records, not arbitrary
 filesystem access. `ARCADE_DATA` chooses a disposable profile for tests.
+
+Inside Inbe, Arcade's verified games use the active Inbe account's nested-app
+records, so their progress follows that profile and its sync. Standalone
+Arcade never opens that account: its games and collection settings stay in
+the private local profile above.
 
 ## Checks
 
@@ -127,11 +132,10 @@ public Inbe 2.1.34 is API 11 and outside this game's supported range. The
 current dependency graph also includes local, unpublished Self source.
 Building or installing never publishes.
 
-## Pushy
+## Shovey
 
-[Pushy](https://github.com/waozixyz/pushy) has its own repository: its
-two editions, Classic and Island, their artwork, puzzles and tests live
-there. Arcade installs Pushy by default, like Chess, and builds it from that
-package. Opening Classic or Island goes straight to your newest unlocked
-level; Levels lets you replay any unlocked puzzle. Pushy also runs as its own
-desktop app.
+[Shovey](https://github.com/waozixyz/shovey) has its own repository: Classic,
+Island and Editor, their artwork, puzzles and tests live there. Arcade installs
+Shovey by default, like Chess, and builds it from that package. Opening Classic
+or Editor goes straight to its own screen; Levels lets you replay any unlocked
+puzzle. Shovey also runs as its own desktop app.

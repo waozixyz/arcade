@@ -10,25 +10,32 @@
       "sequence": 5,
       "host_api": 12
     },
-    "pushy": {
-      "id": "arcade.pushy",
-      "title": "Pushy",
-      "version": "0.5.1",
-      "sequence": 7,
+    "shovey": {
+      "id": "arcade.shovey",
+      "title": "Shovey",
+      "version": "0.6.0",
+      "sequence": 8,
       "host_api": 12
     },
-    "pushy-island": {
-      "id": "arcade.pushy-island",
-      "title": "Pushy Island",
-      "version": "0.3.0",
-      "sequence": 3,
+    "shovey-island": {
+      "id": "arcade.shovey-island",
+      "title": "Shovey Island \u2014 Coming Soon",
+      "version": "0.4.0",
+      "sequence": 4,
+      "host_api": 12
+    },
+    "shovey-editor": {
+      "id": "arcade.shovey-editor",
+      "title": "Shovey Editor",
+      "version": "0.2.0",
+      "sequence": 2,
       "host_api": 12
     },
     "arcade": {
       "id": "inbe.arcade",
       "title": "Arcade",
-      "version": "0.5.2",
-      "sequence": 3,
+      "version": "0.6.0",
+      "sequence": 4,
       "host_api": 18
     }
   }

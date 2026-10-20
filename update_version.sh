@@ -18,7 +18,7 @@ if ledger_path.exists():
     registrations = json.loads(Path('games.json').read_text())['games']
     changelogs = {}
     for registration in registrations:
-        # Games from other packages (Pushy) keep their changelog there.
+        # Games from other packages (Shovey) keep their changelog there.
         source = Path('.') if registration['package'] == 'self' else Path(subprocess.check_output(
             ['scripts/ziran.sh', 'pkg', 'path', registration['package']], text=True).strip())
         game = json.loads((source / registration['manifest']).read_text())

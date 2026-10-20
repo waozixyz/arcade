@@ -31,6 +31,14 @@ def build(ziran, lock_flags):
         resources = staged / "assets" / name
         resources.mkdir(parents=True)
         shutil.copytree(source / descriptor["assets"], resources, dirs_exist_ok=True)
+        shared = (source / registration["manifest"]).with_name("shared_assets.json")
+        for copy in json.loads(shared.read_text())["copies"] if shared.exists() else []:
+            asset_source, target = source / copy["from"], resources / copy["to"]
+            target.parent.mkdir(parents=True, exist_ok=True)
+            if asset_source.is_dir():
+                shutil.copytree(asset_source, target)
+            else:
+                shutil.copyfile(asset_source, target)
         shutil.copyfile(source / registration["manifest"], resources / "catalog.json")
         locales = resources / "locales"
         locales.mkdir(exist_ok=True)
@@ -63,7 +71,7 @@ def build(ziran, lock_flags):
         bundle.parent.mkdir(parents=True, exist_ok=True)
         subprocess.run([
             ziran, "bundle", "--root", str(source),
-            # Game packages without a src folder (Pushy) keep sources beside their catalogs.
+            # Game packages without a src folder (Shovey) keep sources beside their catalogs.
             *(["--module-path", str(source / "src")] if (source / "src").is_dir() else []),
             "--module-path", str(generated),
             "--module-path", str(kryon / "src/ui"),

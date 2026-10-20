@@ -1,5 +1,11 @@
 # Arcade changelog
 
+## 0.6.0
+
+- Pushy is now Shovey, with Classic, Island and a level Editor.
+- Choose joystick or swipe controls; the joystick shows on touch screens.
+- Level 121 is new, upside down, with a fresh route.
+
 ## 0.5.2
 
 - No lines between Pushy's tiles in Inner Breeze, and new layouts for levels 2, 4 and 5.

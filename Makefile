@@ -16,8 +16,8 @@ BIN_DIR ?= $(HOME)/.local/bin
 LIB_DIR ?= $(HOME)/.local/lib/arcade
 DATA_DIR ?= $(if $(XDG_DATA_HOME),$(XDG_DATA_HOME),$(HOME)/.local/share)
 
-.PHONY: all build/arcade build/pushy standalone-ui-test collection-ui-test games collection collection-test run test chess-engine-test chess-app-test ui-test inbe-ui-test compatibility-test install
-all: collection build/arcade build/pushy
+.PHONY: all build/arcade build/shovey standalone-ui-test collection-ui-test games collection collection-test run test chess-engine-test chess-app-test ui-test inbe-ui-test compatibility-test install
+all: collection build/arcade build/shovey
 
 games:
 	python3 scripts/check-games.py
@@ -44,8 +44,8 @@ build/ziran/libziran.a: ziran.lock $(RUNTIME_SOURCES)
 build/arcade: $(wildcard src/*.zi) src/catalog.zi ziran.toml ziran.lock Makefile scripts/build-desktop.py build/ziran/libziran.a
 	python3 scripts/build-desktop.py --output '$@'
 
-build/pushy: $(wildcard src/*.zi) src/catalog.zi ziran.toml ziran.lock Makefile scripts/build-desktop.py build/ziran/libziran.a
-	python3 scripts/build-desktop.py --standalone-pushy --output '$@'
+build/shovey: $(wildcard src/*.zi) src/catalog.zi ziran.toml ziran.lock Makefile scripts/build-desktop.py build/ziran/libziran.a
+	python3 scripts/build-desktop.py --standalone-shovey --output '$@'
 
 run: all
 	./build/arcade
@@ -84,7 +84,7 @@ compatibility-test:
 standalone-ui-test: all
 	env -u DISPLAY -u WAYLAND_DISPLAY -u XAUTHORITY -u DBUS_SESSION_BUS_ADDRESS \
 		-u SESSION_MANAGER -u GDK_DISPLAY YUE_DESKTOP_RECOVERY=0 SDL_AUDIODRIVER=dummy \
-		timeout 240s xvfb-run -a -n 400 -s '-screen 0 1280x1000x24' python3 tests/pushy_standalone_ui_test.py --binary '$(CURDIR)/build/pushy' --inbe-source '$(INBE_SOURCE)'
+		timeout 240s xvfb-run -a -n 400 -s '-screen 0 1280x1000x24' python3 tests/shovey_standalone_ui_test.py --binary '$(CURDIR)/build/shovey' --inbe-source '$(INBE_SOURCE)'
 
 collection-ui-test: all
 	env -u DISPLAY -u WAYLAND_DISPLAY -u XAUTHORITY -u DBUS_SESSION_BUS_ADDRESS \
@@ -95,11 +95,11 @@ install: all
 	mkdir -p '$(BIN_DIR)' '$(LIB_DIR)/games' '$(DATA_DIR)/applications'
 	install -m 0755 build/arcade '$(LIB_DIR)/arcade.new'
 	mv -f '$(LIB_DIR)/arcade.new' '$(LIB_DIR)/arcade'
-	install -m 0755 build/pushy '$(LIB_DIR)/pushy.new'
-	mv -f '$(LIB_DIR)/pushy.new' '$(LIB_DIR)/pushy'
-	install -m 0644 build/arcade.zib build/arcade.json build/pushy.zib build/pushy.json '$(LIB_DIR)/'
+	install -m 0755 build/shovey '$(LIB_DIR)/shovey.new'
+	mv -f '$(LIB_DIR)/shovey.new' '$(LIB_DIR)/shovey'
+	install -m 0644 build/arcade.zib build/arcade.json build/shovey.zib build/shovey.json '$(LIB_DIR)/'
 	install -m 0644 build/games/*.zib '$(LIB_DIR)/games/'
 	install -m 0644 build/games/*-preview.png '$(LIB_DIR)/games/'
 	ln -sfn '$(LIB_DIR)/arcade' '$(BIN_DIR)/arcade'
-	ln -sfn '$(LIB_DIR)/pushy' '$(BIN_DIR)/pushy'
-	install -m 0644 packaging/xyz.waozi.arcade.desktop packaging/xyz.waozi.pushy.desktop '$(DATA_DIR)/applications/'
+	ln -sfn '$(LIB_DIR)/shovey' '$(BIN_DIR)/shovey'
+	install -m 0644 packaging/xyz.waozi.arcade.desktop packaging/xyz.waozi.shovey.desktop '$(DATA_DIR)/applications/'

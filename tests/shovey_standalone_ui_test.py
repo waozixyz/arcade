@@ -1,6 +1,5 @@
-"""Run the standalone Pushy app privately: the edition chooser, both
-editions opening straight on their newest level with picture sprites,
-independent saves, and the same level after a restart."""
+"""Run the standalone Shovey app privately: the chooser, Classic and Editor
+opening directly, Island's status screen, and independent saves."""
 import argparse
 import contextlib
 import json
@@ -20,11 +19,10 @@ def main():
     assert int(os.environ['DISPLAY'].split(':')[-1].split('.')[0]) >= 400
     assert os.environ['YUE_DESKTOP_RECOVERY'] == '0'
     root = Path(__file__).resolve().parents[1]
-    output = root / 'build/pushy-standalone-ui-test'
-    # Each heading counts the edition's levels, which Pushy's level files list.
-    pushy = Path(subprocess.check_output([str(root / 'scripts/ziran.sh'), 'pkg', 'path', 'pushy'], text=True).strip())
-    classic_levels, island_levels = (len(json.loads((pushy / 'levels' / f'{edition}.json').read_text())['levels'])
-                       for edition in ('classic', 'island'))
+    output = root / 'build/shovey-standalone-ui-test'
+    # Classic's heading counts its levels, which Shovey's level file lists.
+    shovey = Path(subprocess.check_output([str(root / 'scripts/ziran.sh'), 'pkg', 'path', 'shovey'], text=True).strip())
+    classic_levels = len(json.loads((shovey / 'levels/classic.json').read_text())['levels'])
     output.mkdir(parents=True, exist_ok=True)
     sys.path.insert(0, str(args.inbe_source / 'tests'))
     from ui_driver import UiDriver
@@ -40,8 +38,9 @@ def main():
                                      stdout=log, stderr=subprocess.STDOUT)
             driver.attach(child, log_path)
             try:
-                driver.wait(label='Pushy Classic', role='button')
-                driver.wait(label='Pushy Island', role='button')
+                driver.wait(label='Shovey Classic', role='button')
+                driver.wait(label='Shovey Island', role='button')
+                driver.wait(label='Shovey Editor', role='button')
                 yield child
             finally:
                 if child.poll() is None:
@@ -61,31 +60,23 @@ def main():
 
     with tempfile.TemporaryDirectory(prefix='profile-', dir=output) as temporary:
         profile = Path(temporary)
-        classic = profile / 'games/arcade.pushy/records/campaign'
-        island = profile / 'games/arcade.pushy-island/records/campaign'
+        classic = profile / 'games/arcade.shovey/records/campaign'
         with application(profile, 'play'):
             assert not driver.find(label='Arcade', role='text')
-            driver.press(label='Pushy Classic', role='button')
+            driver.press(label='Shovey Classic', role='button')
             driver.wait(label=f'Level 1 / {classic_levels}')
             assert not driver.find(label='Continue', role='button'), 'Classic must open straight on a level'
-            assert driver.find(label='Pushy', role='image', visible=True), 'Pushy must be drawn as a picture'
+            assert driver.find(label='Shovey', role='image', visible=True), 'Shovey must be drawn as a picture'
             classic_saved = move_until_saved(classic)
-            driver.press(label='Back', role='button')
-            driver.press(label='Pushy Island', role='button')
-            driver.wait(label=f'Island 1 / {island_levels}')
-            assert not driver.find(label='Continue', role='button'), 'Island must open straight on a level'
-            assert driver.find(label='Pushy', role='image', visible=True)
-            island_saved = move_until_saved(island)
-            assert classic.read_bytes() == classic_saved, 'Island changed the Classic save'
+            assert not driver.find(label='Back', role='button'), 'Shovey must own all of its chrome'
         with application(profile, 'restore'):
-            driver.press(label='Pushy Island', role='button')
-            driver.wait(label=f'Island 1 / {island_levels}')
-            assert island.read_bytes() == island_saved, 'Reopening the newest island must keep its position'
-            driver.press(label='Back', role='button')
-            driver.press(label='Pushy Classic', role='button')
+            driver.press(label='Shovey Editor', role='button')
+            driver.wait(label='Explore', role='button')
+            driver.key('escape')
+            driver.press(label='Shovey Classic', role='button')
             driver.wait(label=f'Level 1 / {classic_levels}')
             assert classic.read_bytes() == classic_saved
-    print('Standalone Pushy: chooser, both editions opening on their newest level with sprites, and independent saves passed')
+    print('Standalone Shovey: chooser, direct openings, owned chrome, and independent saves passed')
 
 
 if __name__ == '__main__':

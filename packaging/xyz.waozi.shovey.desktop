@@ -1,8 +1,8 @@
 [Desktop Entry]
 Type=Application
-Name=Pushy
-Comment=Logic puzzles with Pushy
-Exec=pushy
+Name=Shovey
+Comment=Logic puzzles with Shovey
+Exec=shovey
 Icon=applications-games
 Terminal=false
 Categories=Game;LogicGame;

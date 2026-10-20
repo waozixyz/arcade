@@ -95,8 +95,8 @@ class CollectionTests(unittest.TestCase):
         registrations["games"] = registrations["games"][:1]
         (self.root / "games.json").write_text(json.dumps(registrations))
         self.stage()
-        self.assertFalse((self.output / "assets/arcade/games/pushy.zib").exists())
-        self.assertFalse((self.output / "assets/arcade/previews/pushy.png").exists())
+        self.assertFalse((self.output / "assets/arcade/games/shovey.zib").exists())
+        self.assertFalse((self.output / "assets/arcade/previews/shovey-island.png").exists())
 
 
 if __name__ == "__main__":

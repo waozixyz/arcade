@@ -35,9 +35,9 @@ ref = "master"
 git = "https://github.com/waozixyz/apps.git"
 ref = "master"
 
-# Pushy's two editions are games Arcade installs by default.
-[dependencies.pushy]
-git = "https://github.com/waozixyz/pushy.git"
+# Shovey's editions and editor are games Arcade installs by default.
+[dependencies.shovey]
+git = "https://github.com/waozixyz/shovey.git"
 ref = "master"
 
 # Compatibility tooling runs Inner Breeze's host checks; releases check its publisher pins.

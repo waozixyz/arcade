@@ -1,12 +1,12 @@
-// Classic and Island keep independent verified identities and campaigns.
+// Classic, Island and Editor keep independent verified identities.
 #import "kryon/app_context"
 #import "kryon/app_protocol"
 
 #program_export
 Main :: () -> s32 {
     if AppMode() == APP_IDENTIFY {
-        AppIdentity("pushy")
-        AppDescribe("Pushy", "")
+        AppIdentity("shovey")
+        AppDescribe("Shovey", "")
         return APP_PROTOCOL
     }
     return 0

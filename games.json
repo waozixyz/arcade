@@ -5,12 +5,16 @@
       "manifest": "apps/chess/catalog.json"
     },
     {
-      "package": "pushy",
-      "manifest": "apps/pushy/catalog.json"
+      "package": "shovey",
+      "manifest": "apps/shovey/catalog.json"
     },
     {
-      "package": "pushy",
-      "manifest": "apps/pushy/island/catalog.json"
+      "package": "shovey",
+      "manifest": "apps/shovey/island/catalog.json"
+    },
+    {
+      "package": "shovey",
+      "manifest": "apps/shovey/editor/catalog.json"
     }
   ]
 }

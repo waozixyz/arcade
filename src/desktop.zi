@@ -18,6 +18,7 @@ Draw :: (session: Session) -> bool {
     for candidate: cast(s32)0..269 {
         if TestDriverKeyPressed(candidate) { key = candidate; break }
     }
+    if key == 256 && CollectionBack() { key = 0 }
     KeyboardSend(session, key)
     // Text typed on the keyboard reaches the game's focused field.
     codepoint := DesktopTypedCodepoint()
@@ -46,12 +47,16 @@ Draw :: (session: Session) -> bool {
 #program_export
 main :: (argc: s32, argv: **u8) -> s32 {
     standalone := false
-    #if #defined(PUSHY_STANDALONE) {
+    #if #defined(SHOVEY_STANDALONE) {
         standalone = true
     }
-    product := ifx standalone then "Pushy" else "Arcade"
+    product := ifx standalone then "Shovey" else "Arcade"
     if argc == 2 && TextFromCString(argv[1]) == "--list" {
-        if standalone { Report("arcade.pushy\narcade.pushy-island\n"); return 0 }
+        if standalone {
+            shovey_ids: [3]string = .["arcade.shovey", "arcade.shovey-island", "arcade.shovey-editor"]
+            for game: shovey_ids { Report(game); Report("\n") }
+            return 0
+        }
         for index: cast(s32)0..GameCount - 1 {
             Report(GameAt(index).id)
             Report("\n")
@@ -61,7 +66,7 @@ main :: (argc: s32, argv: **u8) -> s32 {
     first: s32 = -1
     if argc != 1 {
         if argc != 3 || TextFromCString(argv[1]) != "--app" {
-            Report(ifx standalone then "Usage: pushy [--list | --app GAME]\n" else "Usage: arcade [--list | --app GAME]\n")
+            Report(ifx standalone then "Usage: shovey [--list | --app GAME]\n" else "Usage: arcade [--list | --app GAME]\n")
             return 1
         }
         for index: cast(s32)0..GameCount - 1 {
@@ -70,7 +75,14 @@ main :: (argc: s32, argv: **u8) -> s32 {
                 first = index
             }
         }
-        if first < 0 || (standalone && GameAt(first).name != "pushy" && GameAt(first).name != "pushy-island") {
+        standalone_game := false
+        if standalone && first >= 0 {
+            shovey_names: [3]string = .["shovey", "shovey-island", "shovey-editor"]
+            for game: shovey_names {
+                if GameAt(first).name == game { standalone_game = true }
+            }
+        }
+        if first < 0 || (standalone && !standalone_game) {
             Report(product)
             Report(": unknown game\n")
             return 1
@@ -85,7 +97,7 @@ main :: (argc: s32, argv: **u8) -> s32 {
     }
     opened := false
     if standalone {
-        opened = CollectionOpenPushy(directory, data) &&
+        opened = CollectionOpenShovey(directory, data) &&
         (first < 0 || CollectionOpenGame(GameAt(first).id))
     } else {
         opened = CollectionOpenFiles(directory, data) &&
@@ -103,7 +115,7 @@ main :: (argc: s32, argv: **u8) -> s32 {
         return 1
     }
     title: [16]u8
-    unused CopyCString(ifx standalone then "Pushy" else "Arcade", title[:])
+    unused CopyCString(ifx standalone then "Shovey" else "Arcade", title[:])
     SetTitle(window, *title[0])
     session := SessionOpen()
     if !SessionValid(session) {

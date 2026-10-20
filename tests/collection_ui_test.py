@@ -19,9 +19,9 @@ def main():
     assert os.environ["YUE_DESKTOP_RECOVERY"] == "0"
     root = Path(__file__).resolve().parents[1]
     output = root / "build/collection-ui-test"
-    # The Classic heading counts its levels, which Pushy's level file lists.
-    pushy = Path(subprocess.check_output([str(root / "scripts/ziran.sh"), "pkg", "path", "pushy"], text=True).strip())
-    classic = len(json.loads((pushy / "levels/classic.json").read_text())["levels"])
+    # The Classic heading counts its levels, which Shovey's level file lists.
+    shovey = Path(subprocess.check_output([str(root / "scripts/ziran.sh"), "pkg", "path", "shovey"], text=True).strip())
+    classic = len(json.loads((shovey / "levels/classic.json").read_text())["levels"])
     output.mkdir(parents=True, exist_ok=True)
     sys.path.insert(0, str(args.inbe_source / "tests"))
     from ui_driver import UiDriver
@@ -110,16 +110,20 @@ def main():
         with application(profile, "chess-restore", "--app", "inbe.chess"):
             driver.wait(label="Your move")
             assert record.read_bytes() == saved, "The unchanged Chess record did not survive restart"
-        with application(profile, "pushy", "--app", "arcade.pushy") as child:
+        with application(profile, "shovey", "--app", "arcade.shovey") as child:
             driver.wait(label=f"Level 1 / {classic}")
-            driver.wait(label="Pushy", role="image")
-            capture(child, "pushy")
-            driver.press(label="Back", role="button")
-            driver.wait(label="Pushy Classic", role="button")
-            driver.wait(label="Pushy Island", role="button")
-            driver.press(label="Back", role="button")
+            driver.wait(label="Shovey", role="image")
+            assert not driver.find(label="Back", role="button"), "Shovey must own all of its chrome"
+            capture(child, "shovey")
+            driver.key("escape")
+            driver.wait(label="Shovey Classic", role="button")
+            driver.wait(label="Shovey Island", role="button")
+            driver.wait(label="Shovey Editor", role="button")
+            driver.key("escape")
             driver.wait(label="Arcade", role="text")
-    print("Shared Arcade library: previews, Chess play/save/Back/restart and nested Pushy passed")
+        assert not (profile / "inbe.db").exists(), "standalone Arcade opened an Inbe profile"
+        assert record.exists(), "standalone Arcade lost its private game profile"
+    print("Shared Arcade library: previews, Chess play/save/Back/restart and nested Shovey passed")
 
 
 if __name__ == "__main__":
