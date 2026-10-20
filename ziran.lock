@@ -36,14 +36,6 @@
       "url": "https://github.com/ziranlang/qrcode.git"
     },
     {
-      "commit": "48b7a78579b4ba9a42121ab496cdc513e709c02e",
-      "dependencies": {"apps": "p2c4ca8cd46b96384", "kryon": "p06ab88b30afa6fa2"},
-      "id": "p19d9e688e85ea355",
-      "name": "Shovey",
-      "ref": "master",
-      "url": "https://github.com/waozixyz/shovey.git"
-    },
-    {
       "commit": "1cb9df183089a77c8a16448a556186f30b261a98",
       "dependencies": {"kryon": "p06ab88b30afa6fa2"},
       "id": "p1b13dda539ed2a39",
@@ -127,6 +119,14 @@
       "url": "https://github.com/waozixyz/self.git"
     },
     {
+      "commit": "7eedd1ca7b75608adf28ac492d59e9072ad44a32",
+      "dependencies": {"apps": "p2c4ca8cd46b96384", "kryon": "p06ab88b30afa6fa2"},
+      "id": "pd18a7a69c5b5f7c1",
+      "name": "Shovey",
+      "ref": "master",
+      "url": "https://github.com/waozixyz/shovey.git"
+    },
+    {
       "commit": "9cc6872f75447c3a24c16764f9829d0f58751cb0",
       "dependencies": {},
       "id": "pe1027b9d16704793",
@@ -161,7 +161,7 @@
     }
   ],
   "root": {
-    "dependencies": {"apps": "p2c4ca8cd46b96384", "inbe": "p48228a6b7e2920d3", "kryon": "p06ab88b30afa6fa2", "shovey": "p19d9e688e85ea355"},
+    "dependencies": {"apps": "p2c4ca8cd46b96384", "inbe": "p48228a6b7e2920d3", "kryon": "p06ab88b30afa6fa2", "shovey": "pd18a7a69c5b5f7c1"},
     "name": "Arcade"
   },
   "toolchain": {
