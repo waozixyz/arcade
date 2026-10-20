@@ -8,6 +8,7 @@ import subprocess
 import sys
 import tempfile
 import time
+from PIL import Image
 
 
 def main():
@@ -115,6 +116,13 @@ def main():
             driver.wait(label="Shovey", role="image")
             assert not driver.find(label="Back", role="button"), "Shovey must own all of its chrome"
             capture(child, "shovey")
+            # Semantic image nodes can exist while a palette paints every
+            # sprite as a flat rectangle. Check the actual board pixels too.
+            with Image.open(output / "shovey.png") as shot:
+                picture = driver.find(label="Shovey", role="image", visible=True)[0]
+                box = (int(picture["x"]), int(picture["y"]),
+                       int(picture["x"] + picture["width"]), int(picture["y"] + picture["height"]))
+                assert len(shot.convert("RGB").crop(box).getcolors(100000) or []) > 32, "Shovey sprite lost its colours"
             driver.key("escape")
             driver.wait(label="Shovey Classic", role="button")
             driver.wait(label="Shovey Island", role="button")

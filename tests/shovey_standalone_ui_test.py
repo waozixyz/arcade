@@ -74,7 +74,8 @@ def main():
             x, y = screen['x'] + left_gap / 2, board['y'] + board['height'] / 2
         else:
             x, y = board['x'] + board['width'] / 2, board['y'] + board['height'] + below_gap / 2
-        assert max(left_gap, below_gap) > 40, f'no room beside the board: {board} in {screen}'
+        # The portrait layout has a 24 px margin; a vertical swipe fits there.
+        assert max(left_gap, below_gap) > 8, f'no room beside the board: {board} in {screen}'
         before = record.read_bytes()
         for dx, dy in ((-80, 0), (0, -80), (80, 0), (0, 80)):
             driver.drag((x, y), (x + dx, y + dy))
