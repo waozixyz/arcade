@@ -1,5 +1,9 @@
 # Arcade changelog
 
+## 0.6.4
+
+- Hold a press or touch on a Shovey board to keep walking.
+
 ## 0.6.3
 
 - Shovey Island uses Classic's original round green player.
