@@ -58,6 +58,33 @@ def main():
                 time.sleep(.05)
         raise AssertionError(f'No move was saved to {record}')
 
+    def swipe_beside_board_until_saved(record):
+        """A swipe on the game screen moves Shovey even where the board is not."""
+        nodes = driver.tree()
+        screen = nodes[0]
+        # The board is the box Shovey stands in.
+        shovey_image = next(node for node in nodes if node['kind'] == 'image' and node['label'] == 'Shovey')
+        sx, sy = shovey_image['x'] + shovey_image['width'] / 2, shovey_image['y'] + shovey_image['height'] / 2
+        board = max((node for node in nodes if node['kind'] == 'box' and node['visible'] and
+                     node['x'] <= sx <= node['x'] + node['width'] and node['y'] <= sy <= node['y'] + node['height']),
+                    key=lambda node: node['width'] * node['height'])
+        left_gap = board['x'] - screen['x']
+        below_gap = screen['y'] + screen['height'] - (board['y'] + board['height'])
+        if left_gap >= below_gap:
+            x, y = screen['x'] + left_gap / 2, board['y'] + board['height'] / 2
+        else:
+            x, y = board['x'] + board['width'] / 2, board['y'] + board['height'] + below_gap / 2
+        assert max(left_gap, below_gap) > 40, f'no room beside the board: {board} in {screen}'
+        before = record.read_bytes()
+        for dx, dy in ((-80, 0), (0, -80), (80, 0), (0, 80)):
+            driver.drag((x, y), (x + dx, y + dy))
+            deadline = time.monotonic() + 3
+            while time.monotonic() < deadline:
+                if record.read_bytes() != before:
+                    return
+                time.sleep(.05)
+        raise AssertionError(f'A swipe beside the board at {x}, {y} moved nothing')
+
     with tempfile.TemporaryDirectory(prefix='profile-', dir=output) as temporary:
         profile = Path(temporary)
         classic = profile / 'games/arcade.shovey/records/campaign'
@@ -67,7 +94,9 @@ def main():
             driver.wait(label=f'Level 1 / {classic_levels}')
             assert not driver.find(label='Continue', role='button'), 'Classic must open straight on a level'
             assert driver.find(label='Shovey', role='image', visible=True), 'Shovey must be drawn as a picture'
-            classic_saved = move_until_saved(classic)
+            move_until_saved(classic)
+            swipe_beside_board_until_saved(classic)
+            classic_saved = classic.read_bytes()
             assert not driver.find(label='Back', role='button'), 'Shovey must own all of its chrome'
         with application(profile, 'restore'):
             driver.press(label='Shovey Editor', role='button')

@@ -1,5 +1,10 @@
 # Arcade changelog
 
+## 0.6.1
+
+- Swipe anywhere on Shovey's screen to move, not only on the board.
+- Shovey's top bar uses icons, so the level's name fits on a phone.
+
 ## 0.6.0
 
 - Pushy is now Shovey, with Classic, Island and a level Editor.
