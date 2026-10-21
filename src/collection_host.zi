@@ -66,6 +66,7 @@ collection_shared_codec: Codec.WidgetAppSharedCodec;
 collection_item_codec: Codec.WidgetAppSharedItemCodec;
 collection_invitation_codec: Codec.WidgetAppInvitationCodec;
 collection_ready: bool;
+collection_leave_to_library: bool;
 
 CollectionTouchFirst :: () -> bool {
     #if #defined(PLATFORM_DESKTOP) {
@@ -107,7 +108,7 @@ CollectionAllows :: (context: *void, node: *AppNode, name: string) -> bool {
     name == "AppFriendHost" || name == "AppSharedHost" || name == "AppSharedItemHost" ||
     name == "AppInvitationHost" || name == "RefreshAppSharedHost" || name == "SendAppSharedHost" ||
     name == "SmoothFramesHost" || name == "AppLocaleHost" || name == "AppSoundHost" ||
-    name == "arcade.controls"
+    name == "arcade.controls" || name == "arcade.sound" || name == "arcade.navigation"
 }
 
 CollectionCall :: (context: *void, node: *AppNode, module: *u8, function: *u8,
@@ -147,9 +148,32 @@ CollectionCall :: (context: *void, node: *AppNode, module: *u8, function: *u8,
     }
     if name == "AppServiceHost" && count == 2 &&
     HostScalarValid(arguments[0], "string", cast(s32)HostString) &&
-    AppArgumentText(arguments[0]) == "arcade.controls" &&
     HostScalarValid(arguments[1], "string", cast(s32)HostString) {
+        service := AppArgumentText(arguments[0])
         request := AppArgumentText(arguments[1])
+        if service == "arcade.navigation" && request == "back" {
+            collection_leave_to_library = true
+            result.* = AppHostText("queued")
+            return 1
+        }
+        if service == "arcade.sound" {
+            saved := CollectionRecordsFor("arcade.shovey-player")
+            if saved == null { return 0 }
+            if request == "get" {
+                AppFileFree(saved.text)
+                saved.text = AppFileRead(*saved.files, "sound")
+                muted := saved.text == "muted"
+                SoundSetMuted(muted)
+                result.* = AppHostText(ifx muted then "muted" else "on")
+                return 1
+            }
+            value := ifx request == "mute" then "muted" else ifx request == "unmute" then "on" else ""
+            if value == "" || !AppFileWrite(*saved.files, "sound", value) { return 0 }
+            SoundSetMuted(value == "muted")
+            result.* = AppHostText(value)
+            return 1
+        }
+        if service != "arcade.controls" { return 0 }
         saved := CollectionRecordsFor("arcade.shovey-player")
         if saved == null { return 0 }
         if request == "mode" {
@@ -483,6 +507,11 @@ CollectionFrame :: (session: Session, viewport: Rectangle, key: s32, modifiers: 
     drawn := AppHostRun(*collection_host, APP_FRAME)
     WidgetHostEnd()
     if !drawn { return false }
+    if collection_leave_to_library {
+        collection_leave_to_library = false
+        unused AppHostBack(*collection_host)
+        return true
+    }
     if nested && !owns_chrome {
         title_bytes: Vec(u8)
         BuilderPrint(*title_bytes, "%", TextUntilNul(runtime.node.entry.title[:]))

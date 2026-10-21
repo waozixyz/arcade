@@ -34,12 +34,28 @@ def check():
         version = re.search(r'^## \[(\d+\.\d+\.\d+)\] - \d{4}-\d{2}-\d{2}$', changelog, re.M)
         assert version and version[1] == component['version'], 'Run ./update_version.sh'
         assert component['sequence'] > 0
-        locales = {}
-        for file in (source / game['locales']).glob('*.txt'):
-            locales[file.stem] = {match[1] for match in re.finditer(r'^\[([^\]]+)\]$', file.read_text(), re.M)}
         required = set()
         for file in (source / registration['manifest']).parent.glob('*.zi'):
             required.update(re.findall(r'"(' + re.escape(game['locale_prefix']) + r'[a-z0-9_]+)"', file.read_text()))
+        locales = {}
+        for file in (source / game['locales']).glob('*.txt'):
+            text = file.read_text()
+            locales[file.stem] = {match[1] for match in re.finditer(r'^\[([^\]]+)\]$', text, re.M)}
+            entries = {}
+            heading = None
+            value = []
+            for line in text.splitlines():
+                if line.startswith('[') and line.endswith(']'):
+                    if heading is not None:
+                        entries[heading] = '\n'.join(value).strip()
+                    heading = line[1:-1]
+                    value = []
+                elif heading is not None and line != '---':
+                    value.append(line)
+            if heading is not None:
+                entries[heading] = '\n'.join(value).strip()
+            empty = [key for key in required if not entries.get(key, '').strip()]
+            assert not empty, f'{file.name}: empty translations {empty[:3]}'
         assert len(locales) >= 12
         for language, keys in locales.items():
             assert required <= keys, f'{language}: missing {sorted(required - keys)}'

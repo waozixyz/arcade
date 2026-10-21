@@ -48,9 +48,10 @@ def build(ziran, lock_flags):
             values = {}
             for block in locale.read_text().split("---\n"):
                 lines = block.splitlines()
-                if lines and lines[0].startswith("[" + descriptor["locale_prefix"]):
-                    blocks.append(block.rstrip() + "\n---\n")
-                    values[lines[0][1:-1]] = "\n".join(lines[1:]).rstrip()
+                heading = next((line for line in lines if line), "")
+                if heading.startswith("[" + descriptor["locale_prefix"]):
+                    blocks.append(heading + "\n" + "\n".join(lines[lines.index(heading) + 1:]).rstrip() + "\n---\n")
+                    values[heading[1:-1]] = "\n".join(lines[lines.index(heading) + 1:]).rstrip()
             (locales / locale.name).write_text("".join(blocks))
             translations[locale.stem] = values
         # Text also lives in the game itself: released legacy hosts only know
