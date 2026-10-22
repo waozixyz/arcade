@@ -140,7 +140,7 @@ def main():
             driver.wait(label=f'Level 1 / {classic_levels}')
             assert not driver.find(label='Continue', role='button'), 'Classic must open straight on a level'
             assert driver.find(label='Shovey', role='image', visible=True), 'Shovey must be drawn as a picture'
-            assert driver.find(label='Select game', role='button', visible=True), 'Classic lacks its return control'
+            assert driver.find(label='Back', role='button', visible=True), 'Classic lacks its return control'
             driver.press(label='Mute', role='button')
             driver.wait(label='Unmute', role='button')
             assert (profile / 'games/arcade.shovey-player/records/sound').read_text() == 'muted'
@@ -155,9 +155,11 @@ def main():
             landscape_preview = driver.find(label='1', role='image', visible=True)[0]
             assert abs(landscape_preview['width'] / landscape_preview['height'] - 5 / 3) < .01
             subprocess.run(['import', '-window', window, str(output / 'level-selector-landscape.png')], check=True)
-            driver.press(label='Continue', role='button')
+            driver.press(key=20022)
+            driver.wait(label='Shovey Classic', role='button')
+            driver.press(label='Shovey Classic', role='button')
             driver.wait(label=f'Level 1 / {classic_levels}')
-            driver.press(label='Select game', role='button')
+            driver.press(label='Back', role='button')
             driver.wait(label='Shovey Classic', role='button')
             driver.press(label='Shovey Classic', role='button')
             driver.wait(label=f'Level 1 / {classic_levels}')
@@ -176,8 +178,8 @@ def main():
                 subprocess.run(['import', '-window', window, str(output / (orientation + '.png'))], check=True)
                 swipe_in_visible_direction()
             classic_saved = classic.read_bytes()
-            assert not driver.find(label='Back', role='button'), 'Shovey must own all of its chrome'
-            driver.press(label='Select game', role='button')
+            assert len(driver.find(label='Back', role='button', visible=True)) == 1, 'Shovey needs one clear Back action'
+            driver.press(label='Back', role='button')
             driver.wait(label='Shovey Editor', role='button')
             driver.press(label='Shovey Editor', role='button')
             driver.wait(label='Explore', role='button')

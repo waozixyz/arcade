@@ -114,7 +114,7 @@ def main():
         with application(profile, "shovey", "--app", "arcade.shovey") as child:
             driver.wait(label=f"Level 1 / {classic}")
             driver.wait(label="Shovey", role="image")
-            assert not driver.find(label="Back", role="button"), "Shovey must own all of its chrome"
+            assert len(driver.find(label="Back", role="button", visible=True)) == 1, "Shovey needs one clear Back action"
             capture(child, "shovey")
             # Semantic image nodes can exist while a palette paints every
             # sprite as a flat rectangle. Check the actual board pixels too.
@@ -123,7 +123,7 @@ def main():
                 box = (int(picture["x"]), int(picture["y"]),
                        int(picture["x"] + picture["width"]), int(picture["y"] + picture["height"]))
                 assert len(shot.convert("RGB").crop(box).getcolors(100000) or []) > 32, "Shovey sprite lost its colours"
-            driver.key("escape")
+            driver.press(label="Back", role="button")
             driver.wait(label="Shovey Classic", role="button")
             assert not driver.find(label="Shovey Island", role="button"), 'Unapproved Island must not be offered'
             driver.wait(label="Shovey Editor", role="button")

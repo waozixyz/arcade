@@ -1,5 +1,18 @@
 # Arcade changelog
 
+## 0.6.11
+
+- Shovey has working Back navigation with updated and older Inner Breeze versions.
+- Includes the approved Classic campaign through level 19; Island stays unavailable.
+## 0.6.10
+
+- Shovey has a visible Back button on its board and level selector.
+- Includes the approved Classic campaign through level 19; Island stays unavailable.
+## 0.6.8
+
+- Shovey includes approved Classic levels 1–19 with updated artwork and portal travel.
+- Island stays unavailable while its levels are being edited.
+- Existing Shovey saves and completed levels are retained.
 ## 0.6.7
 
 - Shovey includes approved Classic levels 1–19 with updated artwork and portal travel.
