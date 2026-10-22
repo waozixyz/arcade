@@ -6,6 +6,7 @@ ZIRAN_ROOT = $(if $(TOOLCHAIN_SOURCE),$(TOOLCHAIN_SOURCE),$(shell $(ZIRAN) pkg p
 KRYON_DIR = $(shell $(ZIRAN) pkg path kryon $(LOCK_FLAGS))
 # The shared Apps controller is built from the locked Apps package. Arcade
 # trusts only the reviewed digest committed in apps-controller.sha256.
+ENTITY_DIR = $(shell $(ZIRAN) pkg path entity $(LOCK_FLAGS))
 APPS_DIR = $(shell $(ZIRAN) pkg path apps $(LOCK_FLAGS))
 APPS_BUNDLE := build/apps-ui/apps.zib
 APPS_SHA256 := $(shell cat apps-controller.sha256)
@@ -17,7 +18,7 @@ LIB_DIR ?= $(HOME)/.local/lib/arcade
 DATA_DIR ?= $(if $(XDG_DATA_HOME),$(XDG_DATA_HOME),$(HOME)/.local/share)
 
 .PHONY: all build/arcade build/shovey standalone-ui-test collection-ui-test games collection collection-test run test chess-engine-test chess-app-test ui-test inbe-ui-test compatibility-test install
-all: collection build/arcade build/shovey
+all: collection build/entity.zib build/arcade build/shovey
 
 games:
 	python3 scripts/check-games.py
@@ -38,13 +39,16 @@ collection-test:
 
 src/catalog.zi: games
 
+build/entity.zib: ziran.lock $(wildcard $(ENTITY_DIR)/src/*.zi)
+	python3 scripts/build-entity.py
+
 build/ziran/libziran.a: ziran.lock $(RUNTIME_SOURCES)
 	$(MAKE) -C '$(ZIRAN_ROOT)' BUILD_DIR='$(abspath build/ziran)' '$(abspath $@)'
 
-build/arcade: $(wildcard src/*.zi) src/catalog.zi ziran.toml ziran.lock Makefile scripts/build-desktop.py build/ziran/libziran.a
+build/arcade: build/entity.zib $(wildcard src/*.zi) src/catalog.zi ziran.toml ziran.lock Makefile scripts/build-desktop.py build/ziran/libziran.a
 	python3 scripts/build-desktop.py --output '$@'
 
-build/shovey: $(wildcard src/*.zi) src/catalog.zi ziran.toml ziran.lock Makefile scripts/build-desktop.py build/ziran/libziran.a
+build/shovey: build/entity.zib $(wildcard src/*.zi) src/catalog.zi ziran.toml ziran.lock Makefile scripts/build-desktop.py build/ziran/libziran.a
 	python3 scripts/build-desktop.py --standalone-shovey --output '$@'
 
 run: all
@@ -97,7 +101,7 @@ install: all
 	mv -f '$(LIB_DIR)/arcade.new' '$(LIB_DIR)/arcade'
 	install -m 0755 build/shovey '$(LIB_DIR)/shovey.new'
 	mv -f '$(LIB_DIR)/shovey.new' '$(LIB_DIR)/shovey'
-	install -m 0644 build/arcade.zib build/arcade.json build/shovey.zib build/shovey.json '$(LIB_DIR)/'
+	install -m 0644 build/entity.zib build/arcade.zib build/arcade.json build/shovey.zib build/shovey.json '$(LIB_DIR)/'
 	install -m 0644 build/games/*.zib '$(LIB_DIR)/games/'
 	install -m 0644 build/games/*-preview.png '$(LIB_DIR)/games/'
 	ln -sfn '$(LIB_DIR)/arcade' '$(BIN_DIR)/arcade'

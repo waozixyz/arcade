@@ -7,6 +7,7 @@
 #import "platform"
 #import "catalog"
 #import "collection_host"
+#import "entity_host"
 
 sdl :: #system_library "SDL2";
 SetTitle :: (window: *void, title: *u8) #foreign sdl "SDL_SetWindowTitle";
@@ -116,6 +117,11 @@ main :: (argc: s32, argv: **u8) -> s32 {
     if !opened {
         Report(product)
         Report(": could not open collection or game\n")
+        unused CollectionClose()
+        return 1
+    }
+    if !EntityOpenFile(directory, data, standalone) {
+        Report("Could not open Entity\n")
         unused CollectionClose()
         return 1
     }

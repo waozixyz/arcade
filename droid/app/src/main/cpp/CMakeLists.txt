@@ -72,7 +72,32 @@ execute_process(COMMAND "${HOST_PYTHON}"
 
 kryon_android_raylib("${RAYLIB_DIR}")
 
-add_library(main SHARED ${APP_ZIRAN_GENERATED_SOURCES})
+# Entity uses the same native account cryptography as the flagship Inbe host.
+set(LIBOQS_DIR "$ENV{LIBOQS_DIR}" CACHE PATH "Locked liboqs source")
+set(MONOCYPHER_DIR "$ENV{MONOCYPHER_DIR}" CACHE PATH "Locked Monocypher source")
+set(ENTITY_LOCK_FLAGS --locked)
+if(EXISTS "${REPO_ROOT}/ziran.local.toml")
+    set(ENTITY_LOCK_FLAGS)
+endif()
+if(NOT LIBOQS_DIR)
+    execute_process(COMMAND "${REPO_ROOT}/scripts/ziran.sh" pkg path liboqs ${ENTITY_LOCK_FLAGS}
+        WORKING_DIRECTORY "${REPO_ROOT}" OUTPUT_VARIABLE LIBOQS_DIR OUTPUT_STRIP_TRAILING_WHITESPACE COMMAND_ERROR_IS_FATAL ANY)
+endif()
+if(NOT MONOCYPHER_DIR)
+    execute_process(COMMAND "${REPO_ROOT}/scripts/ziran.sh" pkg path monocypher ${ENTITY_LOCK_FLAGS}
+        WORKING_DIRECTORY "${REPO_ROOT}" OUTPUT_VARIABLE MONOCYPHER_DIR OUTPUT_STRIP_TRAILING_WHITESPACE COMMAND_ERROR_IS_FATAL ANY)
+endif()
+set(OQS_BUILD_ONLY_LIB ON CACHE BOOL "" FORCE)
+set(OQS_USE_OPENSSL OFF CACHE BOOL "" FORCE)
+set(OQS_MINIMAL_BUILD "SIG_ml_dsa_44" CACHE STRING "" FORCE)
+set(OQS_DIST_BUILD OFF CACHE BOOL "" FORCE)
+set(OQS_OPT_TARGET generic CACHE STRING "" FORCE)
+foreach(feature ADX AES AVX AVX2 AVX512 AVX512BW AVX512DQ AVX512F BMI1 BMI2 FMA PCLMULQDQ POPCNT SSE SSE2 SSE3 VPCLMULQDQ)
+    set(OQS_USE_${feature}_INSTRUCTIONS OFF CACHE BOOL "" FORCE)
+endforeach()
+add_subdirectory("${LIBOQS_DIR}" "${CMAKE_BINARY_DIR}/entity-oqs")
+add_library(main SHARED ${APP_ZIRAN_GENERATED_SOURCES} "${MONOCYPHER_DIR}/src/monocypher.c")
+target_link_libraries(main oqs)
 kryon_android_app(main)
 kryon_android_host(main ${APP_ZIRAN_GENERATED_SOURCES})
 

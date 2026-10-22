@@ -89,6 +89,7 @@ def build(ziran, lock_flags):
             "--module-path", "std=" + str(toolchain / "std"),
             "--module-path", str(toolchain / "std"),
             "--module-path", "apps=" + str(package("apps") / "src"),
+            "--module-path", "mingcute=" + str(package("mingcute") / "src"),
             *[flag for name in defines for flag in ('--define', name)],
             "--define", "KRYON_HOSTED_UI", "--asset-dir", "assets=" + str(staged / "assets"),
             "--entry", descriptor["entry"], "-o", str(bundle),

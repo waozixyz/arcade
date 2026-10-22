@@ -45,3 +45,7 @@ ref = "master"
 [dependencies.inbe]
 git = "https://github.com/waozixyz/inbe.git"
 ref = "master"
+
+[dependencies.entity]
+git = "https://github.com/waozixyz/entity.git"
+ref = "master"

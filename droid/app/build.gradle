@@ -57,6 +57,7 @@ android {
         }
     }
 
+    sourceSets.main.assets.srcDir "${rootProject.projectDir}/../build/entity-assets"
     // Arcade's collection and receipt, staged by make android.
     sourceSets.main.assets.srcDir "${rootProject.projectDir}/../build/${standaloneShovey ? 'android-shovey-assets' : 'android-assets'}"
     if (standaloneShovey) {
@@ -75,3 +76,10 @@ android {
         }
     }
 }
+
+// The shared profile is a host asset, never a child of a game collection.
+tasks.register('prepareEntity', Exec) {
+    workingDir file('../..')
+    commandLine 'python3', 'scripts/build-entity.py'
+}
+tasks.named('preBuild').configure { dependsOn 'prepareEntity' }

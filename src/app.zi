@@ -6,6 +6,7 @@
 #import "kryon/tree_input"
 #import "kryon/app_asset"
 #import "collection_host"
+#import "entity_host"
 #import "platform"
 
 // Android's Back key as raylib reports it.
@@ -34,7 +35,13 @@ ArcadeStart :: () -> bool {
         Report("Arcade: could not open the collection")
         return false
     }
-    return true
+    entity := ReadAppAsset("entity.zib")
+    defer { FreeAppAsset(entity) }
+    #if #defined(SHOVEY_STANDALONE) {
+        return entity.count > 0 && EntityOpen(entity, data, true)
+    } else {
+        return entity.count > 0 && EntityOpen(entity, data)
+    }
 }
 
 Frame :: (session: Session, viewport: Rectangle) -> s32 {

@@ -19,6 +19,7 @@ def main():
     parser.add_argument('--release', action='store_true', help='Build an unsigned release APK for the release signer')
     parser.add_argument('--application-id', help='Use an isolated package for device tests')
     args = parser.parse_args()
+    subprocess.run(['make', 'build/entity.zib'], cwd=ROOT, check=True)
     metadata = json.loads((ROOT / 'build/shovey.json').read_text())
     payload = (ROOT / 'build/shovey.zib').read_bytes()
     if hashlib.sha256(payload).hexdigest() != metadata['sha256']:
@@ -39,7 +40,8 @@ def main():
         icon.resize((size, size), Image.Resampling.LANCZOS).save(folder / 'ic_launcher.png')
     sdk = Path(os.environ.get('ANDROID_SDK_ROOT') or os.environ.get('ANDROID_HOME') or Path.home() / 'Android/Sdk')
     env = {key: value for key, value in os.environ.items() if key not in ('DISPLAY', 'WAYLAND_DISPLAY', 'XAUTHORITY', 'DBUS_SESSION_BUS_ADDRESS')}
-    env.update(ANDROID_HOME=str(sdk), ANDROID_SDK_ROOT=str(sdk))
+    env.update(ANDROID_HOME=str(sdk), ANDROID_SDK_ROOT=str(sdk),
+               LIBOQS_DIR=str(package('liboqs')), MONOCYPHER_DIR=str(package('monocypher')))
     command = ['sh', str(ROOT / 'droid/gradlew'), '-p', str(ROOT / 'droid'), '--no-daemon', '--max-workers=4',
                '-Papp.product=shovey', '-Papp.abis=arm64-v8a,armeabi-v7a',
                '-Pkryon.dir=' + str(package('kryon')), '-Pziran.dir=' + str(package('ziran')),

@@ -50,9 +50,12 @@ app and Kryon widget interface Inbe uses. The bundle contains its existing
 piece images and translated Chess text. Arcade validates its game identity,
 capabilities and resource paths before opening it.
 
-This first version is a Linux desktop harness. Its games are local; Arcade
-does not connect an account or provide friend-game transport. Inbe retains
-its existing account sync and friend games. Arcade and Inbe keep separate
+Native standalone Shovey uses the shared Entity profile for account creation,
+key recovery and device connection. Connected Waozi-node accounts can view Dew,
+get a funding address and confirm a storage-plan purchase. These services belong
+to the outer native host. Portable Arcade and Shovey collections carry no profile
+bundle, so Inbe supplies its existing profile and account. Inbe retains its
+existing game sync and friend games. Arcade and Inbe keep separate
 saved games; this version does not migrate or synchronize games between them.
 
 ## Build and run
@@ -139,3 +142,15 @@ Island and Editor, their artwork, puzzles and tests live there. Arcade installs
 Shovey by default, like Chess, and builds it from that package. Opening Classic
 or Editor goes straight to its own screen; Levels lets you replay any unlocked
 puzzle. Shovey also runs as its own desktop app.
+
+## Shared Entity profile
+
+Standalone Shovey's title-screen Profile control opens the shared `entity.zib`
+supplied by the Entity package. The host keeps account keys and native file
+access behind Entity's versioned management service. Returning from Profile
+keeps the current game and its existing save directory. Account connection does
+not claim that standalone saved games synchronize with Inbe.
+
+`tests/entity_ui_test.py` checks the standalone profile route and retained game
+progress. Run it with `--binary build/shovey --inbe-source PATH` only on a private
+Xvfb display after scrubbing the inherited desktop environment.

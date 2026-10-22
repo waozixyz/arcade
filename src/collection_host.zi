@@ -36,6 +36,7 @@ Node :: #import "apps/node_types";
 Codec :: #import "apps/node_codec";
 #import "platform"
 #import "sound"
+#import "entity_host"
 
 using HostValueKind;
 
@@ -112,7 +113,8 @@ CollectionAllows :: (context: *void, node: *AppNode, name: string) -> bool {
     name == "AppFriendHost" || name == "AppSharedHost" || name == "AppSharedItemHost" ||
     name == "AppInvitationHost" || name == "RefreshAppSharedHost" || name == "SendAppSharedHost" ||
     name == "SmoothFramesHost" || name == "AppLocaleHost" || name == "AppSoundHost" ||
-    name == "arcade.controls" || name == "arcade.sound" || name == "arcade.navigation"
+    name == "tile_map.sampling" || name == "arcade.controls" || name == "arcade.sound" || name == "arcade.navigation" ||
+    (name == "entity.profile" && entity_ready)
 }
 
 CollectionCall :: (context: *void, node: *AppNode, module: *u8, function: *u8,
@@ -155,6 +157,10 @@ CollectionCall :: (context: *void, node: *AppNode, module: *u8, function: *u8,
     HostScalarValid(arguments[1], "string", cast(s32)HostString) {
         service := AppArgumentText(arguments[0])
         request := AppArgumentText(arguments[1])
+        if service == "entity.profile" && request == "open" {
+            result.* = AppHostText(ifx EntityShow() then "queued" else "unavailable")
+            return 1
+        }
         if service == "arcade.navigation" && request == "back" {
             if collection_standalone { unused CopyCString("arcade.shovey", collection_open_next[:]) }
             else { collection_leave_to_library = true }
@@ -425,6 +431,7 @@ CollectionOpenShoveyBytes :: (bytes: string, metadata: string, data: string) -> 
 
 // Steps back from a game to its library, as Android's Back key does.
 CollectionBack :: () -> bool {
+    if EntityBack() { return true }
     runtime := AppHostActiveRuntime(*collection_host)
     leaving := runtime != null && TextUntilNul(runtime.node.identity.id[:]) == "arcade.shovey"
     if AppHostBack(*collection_host) <= 0 { return false }
@@ -451,6 +458,7 @@ CollectionOpenNext :: () -> bool {
 }
 
 CollectionCollect :: () {
+    if entity_ready { EntityPump() }
     AppHostCollect(*collection_host)
     for path: collection_frame_paths { AppFileFree(path) }
     while collection_frame_paths.count > 0 { unused VecPop(collection_frame_paths) }
@@ -458,6 +466,7 @@ CollectionCollect :: () {
 }
 
 CollectionClose :: () -> bool {
+    if !EntityClose() { return false }
     if collection_ready && !AppHostStop(*collection_host) { return false }
     collection_ready = false
     CollectionCollect()
@@ -530,6 +539,7 @@ collection_typed: [1024]u8;
 collection_pasted: [16384]u8;
 
 CollectionFrame :: (session: Session, viewport: Rectangle, key: s32, modifiers: s32) -> bool {
+    if entity_visible { return EntityFrame(session, viewport, key, modifiers) }
     runtime := AppHostActiveRuntime(*collection_host)
     if runtime == null { Report("Arcade: no app is running\n"); return false }
     nested := runtime.node.parent.generation != 0 && !runtime.node.collection

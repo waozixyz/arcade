@@ -1,0 +1,97 @@
+// Only the outer native app owns Entity. Portable game collections contain
+// games only, so embedding hosts keep their existing profile and account.
+#import "entity/native_host"
+#import "entity/model"
+#import "std/file"
+#import "std/c_string"
+#import "std/vec"
+#import "std/text_buffer"
+#import "kryon/session"
+#import "kryon/geometry"
+#import "kryon/key_input"
+#import "kryon/button_props"
+#import "kryon/button_widget"
+#import "platform"
+#import "shovey/shovey_theme"
+#import "kryon/widget_palette"
+#import "kryon/drawing_props"
+#import "kryon/box_widget"
+#import "kryon/box_props"
+#import "kryon/text_widget"
+#import "kryon/text_props"
+
+entity_bundle: string;
+entity_ready: bool;
+entity_visible: bool;
+entity_shovey: bool;
+entity_typed: [1024]u8;
+
+EntityOpen :: (bytes: string, data: string, shovey: bool = false) -> bool {
+    entity_shovey = shovey
+    root := Join(data, "entity")
+    defer { EntityFree(root) }
+    entity_ready = EntityHostOpen(bytes, root, "arcade", true)
+    return entity_ready
+}
+
+EntityOpenFile :: (directory: string, data: string, shovey: bool = false) -> bool {
+    path := Join(directory, "entity.zib")
+    defer { EntityFree(path) }
+    file := OpenRead(path)
+    if !file.valid { return false }
+    defer { unused CloseFile(file) }
+    size := FileSize(file)
+    if size <= 0 || size > 16777216 { return false }
+    bytes: Vec(u8)
+    for index: 0..size - 1 {
+        if !VecPush(bytes, cast(u8)0) { VecFree(bytes); return false }
+    }
+    if ReadAt(file, VecSlice(bytes, 0, size), 0) != size { VecFree(bytes); return false }
+    entity_bundle = BuilderFinish(bytes)
+    return EntityOpen(entity_bundle, data, shovey)
+}
+
+EntityShow :: () -> bool {
+    if !entity_ready { return false }
+    EntityHostReload()
+    entity_visible = true
+    return true
+}
+
+EntityBack :: () -> bool {
+    if !entity_visible { return false }
+    if EntityHostBack() { return true }
+    if EntityHostSave() { entity_visible = false }
+    return true
+}
+
+EntityFrame :: (session: Session, viewport: Rectangle, key: s32, modifiers: s32) -> bool {
+    if entity_shovey { unused WidgetPaletteUse(session, ShoveyPalette()) }
+    defer { if entity_shovey { unused WidgetPaletteRestore(session) } }
+    Box(session, BoxProps.{.key = cast(u64)49000, .bounds = viewport,
+            .fill = StyleTokenColorOr("canvas", Color.{239, 246, 244, 255})})
+    bounds := Rectangle.{viewport.x, viewport.y + 56.0, viewport.width, viewport.height - 56.0}
+    input := TextFieldInputFor(key, modifiers, TypedTextTake(session, entity_typed[:]))
+    if !EntityHostFrame(session, bounds, key, modifiers, input, entity_shovey) { return false }
+    Text(session, TextProps.{.key = cast(u64)49002, .text = "Entity", .font = 20,
+            .bounds = Rectangle.{viewport.x + 100.0, viewport.y + 12.0, viewport.width - 116.0, 36.0}})
+    if Button(session, ButtonProps.{.key = cast(u64)49001, .id = 49001, .label = "Back",
+            .bounds = Rectangle.{viewport.x + 8.0, viewport.y + 6.0, 76.0, 44.0}}) != 0 {
+        unused EntityBack()
+    }
+    return true
+}
+
+EntityPump :: () {
+    EntityHostPump()
+}
+
+EntityClose :: () -> bool {
+    if !entity_ready { return true }
+    if !EntityHostClose() { return false }
+    entity_ready = false
+    entity_visible = false
+    EntityFree(entity_bundle)
+    entity_bundle = ""
+    return true
+}
