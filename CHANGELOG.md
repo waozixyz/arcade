@@ -1,5 +1,12 @@
 # Arcade changelog
 
+## 0.7.3
+
+- Place Shovey’s title controls over the full-screen artwork, with Levels, Help and sound at the top.
+- Open Help in the existing header and show every Classic object and terrain tile.
+- Open Dew from connected accounts and use the shared profile’s intention field.
+- Remove the duplicate Settings shortcut.
+
 ## 0.7.2
 
 - Open Profile and account settings from the top right of standalone Arcade and Shovey.

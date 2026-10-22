@@ -150,7 +150,8 @@ def main():
             destination.parent.mkdir(parents=True, exist_ok=True)
             shutil.copyfile(output / relative, destination)
     bundle("shovey_collection.zi", "shovey_collection:Main", assets, ROOT / "build/shovey.zib")
-    shovey_metadata = dict(id="arcade.shovey-player", version=(ROOT / "VERSION").read_text().strip(),
+    shovey_version = next(child["version"] for child in editions if child["id"] == "arcade.shovey")
+    shovey_metadata = dict(id="arcade.shovey-player", version=shovey_version,
         sha256=digest(ROOT / "build/shovey.zib"), apps_sha256=args.apps_sha256,
         children=editions, source_mode="project")
     (ROOT / "build/shovey.json").write_text(json.dumps(shovey_metadata, indent=2) + "\n")
