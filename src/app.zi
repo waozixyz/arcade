@@ -25,7 +25,8 @@ ArcadeStart :: () -> bool {
     }
     opened := false
     #if #defined(SHOVEY_STANDALONE) {
-        opened = CollectionOpenShoveyBytes(bundle, metadata, data)
+        // Standalone Shovey opens on the game's title screen.
+        opened = CollectionOpenShoveyBytes(bundle, metadata, data) && CollectionOpenGame("arcade.shovey")
     } else {
         opened = CollectionOpenBytes(bundle, metadata, data)
     }

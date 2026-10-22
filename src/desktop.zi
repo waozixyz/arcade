@@ -106,8 +106,9 @@ main :: (argc: s32, argv: **u8) -> s32 {
     }
     opened := false
     if standalone {
+        // Standalone Shovey opens on the game's title screen.
         opened = CollectionOpenShovey(directory, data) &&
-        (first < 0 || CollectionOpenGame(GameAt(first).id))
+        CollectionOpenGame(ifx first < 0 then "arcade.shovey" else GameAt(first).id)
     } else {
         opened = CollectionOpenFiles(directory, data) &&
         (first < 0 || CollectionOpenGame(GameAt(first).id))
