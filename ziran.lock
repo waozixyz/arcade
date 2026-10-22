@@ -70,14 +70,6 @@
       "url": "https://github.com/curl/curl.git"
     },
     {
-      "commit": "4a83573c01844458c13625b9cd12bcf5aa969b79",
-      "dependencies": {"apps": "p2c4ca8cd46b96384", "kryon": "pb8945df295df506b"},
-      "id": "p3cc3f0fed7c5427b",
-      "name": "Shovey",
-      "ref": "master",
-      "url": "https://github.com/waozixyz/shovey.git"
-    },
-    {
       "commit": "2f6f1f57d7de742ef7ebc01159c2315acf793d5b",
       "dependencies": {"apps": "p2c4ca8cd46b96384", "crypto": "pf039d7a776333200", "curl": "p2f75403ea4cb61e4", "daochi_client": "p6cee0aacfacc847c", "game2d": "p20eb23d3e6db3711", "kryon": "pb8945df295df506b", "kss": "p1b13dda539ed2a39", "liboqs": "pfb3df7cb222b1bdc", "mingcute": "pe1027b9d16704793", "monocypher": "p0bd527640057f7d4", "oqs": "p7098ac9cd92f7e5f", "plot": "pe8e21a1f2b5ff52c", "qrcode": "p0dfa70137405b096", "rini": "p09fa77e94b0dfc6c", "self": "pa4da0de6c3c44e61", "sqlite": "p219661bf4be659ed"},
       "id": "p48228a6b7e2920d3",
@@ -101,6 +93,14 @@
       "name": "DaochiClient",
       "ref": "master",
       "url": "https://github.com/ziranlang/daochi-client.git"
+    },
+    {
+      "commit": "adec2a55d5f7ff69f3bceaba2a718a7d54d1a6a8",
+      "dependencies": {"apps": "p2c4ca8cd46b96384", "kryon": "pb8945df295df506b"},
+      "id": "p6d59948b5286e9e5",
+      "name": "Shovey",
+      "ref": "master",
+      "url": "https://github.com/waozixyz/shovey.git"
     },
     {
       "commit": "22d2ddbdc236796953c905a05a2cebf5ab1b4ff3",
@@ -161,7 +161,7 @@
     }
   ],
   "root": {
-    "dependencies": {"apps": "p2c4ca8cd46b96384", "inbe": "p48228a6b7e2920d3", "kryon": "pb8945df295df506b", "shovey": "p3cc3f0fed7c5427b"},
+    "dependencies": {"apps": "p2c4ca8cd46b96384", "inbe": "p48228a6b7e2920d3", "kryon": "pb8945df295df506b", "shovey": "p6d59948b5286e9e5"},
     "name": "Arcade"
   },
   "toolchain": {
