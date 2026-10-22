@@ -1,5 +1,55 @@
 # Arcade changelog
 
+## 0.6.50
+
+- Shovey includes approved Classic levels 1–30.
+- All objects stop at the abyss and leave it open.
+- Existing Shovey saves and completed levels are retained.
+## 0.6.49
+
+- Shovey includes approved Classic levels 1–30.
+- All objects stop at the abyss and leave it open.
+- Existing Shovey saves and completed levels are retained.
+## 0.6.48
+
+- Shovey includes approved Classic levels 1–30.
+- All objects stop at the abyss and leave it open.
+- Existing Shovey saves and completed levels are retained.
+## 0.6.47
+
+- Shovey includes approved Classic levels 1–30.
+- All objects stop at the abyss and leave it open.
+- Existing Shovey saves and completed levels are retained.
+## 0.6.46
+
+- Shovey includes approved Classic levels 1–29.
+- All objects stop at the abyss and leave it open.
+- Existing Shovey saves and completed levels are retained.
+## 0.6.45
+
+- Shovey includes approved Classic levels 1–29.
+- All objects stop at the abyss and leave it open.
+- Existing Shovey saves and completed levels are retained.
+## 0.6.44
+
+- Shovey includes approved Classic levels 1–29.
+- All objects stop at the abyss and leave it open.
+- Existing Shovey saves and completed levels are retained.
+## 0.6.43
+
+- Shovey includes approved Classic levels 1–29.
+- All objects stop at the abyss and leave it open.
+- Existing Shovey saves and completed levels are retained.
+## 0.6.42
+
+- Shovey includes approved Classic levels 1–29.
+- All objects stop at the abyss and leave it open.
+- Existing Shovey saves and completed levels are retained.
+## 0.6.41
+
+- Shovey includes approved Classic levels 1–28.
+- All objects stop at the abyss and leave it open.
+- Existing Shovey saves and completed levels are retained.
 ## 0.6.40
 
 - Shovey’s connected abyss openings stay dark without pale tile seams on mobile.

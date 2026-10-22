@@ -32,8 +32,8 @@ android {
         applicationId project.findProperty('app.id') ?: (standaloneShovey ? 'xyz.waozi.shovey' : 'xyz.waozi.arcade')
         minSdk Integer.parseInt((project.findProperty('app.minSdk') ?: '21').toString())
         targetSdk 36
-        versionCode Integer.parseInt(appRelease.sequence.toString())
-        versionName appRelease.version
+        versionCode Integer.parseInt((project.findProperty('app.versionCode') ?: appRelease.sequence).toString())
+        versionName project.findProperty('app.versionName') ?: appRelease.version
         manifestPlaceholders = [appLabel: standaloneShovey ? 'Shovey' : 'Arcade', appIcon: standaloneShovey ? '@mipmap/ic_launcher' : '@android:drawable/sym_def_app_icon', zibPlayer: (appCodegen == 'zib').toString(),
             nativeLaunchMode: appCodegen == 'zib' ? 'singleTask' : 'standard']
         ndk {

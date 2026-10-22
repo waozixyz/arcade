@@ -106,6 +106,9 @@ install: all
 	install -m 0644 build/shovey-icon.png '$(DATA_DIR)/icons/hicolor/256x256/apps/xyz.waozi.shovey.png'
 	install -m 0644 packaging/xyz.waozi.arcade.desktop packaging/xyz.waozi.shovey.desktop '$(DATA_DIR)/applications/'
 
-.PHONY: android-shovey
+.PHONY: android-shovey android-shovey-release
 android-shovey: collection
 	python3 scripts/build-android.py
+
+android-shovey-release: collection
+	python3 scripts/build-android.py --release

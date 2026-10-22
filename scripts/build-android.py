@@ -1,5 +1,7 @@
 #!/usr/bin/env python3
 """Package Arcade's existing native host with the standalone Shovey collection."""
+import argparse
+import hashlib
 import json
 import os
 from pathlib import Path
@@ -13,6 +15,17 @@ def package(name):
     return Path(subprocess.check_output([str(ROOT / 'scripts/ziran.sh'), 'pkg', 'path', name], cwd=ROOT, text=True).strip())
 
 def main():
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument('--release', action='store_true', help='Build an unsigned release APK for the release signer')
+    parser.add_argument('--application-id', help='Use an isolated package for device tests')
+    args = parser.parse_args()
+    metadata = json.loads((ROOT / 'build/shovey.json').read_text())
+    payload = (ROOT / 'build/shovey.zib').read_bytes()
+    if hashlib.sha256(payload).hexdigest() != metadata['sha256']:
+        raise ValueError('The Shovey payload changed; rebuild the collection first')
+    release = json.loads((ROOT / 'apps/versions.json').read_text())['node_apps']['shovey']
+    if release['version'] != metadata['version']:
+        raise ValueError('The Shovey version changed; rebuild the collection first')
     assets = ROOT / 'build/android-shovey-assets'
     assets.mkdir(parents=True, exist_ok=True)
     for suffix in ('zib', 'json'):
@@ -31,10 +44,16 @@ def main():
                '-Papp.product=shovey', '-Papp.abis=arm64-v8a,armeabi-v7a',
                '-Pkryon.dir=' + str(package('kryon')), '-Pziran.dir=' + str(package('ziran')),
                '-Praylib.dir=' + str(package('raylib') / 'src'),
-               '-Pandroid.aapt2FromMavenOverride=' + str(sdk / 'build-tools/36.0.0/aapt2'), 'assembleDebug']
+               '-Papp.versionName=' + metadata['version'], '-Papp.versionCode=' + str(release['sequence']),
+               '-Pandroid.aapt2FromMavenOverride=' + str(sdk / 'build-tools/36.0.0/aapt2'),
+               'assembleRelease' if args.release else 'assembleDebug']
+    if args.application_id:
+        command.insert(-1, '-Papp.id=' + args.application_id)
     subprocess.run(command, cwd=ROOT, env=env, check=True)
-    apk = ROOT / 'droid/app/build/outputs/apk/debug/app-debug.apk'
-    output = ROOT / 'build/shovey.apk'
+    apk = ROOT / ('droid/app/build/outputs/apk/release/app-release-unsigned.apk' if args.release else
+                  'droid/app/build/outputs/apk/debug/app-debug.apk')
+    output = ROOT / ('build/shovey-test-unsigned.apk' if args.application_id else
+                     'build/shovey-unsigned.apk' if args.release else 'build/shovey.apk')
     shutil.copyfile(apk, output)
     print(f'Standalone Shovey APK: {output}')
 
