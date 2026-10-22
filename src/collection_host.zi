@@ -37,6 +37,10 @@ Codec :: #import "apps/node_codec";
 #import "platform"
 #import "sound"
 #import "entity_host"
+#import "kryon/widget_palette"
+#import "shovey/shovey_theme"
+ProfileIcon :: #import "mingcute/mingcute_regular_user_4";
+SettingsIcon :: #import "mingcute/mingcute_regular_settings_3";
 
 using HostValueKind;
 
@@ -113,8 +117,7 @@ CollectionAllows :: (context: *void, node: *AppNode, name: string) -> bool {
     name == "AppFriendHost" || name == "AppSharedHost" || name == "AppSharedItemHost" ||
     name == "AppInvitationHost" || name == "RefreshAppSharedHost" || name == "SendAppSharedHost" ||
     name == "SmoothFramesHost" || name == "AppLocaleHost" || name == "AppSoundHost" ||
-    name == "tile_map.sampling" || name == "arcade.controls" || name == "arcade.sound" || name == "arcade.navigation" ||
-    (name == "entity.profile" && entity_ready)
+    name == "tile_map.sampling" || name == "arcade.controls" || name == "arcade.sound" || name == "arcade.navigation"
 }
 
 CollectionCall :: (context: *void, node: *AppNode, module: *u8, function: *u8,
@@ -539,6 +542,7 @@ collection_typed: [1024]u8;
 collection_pasted: [16384]u8;
 
 CollectionFrame :: (session: Session, viewport: Rectangle, key: s32, modifiers: s32) -> bool {
+    defer { CollectionToolbar(session, viewport) }
     if entity_visible { return EntityFrame(session, viewport, key, modifiers) }
     runtime := AppHostActiveRuntime(*collection_host)
     if runtime == null { Report("Arcade: no app is running\n"); return false }
@@ -546,7 +550,14 @@ CollectionFrame :: (session: Session, viewport: Rectangle, key: s32, modifiers: 
     identifier := TextUntilNul(runtime.node.identity.id[:])
     owns_chrome := identifier == "arcade.shovey" || identifier == "arcade.shovey-island" ||
     identifier == "arcade.shovey-editor"
-    top: s32 = ifx nested && !owns_chrome then 56 else 0
+    // Collections keep full-bleed covers; games leave room for the native
+    // profile/settings controls so their own navigation never overlaps them.
+    top: s32 = ifx (entity_ready && !runtime.node.collection) || (nested && !owns_chrome) then 56 else 0
+    if entity_shovey && top > 0 {
+        Box(session, BoxProps.{.key = cast(u64)49202,
+                .bounds = Rectangle.{viewport.x, viewport.y, viewport.width, 56.0},
+                .fill = ColorFromPacked(cast(u32)SHOVEY_SLATE)})
+    }
     now := cast(float64)MonotonicMilliseconds() / 1000.0
     runtime.app.session = session
     runtime.app.bounds = Rectangle.{viewport.x, viewport.y + cast(float32)top, viewport.width, viewport.height - cast(float32)top}
@@ -602,6 +613,26 @@ CollectionFrame :: (session: Session, viewport: Rectangle, key: s32, modifiers: 
                 .bounds = Rectangle.{viewport.x + 100.0, viewport.y + 12.0, viewport.width - 116.0, 36.0}})
     }
     return true
+}
+
+CollectionToolbar :: (session: Session, viewport: Rectangle) {
+    if !entity_ready { return }
+    if entity_shovey { unused WidgetPaletteUse(session, ShoveyPalette()) }
+    defer { if entity_shovey { unused WidgetPaletteRestore(session) } }
+    if Button(session, ButtonProps.{.key = cast(u64)49200, .id = 49200, .label = "Profile",
+            .bounds = Rectangle.{viewport.x + viewport.width - 108.0, viewport.y + 6.0, 44.0, 44.0},
+            .icon_shape = ProfileIcon.Shape, .icon_only = true,
+            .selected = entity_visible && !entity_settings,
+            .tone = ButtonTone.ButtonToneNeutral, .emphasis = ButtonEmphasis.ButtonEmphasisSoft}) != 0 {
+        unused EntityShow()
+    }
+    if Button(session, ButtonProps.{.key = cast(u64)49201, .id = 49201, .label = "Settings",
+            .bounds = Rectangle.{viewport.x + viewport.width - 56.0, viewport.y + 6.0, 44.0, 44.0},
+            .icon_shape = SettingsIcon.Shape, .icon_only = true,
+            .selected = entity_visible && entity_settings,
+            .tone = ButtonTone.ButtonToneNeutral, .emphasis = ButtonEmphasis.ButtonEmphasisSoft}) != 0 {
+        unused EntityShow(true)
+    }
 }
 
 c :: #system_library "c";

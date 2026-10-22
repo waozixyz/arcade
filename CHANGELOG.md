@@ -1,5 +1,10 @@
 # Arcade changelog
 
+## 0.7.2
+
+- Open Profile and account settings from the top right of standalone Arcade and Shovey.
+- Keep these controls available while browsing games or playing.
+
 ## 0.7.1
 
 - Scroll Shovey’s level list with the wheel, by swiping over cards, or by dragging the scrollbar.

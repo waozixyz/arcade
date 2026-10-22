@@ -1,12 +1,16 @@
 #!/usr/bin/env python3
 """Build Entity once for the outer native host; never pack it into a game."""
 from pathlib import Path
+import argparse
 import shutil
 import subprocess
 
 ROOT = Path(__file__).resolve().parents[1]
 ZIRAN = str(ROOT / 'scripts/ziran.sh')
-flags = [] if (ROOT / 'ziran.local.toml').exists() else ['--locked']
+parser = argparse.ArgumentParser(description=__doc__)
+parser.add_argument('--locked', action='store_true')
+args = parser.parse_args()
+flags = ['--locked'] if args.locked or not (ROOT / 'ziran.local.toml').exists() else []
 def package(name):
     return Path(subprocess.check_output([ZIRAN, 'pkg', 'path', name, *flags], cwd=ROOT, text=True).strip())
 entity, kryon, toolchain, qrcode = map(package, ('entity', 'kryon', 'ziran', 'qrcode'))

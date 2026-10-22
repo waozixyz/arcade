@@ -34,8 +34,8 @@
     "arcade": {
       "id": "inbe.arcade",
       "title": "Arcade",
-      "version": "0.7.1",
-      "sequence": 80,
+      "version": "0.7.2",
+      "sequence": 81,
       "host_api": 28
     }
   }

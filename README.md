@@ -56,8 +56,9 @@ app and Kryon widget interface Inbe uses. The bundle contains its existing
 piece images and translated Chess text. Arcade validates its game identity,
 capabilities and resource paths before opening it.
 
-Native standalone Shovey uses the shared Entity profile for account creation,
-key recovery and device connection. Connected Waozi-node accounts can view Dew,
+Standalone Arcade and Shovey provide Profile and account Settings at the top right.
+They use the shared Entity profile for account creation, key recovery and device
+connection. Connected Waozi-node accounts can view Dew,
 get a funding address and confirm a storage-plan purchase. These services belong
 to the outer native host. Portable Arcade and Shovey collections carry no profile
 bundle, so Inbe supplies its existing profile and account. Inbe retains its
@@ -116,6 +117,7 @@ make ui-test
 make standalone-ui-test
 make collection-ui-test
 make scroll-ui-test
+make navigation-ui-test
 make inbe-ui-test INBE_BINARY=/absolute/path/to/intended/inbe
 make compatibility-test INBE_BINARY=/absolute/path/to/intended/inbe
 ```

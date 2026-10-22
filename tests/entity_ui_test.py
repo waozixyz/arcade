@@ -52,7 +52,7 @@ with tempfile.TemporaryDirectory(dir=out) as temporary:
                         round(profile_button['x'] + profile_button['width']), round(profile_button['y'] + profile_button['height']))).save(out / 'profile-icon.png')
             driver.press(label='Profile', role='button')
             driver.wait(label='Connect an account', role='button')
-            driver.wait(label='Entity', role='text')
+            driver.wait(label='Profile', role='text')
             driver.wait_idle(frames=3)
             subprocess.run(['import', '-window', window, str(out / 'profile.png')], env=env, check=True)
             profile = Image.open(out / 'profile.png').convert('RGB')
