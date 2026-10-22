@@ -1,5 +1,45 @@
 # Arcade changelog
 
+## 0.6.23
+
+- Shovey includes approved Classic levels 1–20 with updated artwork and portal travel.
+- Island stays unavailable while its levels are being edited.
+- Existing Shovey saves and completed levels are retained.
+## 0.6.22
+
+- Shovey includes approved Classic levels 1–20 with updated artwork and portal travel.
+- Island stays unavailable while its levels are being edited.
+- Existing Shovey saves and completed levels are retained.
+## 0.6.21
+
+- Shovey includes approved Classic levels 1–20 with updated artwork and portal travel.
+- Island stays unavailable while its levels are being edited.
+- Existing Shovey saves and completed levels are retained.
+## 0.6.20
+
+- Shovey includes approved Classic levels 1–19 with updated artwork and portal travel.
+- Island stays unavailable while its levels are being edited.
+- Existing Shovey saves and completed levels are retained.
+## 0.6.19
+
+- Shovey includes approved Classic levels 1–19 with updated artwork and portal travel.
+- Island stays unavailable while its levels are being edited.
+- Existing Shovey saves and completed levels are retained.
+## 0.6.18
+
+- Shovey includes approved Classic levels 1–19 with updated artwork and portal travel.
+- Island stays unavailable while its levels are being edited.
+- Existing Shovey saves and completed levels are retained.
+## 0.6.17
+
+- Shovey includes approved Classic levels 1–19 with updated artwork and portal travel.
+- Island stays unavailable while its levels are being edited.
+- Existing Shovey saves and completed levels are retained.
+## 0.6.16
+
+- Shovey restores textured grey stone and fish swimming without sprite animation.
+- Add an easy-opening door and a solid floor lantern.
+- Keep the approved Classic campaign and existing saves.
 ## 0.6.15
 
 - Shovey has cleaner stone walls and matching floors for every wall material.
