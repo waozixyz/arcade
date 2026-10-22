@@ -102,4 +102,10 @@ install: all
 	install -m 0644 build/games/*-preview.png '$(LIB_DIR)/games/'
 	ln -sfn '$(LIB_DIR)/arcade' '$(BIN_DIR)/arcade'
 	ln -sfn '$(LIB_DIR)/shovey' '$(BIN_DIR)/shovey'
+	mkdir -p '$(DATA_DIR)/icons/hicolor/256x256/apps'
+	install -m 0644 build/shovey-icon.png '$(DATA_DIR)/icons/hicolor/256x256/apps/xyz.waozi.shovey.png'
 	install -m 0644 packaging/xyz.waozi.arcade.desktop packaging/xyz.waozi.shovey.desktop '$(DATA_DIR)/applications/'
+
+.PHONY: android-shovey
+android-shovey: collection
+	python3 scripts/build-android.py

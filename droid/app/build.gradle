@@ -17,6 +17,10 @@ if (kryonDir == null || ziranDir == null || raylibDir == null) {
 }
 def androidAbis = (project.findProperty('app.abis') ?:
     System.getenv('KRYON_ANDROID_ABIS') ?: 'arm64-v8a').split(',').toList()
+def standaloneShovey = project.findProperty('app.product') == 'shovey'
+def ledger = new groovy.json.JsonSlurper().parse(file('../../apps/versions.json'))
+def appRelease = ledger.node_apps[standaloneShovey ? 'shovey' : 'arcade']
+
 def appCodegen = envOrProp('KRYON_PROJECT_CODEGEN', 'app.codegen') ?: 'c99'
 
 android {
@@ -25,12 +29,12 @@ android {
     ndkVersion '28.2.13676358'
 
     defaultConfig {
-        applicationId 'xyz.waozi.arcade'
+        applicationId project.findProperty('app.id') ?: (standaloneShovey ? 'xyz.waozi.shovey' : 'xyz.waozi.arcade')
         minSdk Integer.parseInt((project.findProperty('app.minSdk') ?: '21').toString())
         targetSdk 36
-        versionCode 1
-        versionName '0.1.0'
-        manifestPlaceholders = [zibPlayer: (appCodegen == 'zib').toString(),
+        versionCode Integer.parseInt(appRelease.sequence.toString())
+        versionName appRelease.version
+        manifestPlaceholders = [appLabel: standaloneShovey ? 'Shovey' : 'Arcade', appIcon: standaloneShovey ? '@mipmap/ic_launcher' : '@android:drawable/sym_def_app_icon', zibPlayer: (appCodegen == 'zib').toString(),
             nativeLaunchMode: appCodegen == 'zib' ? 'singleTask' : 'standard']
         ndk {
             abiFilters += androidAbis
@@ -40,7 +44,8 @@ android {
                 arguments '-DKRYON_DIR=' + kryonDir,
                     '-DZIRAN_DIR=' + ziranDir,
                     '-DRAYLIB_DIR=' + raylibDir,
-                    '-DAPP_CODEGEN=' + appCodegen
+                    '-DAPP_CODEGEN=' + appCodegen,
+                    '-DSHOVEY_STANDALONE=' + (standaloneShovey ? 'ON' : 'OFF')
             }
         }
     }
@@ -53,7 +58,10 @@ android {
     }
 
     // Arcade's collection and receipt, staged by make android.
-    sourceSets.main.assets.srcDir "${rootProject.projectDir}/../build/android-assets"
+    sourceSets.main.assets.srcDir "${rootProject.projectDir}/../build/${standaloneShovey ? 'android-shovey-assets' : 'android-assets'}"
+    if (standaloneShovey) {
+        sourceSets.main.res.srcDir "${rootProject.projectDir}/../build/android-shovey-res"
+    }
 
     if (appCodegen == 'zib') {
         sourceSets.main.assets.srcDir "${rootProject.projectDir}/../build/android/zib-assets"

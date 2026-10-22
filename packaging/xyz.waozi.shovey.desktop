@@ -3,6 +3,6 @@ Type=Application
 Name=Shovey
 Comment=Logic puzzles with Shovey
 Exec=shovey
-Icon=applications-games
+Icon=xyz.waozi.shovey
 Terminal=false
 Categories=Game;LogicGame;

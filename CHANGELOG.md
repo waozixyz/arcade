@@ -1,5 +1,24 @@
 # Arcade changelog
 
+## 0.6.15
+
+- Shovey has cleaner stone walls and matching floors for every wall material.
+- Includes approved Classic levels 1–19 and preserves existing saves.
+## 0.6.14
+
+- Shovey includes approved Classic levels 1–19 with updated artwork and portal travel.
+- Island stays unavailable while its levels are being edited.
+- Existing Shovey saves and completed levels are retained.
+## 0.6.13
+
+- Shovey includes approved Classic levels 1–19 with updated artwork and portal travel.
+- Island stays unavailable while its levels are being edited.
+- Existing Shovey saves and completed levels are retained.
+## 0.6.12
+
+- Shovey includes approved Classic levels 1–19 with updated artwork and portal travel.
+- Island stays unavailable while its levels are being edited.
+- Existing Shovey saves and completed levels are retained.
 ## 0.6.11
 
 - Shovey has working Back navigation with updated and older Inner Breeze versions.

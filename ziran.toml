@@ -33,7 +33,8 @@ ref = "master"
 
 [dependencies.apps]
 git = "https://github.com/waozixyz/apps.git"
-ref = "master"
+# Keep the controller compatible with already installed Inbe hosts.
+ref = "49e2d859bc1db01faf7ac05624cc531fbe51913b"
 
 # Shovey's editions and editor are games Arcade installs by default.
 [dependencies.shovey]

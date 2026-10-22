@@ -383,10 +383,15 @@ CollectionOpenShovey :: (directory: string, data: string) -> bool {
     bytes, found := ReadEntireFile(payload_path)
     metadata, metadata_found := ReadEntireFile(metadata_path)
     defer { AppFileFree(bytes); AppFileFree(metadata) }
+    return found && metadata_found && CollectionOpenShoveyBytes(bytes, metadata, data)
+}
+
+CollectionOpenShoveyBytes :: (bytes: string, metadata: string, data: string) -> bool {
+    if collection_ready { return false }
     id: [128]u8
     digest: [65]u8
     harness: [65]u8
-    if !found || !metadata_found || bytes.count > 67108864 || metadata.count > 65536 ||
+    if bytes.count > 67108864 || metadata.count > 65536 ||
     !AppsReadText(metadata, 0, "id", id[:]) || TextUntilNul(id[:]) != "arcade.shovey-player" ||
     !AppsReadText(metadata, 0, "sha256", digest[:]) ||
     !AppsReadText(metadata, 0, "apps_sha256", harness[:]) { return false }

@@ -23,7 +23,13 @@ ArcadeStart :: () -> bool {
         Report("Arcade: the collection is missing from the app")
         return false
     }
-    if !CollectionOpenBytes(bundle, metadata, data) {
+    opened := false
+    #if #defined(SHOVEY_STANDALONE) {
+        opened = CollectionOpenShoveyBytes(bundle, metadata, data)
+    } else {
+        opened = CollectionOpenBytes(bundle, metadata, data)
+    }
+    if !opened {
         Report("Arcade: could not open the collection")
         return false
     }

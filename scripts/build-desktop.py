@@ -38,6 +38,10 @@ def main():
                     *map(str, generated.rglob('*.c')), str(ROOT / 'build/ziran/libziran.a'),
                     '-Wl,--gc-sections', *libraries, '-lm', '-lpthread', '-o', str(temporary)], check=True)
     temporary.replace(output)
+    if args.standalone_shovey:
+        from PIL import Image
+        source = Path(subprocess.check_output([ZIRAN, 'pkg', 'path', 'shovey', *lock], cwd=ROOT, text=True).strip())
+        Image.open(source / 'assets/branding/shovey-icon.png').resize((256, 256), Image.Resampling.LANCZOS).save(output.parent / 'shovey-icon.png')
     print(('Shovey' if args.standalone_shovey else 'Arcade') + ' native build passed')
 
 
