@@ -67,6 +67,10 @@ collection_item_codec: Codec.WidgetAppSharedItemCodec;
 collection_invitation_codec: Codec.WidgetAppInvitationCodec;
 collection_ready: bool;
 collection_leave_to_library: bool;
+// Standalone Shovey has no library: its title screen is the start.
+collection_standalone: bool;
+// A game another one asked for, opened after the frame.
+collection_open_next: [64]u8;
 
 CollectionTouchFirst :: () -> bool {
     #if #defined(PLATFORM_DESKTOP) {
@@ -152,7 +156,17 @@ CollectionCall :: (context: *void, node: *AppNode, module: *u8, function: *u8,
         service := AppArgumentText(arguments[0])
         request := AppArgumentText(arguments[1])
         if service == "arcade.navigation" && request == "back" {
-            collection_leave_to_library = true
+            if collection_standalone { unused CopyCString("arcade.shovey", collection_open_next[:]) }
+            else { collection_leave_to_library = true }
+            result.* = AppHostText("queued")
+            return 1
+        }
+        if service == "arcade.navigation" && request == "library" {
+            result.* = AppHostText(ifx collection_standalone then "none" else "available")
+            return 1
+        }
+        if service == "arcade.navigation" && request == "editor" {
+            unused CopyCString("arcade.shovey-editor", collection_open_next[:])
             result.* = AppHostText("queued")
             return 1
         }
@@ -395,6 +409,7 @@ CollectionOpenShoveyBytes :: (bytes: string, metadata: string, data: string) -> 
     !AppsReadText(metadata, 0, "id", id[:]) || TextUntilNul(id[:]) != "arcade.shovey-player" ||
     !AppsReadText(metadata, 0, "sha256", digest[:]) ||
     !AppsReadText(metadata, 0, "apps_sha256", harness[:]) { return false }
+    collection_standalone = true
     collection_directory = data
     collection_resource_root = Join(data, "resources")
     if !AppFilesOpen(*collection_resources, collection_resource_root) { return false }
@@ -409,7 +424,31 @@ CollectionOpenShoveyBytes :: (bytes: string, metadata: string, data: string) -> 
 }
 
 // Steps back from a game to its library, as Android's Back key does.
-CollectionBack :: () -> bool { return AppHostBack(*collection_host) > 0 }
+CollectionBack :: () -> bool {
+    runtime := AppHostActiveRuntime(*collection_host)
+    leaving := runtime != null && TextUntilNul(runtime.node.identity.id[:]) == "arcade.shovey"
+    if AppHostBack(*collection_host) <= 0 { return false }
+    if !collection_standalone || !CollectionAtLibrary() { return true }
+    // Back on Shovey's title screen leaves the app; from another game it
+    // returns to that title screen.
+    return !leaving && CollectionOpenGame("arcade.shovey")
+}
+
+CollectionAtLibrary :: () -> bool {
+    runtime := AppHostActiveRuntime(*collection_host)
+    return runtime != null && runtime.node.collection
+}
+
+// Opens the game another one asked for, from the library.
+CollectionOpenNext :: () -> bool {
+    id: [64]u8
+    for at: cast(s32)0..63 { id[at] = collection_open_next[at] }
+    collection_open_next[0] = 0
+    while !CollectionAtLibrary() {
+        if AppHostBack(*collection_host) <= 0 { break }
+    }
+    return CollectionOpenGame(TextUntilNul(id[:]))
+}
 
 CollectionCollect :: () {
     AppHostCollect(*collection_host)
@@ -530,6 +569,7 @@ CollectionFrame :: (session: Session, viewport: Rectangle, key: s32, modifiers: 
         Report("collection frame failed\n")
         return false
     }
+    if collection_open_next[0] != 0 { return CollectionOpenNext() }
     if collection_leave_to_library {
         collection_leave_to_library = false
         unused AppHostBack(*collection_host)
