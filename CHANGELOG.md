@@ -1,5 +1,10 @@
 # Arcade changelog
 
+## 0.6.40
+
+- Shovey’s connected abyss openings stay dark without pale tile seams on mobile.
+- Play updated Classic puzzles with checked winning routes; existing progress is retained.
+
 ## 0.6.39
 
 - Shovey’s integrated editor follows screen orientation while editing and testing levels.
