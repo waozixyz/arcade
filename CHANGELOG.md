@@ -1,5 +1,20 @@
 # Arcade changelog
 
+## 0.6.28
+
+- Shovey includes approved Classic levels 1–25 with updated artwork and portal travel.
+- Island stays unavailable while its levels are being edited.
+- Existing Shovey saves and completed levels are retained.
+## 0.6.27
+
+- Shovey includes approved Classic levels 1–24 with updated artwork and portal travel.
+- Island stays unavailable while its levels are being edited.
+- Existing Shovey saves and completed levels are retained.
+## 0.6.26
+
+- Shovey includes approved Classic levels 1–23 with updated artwork and portal travel.
+- Island stays unavailable while its levels are being edited.
+- Existing Shovey saves and completed levels are retained.
 ## 0.6.25
 
 - Shovey includes approved Classic levels 1–23 with updated artwork and portal travel.
