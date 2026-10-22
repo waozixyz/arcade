@@ -1,14 +1,17 @@
 # Arcade
 
 Games and entertainment, alongside Werkzeug for practical tools and Inner
-Breeze for personal growth. The library includes Chess and Shovey. Shovey opens
-a chooser for Classic, Island and Editor, and also runs as its own desktop app.
+Breeze for personal growth. The library opens Shovey Classic and Editor
+directly from full-screen covers.
+Swipe, turn the arrows, scroll the wheel, or use the arrow keys to choose;
+press Play/Open or Enter to launch. Standalone Shovey uses the same carousel
+on its title screen. Chess is temporarily disabled in Arcade; its code and
+existing saved games remain available for a later return.
 Each edition has a separate save and earned unlocks. Unlocked puzzles show
 their whole board; locked puzzles keep their lock until earned.
 
-Open Chess from the home screen, choose a side and one of four computer
-levels, and play. The library uses preview cards in a responsive grid; the
-top Back button returns from Chess. A local game
+Chess’s retained implementation can choose a side and one of four computer
+levels. A local game
 survives returning to the library and restarting the app. Ask for a hint, take
 back a complete turn, or flip the board. Expert searches more deeply without
 added evaluation noise; it has no claimed Elo rating.
@@ -30,10 +33,13 @@ review are not implemented.
 ## Shared Apps library
 
 Arcade embeds the shared `apps.zib` controller and exact game bundles in a
-verified collection. Shovey's edition collection is both the standalone payload
-and the same nested child inside Arcade. Preview cards open directly; their
-vertical options menu can mark an app installed or favorite without deleting
-its saves. The local player does not offer node updates or OS actions it
+verified collection. Arcade presents the verified Classic and Editor leaves
+directly, without
+a second chooser. Shovey’s separate standalone collection uses the same
+leaves and saves. Cover entries declare portrait art, landscape art, logo,
+caption and action in `games.json`; Kryon’s shared `Carousel` handles
+navigation and painting. The local player does not offer node updates or OS
+actions it
 cannot perform. Inbe supplies its own account and package policy.
 Arcade's launcher icon is MingCute's `game_2` gamepad (Apache-2.0).
 
@@ -72,7 +78,6 @@ reviewed one in `apps-controller.sha256`:
 ```sh
 make
 ./build/arcade
-./build/arcade --app chess
 ./build/arcade --app shovey
 ./build/arcade --list
 ./build/shovey
@@ -114,8 +119,11 @@ make inbe-ui-test INBE_BINARY=/absolute/path/to/intended/inbe
 make compatibility-test INBE_BINARY=/absolute/path/to/intended/inbe
 ```
 
-The UI test scrubs the inherited desktop and runs on its own Xvfb display.
-It opens Chess, plays a move, waits for the computer's legal response, checks
+The UI tests scrub the inherited desktop and run on private Xvfb displays.
+The collection check verifies covers in both orientations, direct play and
+editor launch, swipe/wheel/keyboard navigation, Back and retained saves.
+The retained Chess-specific check opens Chess, plays a move, waits for the
+computer's legal response, checks
 the rendered piece, returns through the library, restarts and verifies the
 saved position. It checks hints, study variations, bounded analysis, actual
 PGN/FEN clipboard contents, board flipping, complete-turn takebacks, a Black
@@ -133,13 +141,15 @@ compiler used by the compatible Inbe hosts. Each output must pass the
 intended host before publication. A released API 12+ Inbe host is required;
 public Inbe 2.1.34 is API 11 and outside this game's supported range. The
 current dependency graph also includes local, unpublished Self source.
+The cover collection requires an Inbe host with API 28 and the reviewed
+carousel controller. Older hosts must keep their compatible Arcade release.
 Building or installing never publishes.
 
 ## Shovey
 
 [Shovey](https://github.com/waozixyz/shovey) has its own repository: Classic,
 Island and Editor, their artwork, puzzles and tests live there. Arcade installs
-Shovey by default, like Chess, and builds it from that package. Opening Classic
+Shovey by default and builds it from that package. Opening Classic
 or Editor goes straight to its own screen; Levels lets you replay any unlocked
 puzzle. Shovey also runs as its own desktop app.
 

@@ -25,35 +25,22 @@ assert (ROOT / chess["preview"]).is_file()
 env = {key: value for key, value in os.environ.items()
        if key not in {"DISPLAY", "WAYLAND_DISPLAY", "XAUTHORITY", "DBUS_SESSION_BUS_ADDRESS"}}
 listed = subprocess.run([str(ROOT / "build/arcade"), "--list"], env=env, capture_output=True, timeout=10)
-assert listed.returncode == 0 and b"inbe.chess" in listed.stderr + listed.stdout
+assert listed.returncode == 0 and b"inbe.chess" not in listed.stderr + listed.stdout
+assert b"arcade.shovey\n" in listed.stderr + listed.stdout
 unknown = subprocess.run([str(ROOT / "build/arcade"), "--app", "unknown"],
                          env=env, capture_output=True, timeout=10)
 assert unknown.returncode == 1 and b"unknown game" in unknown.stderr
 original = (ROOT / 'build/games/chess.zib').read_bytes()
 container = (ROOT / 'build/arcade.zib').read_bytes()
 metadata = json.loads((ROOT / 'build/arcade.json').read_text())
-assert container.count(original) == 1, 'Collection must embed the exact Chess game'
-with tempfile.TemporaryDirectory(prefix='contract-', dir=ROOT / 'build') as directory:
-    work = Path(directory)
-    binary = work / 'arcade'
-    shutil.copyfile(ROOT / 'build/arcade', binary)
-    binary.chmod(0o700)
-    for old, new in [(b'"contract_version": 1', b'"contract_version": 9'),
-                     (b'"module_api": 2', b'"module_api": 9'),
-                     (b'"host_api": 12', b'"host_api": 99'),
-                     (b'"id": "inbe.chess"', b'"id": "fake.chess"')]:
-        assert original.count(old) == 1
-        altered = original.replace(old, new)
-        nested = container.replace(original, altered, 1)
-        # Re-signing an outer fixture hash does not authorize changing a
-        # child whose exact digest was declared by its verified parent.
-        (work / 'arcade.zib').write_bytes(nested)
-        descriptor = metadata | {'sha256': hashlib.sha256(nested).hexdigest()}
-        (work / 'arcade.json').write_text(json.dumps(descriptor))
-        rejected = subprocess.run([str(binary), '--app', 'chess'],
-                                  env=env | {'ARCADE_DATA': str(work / 'profile')},
-                                  capture_output=True, timeout=10)
-        assert rejected.returncode == 1, 'Incompatible game metadata was accepted'
-        assert b'Arcade: could not open collection or game' in rejected.stderr, 'Game reached window startup before rejection'
-        assert not (work / 'profile/games/inbe.chess/records/computer').exists()
-print("Chess is registered in Arcade and Inbe under one identity; unknown games are refused without opening a window")
+assert original not in container, 'Disabled Chess must not remain in the published collection'
+assert {child['id'] for child in metadata['children']} == {'arcade.shovey', 'arcade.shovey-editor'}
+for child in metadata['children']:
+    name = child['expected_id']
+    exact = (ROOT / f'build/games/{name}.zib').read_bytes()
+    assert container.count(exact) == 1, 'A game must be packed once without a nested chooser'
+    assert hashlib.sha256(exact).hexdigest() == child['sha256']
+    assert child['cover']['portrait'] and child['cover']['landscape'] and child['cover']['logo']
+refused = subprocess.run([str(ROOT / 'build/arcade'), '--app', 'chess'], env=env, capture_output=True, timeout=10)
+assert refused.returncode == 1 and b'unknown game' in refused.stderr
+print('Game identities, direct collection leaves, full cover resources and disabled Chess passed')

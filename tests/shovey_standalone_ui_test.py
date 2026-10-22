@@ -1,4 +1,4 @@
-"""Run the standalone Shovey app privately: the chooser, Classic and Editor
+"""Run the standalone Shovey app privately: the title pages, Classic and Editor
 opening directly, Island's status screen, and independent saves."""
 import argparse
 import contextlib
@@ -38,9 +38,9 @@ def main():
                                      stdout=log, stderr=subprocess.STDOUT)
             driver.attach(child, log_path)
             try:
-                driver.wait(label='Shovey Classic', role='button')
+                driver.wait(label='Play', role='button')
                 assert not driver.find(label='Shovey Island', role='button'), 'Island must stay unavailable'
-                driver.wait(label='Shovey Editor', role='button')
+                driver.wait(label='Next', role='button')
                 yield child
             finally:
                 if child.poll() is None:
@@ -143,7 +143,7 @@ def main():
         classic = profile / 'games/arcade.shovey/records/campaign'
         with application(profile, 'play') as child:
             assert not driver.find(label='Arcade', role='text')
-            driver.press(label='Shovey Classic', role='button')
+            driver.press(label='Play', role='button')
             driver.wait(label=f'Level 1 / {classic_levels}')
             assert not driver.find(label='Continue', role='button'), 'Classic must open straight on a level'
             assert driver.find(label='Shovey', role='image', visible=True), 'Shovey must be drawn as a picture'
@@ -163,12 +163,12 @@ def main():
             assert abs(landscape_preview['width'] / landscape_preview['height'] - 5 / 3) < .01
             subprocess.run(['import', '-window', window, str(output / 'level-selector-landscape.png')], check=True)
             driver.press(key=20022)
-            driver.wait(label='Shovey Classic', role='button')
-            driver.press(label='Shovey Classic', role='button')
+            driver.wait(label='Play', role='button')
+            driver.press(label='Play', role='button')
             driver.wait(label=f'Level 1 / {classic_levels}')
             driver.press(label='Back', role='button')
-            driver.wait(label='Shovey Classic', role='button')
-            driver.press(label='Shovey Classic', role='button')
+            driver.wait(label='Play', role='button')
+            driver.press(label='Play', role='button')
             driver.wait(label=f'Level 1 / {classic_levels}')
             move_until_saved(classic)
             swipe_beside_board_until_saved(classic)
@@ -187,8 +187,9 @@ def main():
             classic_saved = campaign_progress(classic.read_bytes())
             assert len(driver.find(label='Back', role='button', visible=True)) == 1, 'Shovey needs one clear Back action'
             driver.press(label='Back', role='button')
-            driver.wait(label='Shovey Editor', role='button')
-            driver.press(label='Shovey Editor', role='button')
+            driver.wait(label='Play', role='button')
+            driver.press(label='Next', role='button')
+            driver.press(label='Open', role='button')
             driver.wait(label='Explore', role='button')
             driver.press(label='Classic', role='button')
             driver.wait(label='Story levels', role='text')
@@ -230,13 +231,14 @@ def main():
                 assert abs(board['width'] / board['height'] - aspect) < .01, ('Island play orientation', width, height, board)
                 swipe_in_visible_direction(board_key=200000)
         with application(profile, 'restore'):
-            driver.press(label='Shovey Editor', role='button')
+            driver.press(label='Next', role='button')
+            driver.press(label='Open', role='button')
             driver.wait(label='Explore', role='button')
             driver.key('escape')
-            driver.press(label='Shovey Classic', role='button')
+            driver.press(label='Play', role='button')
             driver.wait(label=f'Level 1 / {classic_levels}')
             assert campaign_progress(classic.read_bytes()) == classic_saved
-    print('Standalone Shovey: portrait/landscape boards, swipe directions, rotation saves, chooser and independent saves passed')
+    print('Standalone Shovey: portrait/landscape boards, swipe directions, rotation saves, title pages and independent saves passed')
 
 
 if __name__ == '__main__':

@@ -7,8 +7,10 @@ import shlex
 import shutil
 import tempfile
 import unittest
+import sys
 
 ROOT = Path(__file__).resolve().parents[1]
+sys.path.insert(0, str(ROOT / "scripts"))
 spec = importlib.util.spec_from_file_location("build_collection", ROOT / "scripts/build-collection.py")
 builder = importlib.util.module_from_spec(spec)
 spec.loader.exec_module(builder)
@@ -55,7 +57,7 @@ class CollectionTests(unittest.TestCase):
         # The ledger also versions Arcade itself, which is not one of its games.
         ledger = json.loads((ROOT / "apps/versions.json").read_text())["node_apps"]
         self.assertEqual({c["id"] for c in catalog["children"]},
-                         {entry["id"] for name, entry in ledger.items() if name != "arcade"})
+                         {"arcade.shovey", "arcade.shovey-editor"})
         for child in catalog["children"]:
             name = child["expected_id"]
             packed = self.output / child["bundle"]
@@ -83,16 +85,16 @@ class CollectionTests(unittest.TestCase):
     def test_duplicate_game_rejected_before_replacing_stage(self):
         self.stage()
         registrations = json.loads((self.root / "games.json").read_text())
-        registrations["games"].append(registrations["games"][0])
+        registrations["games"].append(registrations["games"][1])
         (self.root / "games.json").write_text(json.dumps(registrations))
         with self.assertRaisesRegex(ValueError, "Duplicate"):
             self.stage()
-        self.assertTrue((self.output / "assets/arcade/games/chess.zib").is_file())
+        self.assertTrue((self.output / "assets/arcade/games/shovey.zib").is_file())
 
     def test_ledger_identity_mismatch_rejected(self):
         ledger_path = self.root / "apps/versions.json"
         ledger = json.loads(ledger_path.read_text())
-        ledger["node_apps"]["chess"]["id"] = "other.chess"
+        ledger["node_apps"]["shovey"]["id"] = "other.shovey"
         ledger_path.write_text(json.dumps(ledger))
         with self.assertRaisesRegex(ValueError, "version ledger"):
             self.stage()
@@ -101,7 +103,7 @@ class CollectionTests(unittest.TestCase):
     def test_removed_game_leaves_no_stale_payload(self):
         self.stage()
         registrations = json.loads((self.root / "games.json").read_text())
-        registrations["games"] = registrations["games"][:1]
+        registrations["games"] = registrations["games"][3:]
         (self.root / "games.json").write_text(json.dumps(registrations))
         self.stage()
         self.assertFalse((self.output / "assets/arcade/games/shovey.zib").exists())

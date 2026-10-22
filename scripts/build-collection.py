@@ -34,6 +34,8 @@ def stage(root, controller, expected_controller_digest, output):
     children, copies, identities = [], [], set()
     total = len(controller_bytes)
     for registration in registrations:
+        if not registration.get("enabled", True):
+            continue
         # Arcade's own games live here; Shovey comes from its package.
         source = root if registration["package"] == "self" else Path(subprocess.check_output(
             [str(root / "scripts/ziran.sh"), "pkg", "path", registration["package"]], cwd=root, text=True).strip())
@@ -67,6 +69,21 @@ def stage(root, controller, expected_controller_digest, output):
             expected_id=name, version=component["version"],
             sha256=hashlib.sha256(bundle_bytes).hexdigest(),
             preview=f"assets/arcade/previews/{name}.png"))
+        cover = registration.get("cover")
+        if cover:
+            packed_cover = {key: cover[key] for key in ("caption", "action") if key in cover}
+            for key in ("portrait", "landscape", "logo"):
+                if key not in cover:
+                    continue
+                relative = Path(cover[key])
+                if relative.is_absolute() or ".." in relative.parts or relative.suffix != ".png":
+                    raise ValueError("Invalid cover asset path")
+                contents = (source / relative).read_bytes()
+                destination = Path("arcade/covers") / f"{name}-{key}.png"
+                packed_cover[key] = "assets/" + destination.as_posix()
+                copies.append((contents, destination))
+                total += len(contents)
+            children[-1]["cover"] = packed_cover
         copies += [(bundle_bytes, Path("arcade/games") / (name + ".zib")),
                    (preview_bytes, Path("arcade/previews") / (name + ".png"))]
     if total > MAX_PAYLOAD_BYTES:
@@ -99,7 +116,6 @@ def main():
     args = parser.parse_args()
     output = ROOT / "build/collection"
     catalog = stage(ROOT, args.apps_bundle, args.apps_sha256, output)
-    stage_children = list(catalog['children'])
     command = [args.ziran, "bundle", "--project", *(["--locked"] if args.locked else [])]
     env = os.environ.copy()
     def bundle(source, entry, assets, target):
@@ -126,8 +142,10 @@ def main():
                          harness="assets/apps/apps.zib", children=editions)
     (assets / "apps/catalog.json").write_text(json.dumps(shovey_catalog, indent=2) + "\n")
     for child in editions:
-        for field in ("bundle", "preview"):
-            relative = child[field]
+        resources = [child[field] for field in ("bundle", "preview")]
+        resources += [value for field, value in child.get("cover", {}).items()
+                      if field in ("portrait", "landscape", "logo")]
+        for relative in resources:
             destination = shovey_output / relative
             destination.parent.mkdir(parents=True, exist_ok=True)
             shutil.copyfile(output / relative, destination)
@@ -136,19 +154,8 @@ def main():
         sha256=digest(ROOT / "build/shovey.zib"), apps_sha256=args.apps_sha256,
         children=editions, source_mode="project")
     (ROOT / "build/shovey.json").write_text(json.dumps(shovey_metadata, indent=2) + "\n")
-    parent_entry = dict(id="arcade.shovey-player", title="Shovey",
-        bundle="assets/arcade/games/shovey-player.zib", protocol="collection/1",
-        expected_id="shovey", version=shovey_metadata["version"], sha256=shovey_metadata["sha256"],
-        preview="assets/arcade/previews/shovey.png")
-    catalog["children"] = [child for child in catalog["children"]
-                           if child["id"] not in {"arcade.shovey", "arcade.shovey-island", "arcade.shovey-editor"}]
-    catalog["children"].append(parent_entry)
-    shutil.copyfile(ROOT / "build/shovey.zib", output / parent_entry["bundle"])
-    for child in [entry for entry in stage_children
-                  if entry['id'] in {'arcade.shovey', 'arcade.shovey-island', 'arcade.shovey-editor'}]:
-        (output / child["bundle"]).unlink()
-        if child["preview"] != parent_entry["preview"]:
-            (output / child["preview"]).unlink()
+    # Arcade exposes the same verified leaves directly. The standalone
+    # Shovey collection remains independent; there is no nested chooser.
     (output / "assets/apps/catalog.json").write_text(json.dumps(catalog, indent=2) + "\n")
     bundle("collection.zi", "collection:Main", output / "assets", ROOT / "build/arcade.zib")
     receipt = dict(id=COLLECTION_ID, version=(ROOT / "VERSION").read_text().strip(),

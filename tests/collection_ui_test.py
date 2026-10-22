@@ -59,79 +59,73 @@ def main():
         assert int(subprocess.check_output(["xdotool", "getwindowpid", window], text=True, timeout=10)) == child.pid
         subprocess.run(["import", "-window", window, str(output / (name + ".png"))], check=True, timeout=10)
 
-    def open_card(name, index):
-        cards = driver.find(label=name, role="button", visible=True)
-        if cards:
-            driver.press(key=cards[0]["key"])
-        else:
-            # The controller's card actions carry distinct stable widget keys.
-            driver.press(key=103 + index * 16)
+    def cover(child, name):
+        driver.wait_idle(frames=20)
+        assert not driver.find(label="Arcade", role="text"), "Library must have no heading"
+        assert not driver.find(label="Chess"), "Chess is temporarily disabled"
+        images = driver.find(role="image", visible=True)
+        screen = driver.tree()[0]
+        assert max(n["visible_width"] * n["visible_height"] for n in images) >= screen["width"] * screen["height"] * .95
+        capture(child, name)
+        with Image.open(output / (name + ".png")) as image:
+            assert len(image.convert("RGB").getcolors(1000000) or []) > 1000, "Cover artwork was not painted"
 
     with tempfile.TemporaryDirectory(prefix="profile-", dir=output) as temporary:
         profile = Path(temporary)
-        record = profile / "games/inbe.chess/records/computer"
-        with application(profile, "library") as child:
-            driver.wait(label="Arcade", role="text")
-            driver.wait(label="Chess", role="image")
-            options = driver.find(label="App options", role="button", visible=True)
-            assert len(options) == 2 and all(item['visible_height'] <= 38 for item in options)
-            assert not driver.find(label="App actions"), 'Old dropdown must not return'
-            driver.press(key=options[0]['key'])
-            driver.wait(label="Pin")
-            capture(child, "library-menu")
-            driver.press(label="Pin")
-            driver.press(key=options[0]['key'])
-            driver.wait(label="Unpin")
-            driver.key('escape')
-            assert not driver.find(label="Updated"), 'Applied actions must not leave a status banner'
-            capture(child, "library")
-            open_card("Chess", 0)
-            driver.wait(label="Easy", role="button")
-            driver.press(label="Easy", role="button")
-            driver.press(label="Play White", role="button")
-            driver.press(label="Start", role="button")
-            driver.wait(label="Your move")
-            driver.press(key=8062)  # e2
-            driver.press(key=8046)  # e4
-            saved = wait(lambda: record.read_bytes() if record.exists() and
-                         len(record.read_text().split("moves=", 1)[-1].split()) == 2 else None,
-                         "Nested Chess did not save a move and computer reply")
-            capture(child, "chess")
-            driver.press(label="Back", role="button")
-            driver.wait(label="Arcade", role="text")
-            driver.press(key=options[0]['key'])
-            driver.press(label="Uninstall")
-            assert record.read_bytes() == saved
-            driver.press(key=options[0]['key'])
-            driver.press(label="Install")
-            assert record.read_bytes() == saved
-            open_card("Chess", 0)
-            driver.wait(label="Your move")
-            assert record.read_bytes() == saved, "Returning through the collection changed the game"
-        with application(profile, "chess-restore", "--app", "inbe.chess"):
-            driver.wait(label="Your move")
-            assert record.read_bytes() == saved, "The unchanged Chess record did not survive restart"
-        with application(profile, "shovey", "--app", "arcade.shovey") as child:
+        # Disabling an entry must leave a person's older Chess save untouched.
+        chess = profile / "games/inbe.chess/records/computer"
+        chess.parent.mkdir(parents=True)
+        chess.write_bytes(b"existing private Chess save")
+        record = profile / "games/arcade.shovey/records/campaign"
+        with application(profile, "carousel") as child:
+            driver.wait(label="Play", role="button")
+            cover(child, "classic-portrait")
+            driver.press(label="Next", role="button")
+            driver.wait(label="Open", role="button")
+            driver.wait(label="Editor", role="text")
+            cover(child, "editor-portrait")
+            driver.press(label="Previous", role="button")
+            driver.key("right")
+            driver.wait(label="Open", role="button")
+            driver.key("left")
+            driver.wait(label="Play", role="button")
+            driver.drag((350, 400), (100, 400))
+            driver.wait(label="Open", role="button")
+            driver.pointer(240, 400, wheel=1)
+            driver.wait(label="Play", role="button")
+            driver.key("enter")
             driver.wait(label=f"Level 1 / {classic}")
-            driver.wait(label="Shovey", role="image")
-            assert len(driver.find(label="Back", role="button", visible=True)) == 1, "Shovey needs one clear Back action"
-            capture(child, "shovey")
-            # Semantic image nodes can exist while a palette paints every
-            # sprite as a flat rectangle. Check the actual board pixels too.
-            with Image.open(output / "shovey.png") as shot:
-                picture = driver.find(label="Shovey", role="image", visible=True)[0]
-                box = (int(picture["x"]), int(picture["y"]),
-                       int(picture["x"] + picture["width"]), int(picture["y"] + picture["height"]))
-                assert len(shot.convert("RGB").crop(box).getcolors(100000) or []) > 32, "Shovey sprite lost its colours"
+            assert not driver.find(label="Play", role="button"), "Arcade must skip the second title screen"
+            assert len(driver.find(label="Back", role="button", visible=True)) == 1
+            capture(child, "classic-playing")
+            for direction in ("left", "right", "up", "down"):
+                driver.key(direction)
+                driver.wait_idle(frames=5)
+            saved = wait(lambda: record.read_bytes() if record.exists() else None, "Classic did not save")
             driver.press(label="Back", role="button")
-            driver.wait(label="Shovey Classic", role="button")
-            assert not driver.find(label="Shovey Island", role="button"), 'Unapproved Island must not be offered'
-            driver.wait(label="Shovey Editor", role="button")
+            driver.wait(label="Play", role="button")
+            driver.press(label="Next", role="button")
+            driver.press(label="Open", role="button")
+            driver.wait(label="Explore", role="button")
+            capture(child, "editor-open")
             driver.key("escape")
-            driver.wait(label="Arcade", role="text")
-        assert not (profile / "inbe.db").exists(), "standalone Arcade opened an Inbe profile"
-        assert record.exists(), "standalone Arcade lost its private game profile"
-    print("Shared Arcade library: previews, Chess play/save/Back/restart and nested Shovey passed")
+            driver.wait(label="Open", role="button")
+            # Keep the selected editor when returning from its screen.
+            driver.wait(label="Editor", role="text")
+            window = subprocess.check_output(["xdotool", "search", "--onlyvisible", "--pid", str(child.pid)], text=True).splitlines()[0]
+            subprocess.run(["xdotool", "windowsize", window, "900", "540"], check=True)
+            cover(child, "editor-landscape")
+            driver.press(label="Previous", role="button")
+            driver.wait(label="Play", role="button")
+            cover(child, "classic-landscape")
+        with application(profile, "restore", "--app", "arcade.shovey"):
+            driver.wait(label=f"Level 1 / {classic}")
+            assert record.read_bytes()[:210] == saved[:210], "Classic progress changed on restart"
+        assert chess.read_bytes() == b"existing private Chess save"
+        assert not (profile / "inbe.db").exists()
+        refused = subprocess.run([str(args.binary.resolve()), "--app", "chess"], env=os.environ | {"ARCADE_DATA": str(profile)}, capture_output=True, timeout=10)
+        assert refused.returncode == 1 and b"unknown game" in refused.stderr
+    print("Arcade: full covers, arrows/swipe/wheel/Enter, direct play/editor, Back, rotation and retained saves passed")
 
 
 if __name__ == "__main__":

@@ -70,10 +70,7 @@ chess-engine-test:
 chess-app-test: all
 	sh tests/chess_app_test.sh '$(ZIRAN)'
 
-ui-test: all
-	env -u DISPLAY -u WAYLAND_DISPLAY -u XAUTHORITY -u DBUS_SESSION_BUS_ADDRESS \
-		-u SESSION_MANAGER -u GDK_DISPLAY YUE_DESKTOP_RECOVERY=0 SDL_AUDIODRIVER=dummy INBE_SOURCE='$(INBE_SOURCE)' \
-		timeout 180s xvfb-run -a -n 400 -s '-screen 0 1280x1000x24' python3 tests/arcade_ui_test.py
+ui-test: collection-ui-test
 
 inbe-ui-test:
 	@test -n "$(INBE_BINARY)" || { echo 'Set INBE_BINARY to the intended compatible host'; exit 2; }

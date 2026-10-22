@@ -1,5 +1,131 @@
 # Arcade changelog
 
+## 0.7.0
+
+- Browse games with full-screen covers, swipe or arrow navigation, and a clear Play or Open button.
+- Open Shovey Classic and the level editor directly from Arcade.
+- Temporarily hide Chess while keeping existing saved games.
+
+## 0.6.74
+
+- Shovey includes approved Classic levels 1–34.
+- All objects stop at the abyss and leave it open.
+- Existing Shovey saves and completed levels are retained.
+## 0.6.73
+
+- Shovey includes approved Classic levels 1–33.
+- All objects stop at the abyss and leave it open.
+- Existing Shovey saves and completed levels are retained.
+## 0.6.72
+
+- Shovey includes approved Classic levels 1–33.
+- All objects stop at the abyss and leave it open.
+- Existing Shovey saves and completed levels are retained.
+## 0.6.71
+
+- Shovey includes approved Classic levels 1–33.
+- All objects stop at the abyss and leave it open.
+- Existing Shovey saves and completed levels are retained.
+## 0.6.70
+
+- Shovey includes approved Classic levels 1–33.
+- All objects stop at the abyss and leave it open.
+- Existing Shovey saves and completed levels are retained.
+## 0.6.69
+
+- Shovey includes approved Classic levels 1–32.
+- All objects stop at the abyss and leave it open.
+- Existing Shovey saves and completed levels are retained.
+## 0.6.68
+
+- Shovey includes approved Classic levels 1–32.
+- All objects stop at the abyss and leave it open.
+- Existing Shovey saves and completed levels are retained.
+## 0.6.67
+
+- Shovey includes approved Classic levels 1–31.
+- All objects stop at the abyss and leave it open.
+- Existing Shovey saves and completed levels are retained.
+## 0.6.66
+
+- Shovey includes approved Classic levels 1–31.
+- All objects stop at the abyss and leave it open.
+- Existing Shovey saves and completed levels are retained.
+## 0.6.65
+
+- Shovey includes approved Classic levels 1–31.
+- All objects stop at the abyss and leave it open.
+- Existing Shovey saves and completed levels are retained.
+## 0.6.64
+
+- Shovey includes approved Classic levels 1–31.
+- All objects stop at the abyss and leave it open.
+- Existing Shovey saves and completed levels are retained.
+## 0.6.63
+
+- Shovey includes approved Classic levels 1–31.
+- All objects stop at the abyss and leave it open.
+- Existing Shovey saves and completed levels are retained.
+## 0.6.62
+
+- Shovey includes approved Classic levels 1–31.
+- All objects stop at the abyss and leave it open.
+- Existing Shovey saves and completed levels are retained.
+## 0.6.61
+
+- Shovey includes approved Classic levels 1–31.
+- All objects stop at the abyss and leave it open.
+- Existing Shovey saves and completed levels are retained.
+## 0.6.60
+
+- Shovey includes approved Classic levels 1–30.
+- All objects stop at the abyss and leave it open.
+- Existing Shovey saves and completed levels are retained.
+## 0.6.59
+
+- Shovey includes approved Classic levels 1–30.
+- All objects stop at the abyss and leave it open.
+- Existing Shovey saves and completed levels are retained.
+## 0.6.58
+
+- Shovey includes approved Classic levels 1–30.
+- All objects stop at the abyss and leave it open.
+- Existing Shovey saves and completed levels are retained.
+## 0.6.57
+
+- Shovey includes approved Classic levels 1–30.
+- All objects stop at the abyss and leave it open.
+- Existing Shovey saves and completed levels are retained.
+## 0.6.56
+
+- Shovey includes approved Classic levels 1–30.
+- All objects stop at the abyss and leave it open.
+- Existing Shovey saves and completed levels are retained.
+## 0.6.55
+
+- Shovey includes approved Classic levels 1–30.
+- All objects stop at the abyss and leave it open.
+- Existing Shovey saves and completed levels are retained.
+## 0.6.54
+
+- Shovey includes approved Classic levels 1–30.
+- All objects stop at the abyss and leave it open.
+- Existing Shovey saves and completed levels are retained.
+## 0.6.53
+
+- Shovey includes approved Classic levels 1–30.
+- All objects stop at the abyss and leave it open.
+- Existing Shovey saves and completed levels are retained.
+## 0.6.52
+
+- Shovey includes approved Classic levels 1–30.
+- All objects stop at the abyss and leave it open.
+- Existing Shovey saves and completed levels are retained.
+## 0.6.51
+
+- Shovey includes approved Classic levels 1–30.
+- All objects stop at the abyss and leave it open.
+- Existing Shovey saves and completed levels are retained.
 ## 0.6.50
 
 - Shovey includes approved Classic levels 1–30.

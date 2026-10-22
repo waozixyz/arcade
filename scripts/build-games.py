@@ -96,17 +96,18 @@ def build(ziran, lock_flags):
             str(source / descriptor["source"])], cwd=ROOT, check=True)
         preview = ROOT / "build/games" / (name + "-preview.png")
         shutil.copyfile(source / descriptor["preview"], preview)
-        entries.append(descriptor)
+        entries.append(descriptor | {"enabled": registration.get("enabled", True)})
     if not entries or len(entries) > 16 or len({entry["id"] for entry in entries}) != len(entries):
         raise ValueError("Arcade needs 1 to 16 distinct games")
     text = ("// Generated from games.json and the owning packages' game catalogs.\n"
-            "Game :: struct {\n    id: string\n    name: string\n    title: string\n    bundle: string\n    preview: string\n}\n\n"
+            "Game :: struct {\n    id: string\n    name: string\n    title: string\n    bundle: string\n    preview: string\n    enabled: bool\n}\n\n"
             f"GameCount :: {len(entries)}\n\nGameAt :: (index: s32) -> Game {{\n")
     for index, entry in enumerate(entries):
         fields = ", ".join("." + field + " = " + json.dumps(value, ensure_ascii=False)
                            for field, value in [("id", entry["id"]), ("name", entry["name"]),
                                                 ("title", entry["title"]), ("bundle", entry["name"] + ".zib"),
                                                 ("preview", entry["name"] + "-preview.png")])
+        fields += ", .enabled = " + str(entry["enabled"]).lower()
         text += f"    if index == {index} {{ return Game.{{{fields}}} }}\n"
     text += "    return Game.{}\n}\n"
     (ROOT / "src/catalog.zi").write_text(text)

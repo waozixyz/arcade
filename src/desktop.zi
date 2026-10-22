@@ -86,6 +86,7 @@ main :: (argc: s32, argv: **u8) -> s32 {
             return 0
         }
         for index: cast(s32)0..GameCount - 1 {
+            if !GameAt(index).enabled { continue }
             Report(GameAt(index).id)
             Report("\n")
         }
@@ -99,7 +100,7 @@ main :: (argc: s32, argv: **u8) -> s32 {
         }
         for index: cast(s32)0..GameCount - 1 {
             game := GameAt(index)
-            if TextFromCString(argv[2]) == game.name || TextFromCString(argv[2]) == game.id {
+            if game.enabled && (TextFromCString(argv[2]) == game.name || TextFromCString(argv[2]) == game.id) {
                 first = index
             }
         }
