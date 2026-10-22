@@ -447,7 +447,7 @@ CollectionClose :: () -> bool {
 
 CollectionOpenGame :: (id: string) -> bool {
     root := AppTreeNode(*collection_host.tree, collection_host.tree.active)
-    if root == null || !root.collection { return false }
+    if root == null || !root.collection { Report("Arcade: no collection is open to start "); Report(id); Report("\n"); return false }
     shovey_ids: [3]string = .["arcade.shovey", "arcade.shovey-island", "arcade.shovey-editor"]
     if AppCatalogFind(*root.catalog, id) < 0 {
         child := false
@@ -461,7 +461,7 @@ CollectionOpenGame :: (id: string) -> bool {
 
 CollectionOpenChild :: (id: string) -> bool {
     root := AppTreeNode(*collection_host.tree, collection_host.tree.active)
-    if root == null || !root.collection { return false }
+    if root == null || !root.collection { Report("Arcade: no collection is open to start "); Report(id); Report("\n"); return false }
     request: AppsRequest
     request.operation = APPS_OPEN
     if !CopyCString(id, request.id[:]) { return false }
@@ -470,7 +470,7 @@ CollectionOpenChild :: (id: string) -> bool {
         Report("Arcade: could not queue "); Report(id); Report(": "); Report(TextUntilNul(queued.reason[:])); Report("\n")
         return false
     }
-    if !AppTreeDrain(*collection_host.tree) { return false }
+    if !AppTreeDrain(*collection_host.tree) { Report("Arcade: the apps host stopped while starting "); Report(id); Report("\n"); return false }
     for index: cast(s64)0..collection_host.tree.pending.count - 1 {
         reply := collection_host.tree.pending[index].reply
         if reply.request == queued.request && reply.status == APPS_REJECTED {
@@ -479,8 +479,12 @@ CollectionOpenChild :: (id: string) -> bool {
         }
     }
     runtime := AppHostActiveRuntime(*collection_host)
-    return runtime != null && TextUntilNul(runtime.node.identity.id[:]) == id &&
-    AppHostRoute(*collection_host)
+    if runtime == null || TextUntilNul(runtime.node.identity.id[:]) != id {
+        Report("Arcade: "); Report(id); Report(" did not start\n")
+        return false
+    }
+    if !AppHostRoute(*collection_host) { Report("Arcade: "); Report(id); Report(" could not be shown\n"); return false }
+    return true
 }
 
 collection_typed: [1024]u8;
@@ -488,7 +492,7 @@ collection_pasted: [16384]u8;
 
 CollectionFrame :: (session: Session, viewport: Rectangle, key: s32, modifiers: s32) -> bool {
     runtime := AppHostActiveRuntime(*collection_host)
-    if runtime == null { return false }
+    if runtime == null { Report("Arcade: no app is running\n"); return false }
     nested := runtime.node.parent.generation != 0 && !runtime.node.collection
     identifier := TextUntilNul(runtime.node.identity.id[:])
     owns_chrome := identifier == "arcade.shovey" || identifier == "arcade.shovey-island" ||
