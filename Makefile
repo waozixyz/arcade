@@ -97,6 +97,8 @@ collection-ui-test: all
 
 install: all
 	mkdir -p '$(BIN_DIR)' '$(LIB_DIR)/games' '$(DATA_DIR)/applications'
+	mkdir -p '$(LIB_DIR)/startup/shovey'
+	install -m 0644 build/startup/shovey/*.png '$(LIB_DIR)/startup/shovey/'
 	install -m 0755 build/arcade '$(LIB_DIR)/arcade.new'
 	mv -f '$(LIB_DIR)/arcade.new' '$(LIB_DIR)/arcade'
 	install -m 0755 build/shovey '$(LIB_DIR)/shovey.new'

@@ -29,6 +29,17 @@ with tempfile.TemporaryDirectory(dir=out) as temporary:
                                  env=env, stdout=log, stderr=subprocess.STDOUT)
         driver.attach(child, log_path)
         try:
+            startup = driver.tree()
+            (out / 'startup-tree.json').write_text(json.dumps(driver.last, indent=2) + '\n')
+            assert driver.last['frame'] <= 3, 'Loading artwork must precede collection startup'
+            assert not any(node['label'] == 'Play' for node in startup)
+            images = [node for node in startup if node['kind'] == 'image' and node['label'] == 'Shovey']
+            assert len(images) == 2, 'Loading must show both the full title artwork and logo'
+            assert max(node['height'] for node in images) >= 800, 'Loading artwork must fill the window'
+            windows = subprocess.check_output(['xdotool', 'search', '--onlyvisible', '--pid', str(child.pid)], env=env, text=True).split()
+            assert len(windows) == 1
+            assert subprocess.check_output(['xdotool', 'getwindowpid', windows[0]], env=env, text=True).strip() == str(child.pid)
+            subprocess.run(['import', '-window', windows[0], str(out / 'loading.png')], env=env, check=True)
             driver.wait(label='Play', role='button')
             profile_button = driver.wait(label='Profile', role='button')
             windows = subprocess.check_output(['xdotool', 'search', '--onlyvisible', '--pid', str(child.pid)], env=env, text=True).split()

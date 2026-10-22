@@ -51,6 +51,10 @@ def main():
     if args.standalone_shovey:
         from PIL import Image
         source = Path(subprocess.check_output([ZIRAN, 'pkg', 'path', 'shovey', *lock], cwd=ROOT, text=True).strip())
+        startup = output.parent / 'startup/shovey'
+        startup.mkdir(parents=True, exist_ok=True)
+        for name in ('title-portrait.png', 'title-landscape.png', 'logo.png'):
+            shutil.copyfile(source / 'assets/shovey' / name, startup / name)
         Image.open(source / 'assets/branding/shovey-icon.png').resize((256, 256), Image.Resampling.LANCZOS).save(output.parent / 'shovey-icon.png')
     print(('Shovey' if args.standalone_shovey else 'Arcade') + ' native build passed')
 

@@ -8,9 +8,27 @@
 #import "catalog"
 #import "collection_host"
 #import "entity_host"
+#import "entity/model"
+Title :: #import "shovey/title_art";
 
 sdl :: #system_library "SDL2";
 SetTitle :: (window: *void, title: *u8) #foreign sdl "SDL_SetWindowTitle";
+
+DrawStartup :: (session: Session, directory: string) -> bool {
+    if !PollDesktop() || WindowTakeCloseRequestHost() { return false }
+    BeginDesktopFrame()
+    viewport := DesktopViewport()
+    art := Join(directory, ifx viewport.height > viewport.width then
+        "startup/shovey/title-portrait.png" else "startup/shovey/title-landscape.png")
+    logo := Join(directory, "startup/shovey/logo.png")
+    defer { EntityFree(art); EntityFree(logo) }
+    if BeginFrame(session, cast(u64)1, viewport) != FrameStatus.FrameOk { return false }
+    unused Title.TitleArtwork(session, viewport, cast(u64)48000, art, logo, "Shovey")
+    if EndFrame(session) != FrameStatus.FrameOk { return false }
+    ok := EndDesktopFrame()
+    TestDriverFrame(session)
+    return ok
+}
 
 Draw :: (session: Session) -> bool {
     BeginDesktopFrame()
@@ -105,11 +123,24 @@ main :: (argc: s32, argv: **u8) -> s32 {
         Report(": no private data directory\n")
         return 1
     }
+    if !OpenDesktopSized(480, 820) || !WindowInterceptCloseHost(true) {
+        CloseDesktop()
+        return 1
+    }
+    defer { CloseDesktop() }
+    title: [16]u8
+    unused CopyCString(product, title[:])
+    SetTitle(window, *title[0])
+    session := SessionOpen()
+    if !SessionValid(session) { return 1 }
+    defer { SessionClose(session) }
+    if standalone && !DrawStartup(session, directory) { return 0 }
     opened := false
     if standalone {
         // Standalone Shovey opens on the game's title screen.
-        opened = CollectionOpenShovey(directory, data) &&
-        CollectionOpenGame(ifx first < 0 then "arcade.shovey" else GameAt(first).id)
+        opened = CollectionOpenShovey(directory, data)
+        if opened && !DrawStartup(session, directory) { unused CollectionClose(); return 0 }
+        opened = opened && CollectionOpenGame(ifx first < 0 then "arcade.shovey" else GameAt(first).id)
     } else {
         opened = CollectionOpenFiles(directory, data) &&
         (first < 0 || CollectionOpenGame(GameAt(first).id))
@@ -120,23 +151,10 @@ main :: (argc: s32, argv: **u8) -> s32 {
         unused CollectionClose()
         return 1
     }
+    if standalone && !DrawStartup(session, directory) { unused CollectionClose(); return 0 }
     if !EntityOpenFile(directory, data, standalone) {
         Report("Could not open Entity\n")
         unused CollectionClose()
-        return 1
-    }
-    if !OpenDesktopSized(480, 820) || !WindowInterceptCloseHost(true) {
-        unused CollectionClose()
-        CloseDesktop()
-        return 1
-    }
-    title: [16]u8
-    unused CopyCString(ifx standalone then "Shovey" else "Arcade", title[:])
-    SetTitle(window, *title[0])
-    session := SessionOpen()
-    if !SessionValid(session) {
-        unused CollectionClose()
-        CloseDesktop()
         return 1
     }
     ok := true
@@ -150,7 +168,5 @@ main :: (argc: s32, argv: **u8) -> s32 {
         }
     }
     if !CollectionClose() { ok = false }
-    SessionClose(session)
-    CloseDesktop()
     return ifx ok then 0 else 1
 }
