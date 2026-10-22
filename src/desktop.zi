@@ -32,15 +32,24 @@ Draw :: (session: Session) -> bool {
     TreeSecondaryPointerUpdate(session, PollSecondaryPointer())
     PointerWheelSend(session, pointer.x, pointer.y, TestDriverWheel(DesktopWheelMove()))
     if BeginFrame(session, cast(u64)1, viewport) != FrameStatus.FrameOk { return false }
-    if !CollectionFrame(session, viewport, key, DesktopModifiers()) {
+    collection := CollectionFrame(session, viewport, key, DesktopModifiers())
+    if !collection {
         TreeCancel(session)
+        Report("collection frame returned false\n")
         return false
     }
-    if EndFrame(session) != FrameStatus.FrameOk { return false }
+    frame_status := EndFrame(session)
+    if frame_status != FrameStatus.FrameOk {
+        Report("end frame failed\n")
+        Report(FrameStatusMessage(cast(s32)frame_status))
+        Report("\n")
+        return false
+    }
     unused DesktopCursor(session)
     ok := EndDesktopFrame()
     TestDriverFrame(session)
     CollectionCollect()
+    if !ok { Report("end desktop frame failed\n") }
     return ok
 }
 

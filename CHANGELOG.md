@@ -1,5 +1,15 @@
 # Arcade changelog
 
+## 0.6.7
+
+- Shovey includes approved Classic levels 1–19 with updated artwork and portal travel.
+- Island stays unavailable while its levels are being edited.
+- Existing Shovey saves and completed levels are retained.
+## 0.6.6
+
+- Shovey includes approved Classic levels 1–18 with updated artwork and portal travel.
+- Island stays unavailable while its levels are being edited.
+- Existing Shovey saves and completed levels are retained.
 ## 0.6.5
 
 - Shovey Classic and Shovey Island share your solved levels with friends on Inner Breeze's Leaderboard.

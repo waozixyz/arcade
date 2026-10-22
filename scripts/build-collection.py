@@ -8,6 +8,7 @@ from pathlib import Path
 import re
 import shutil
 import subprocess
+from game_manifest import game_manifest
 
 ROOT = Path(__file__).resolve().parents[1]
 COLLECTION_ID = "inbe.arcade"
@@ -36,7 +37,7 @@ def stage(root, controller, expected_controller_digest, output):
         # Arcade's own games live here; Shovey comes from its package.
         source = root if registration["package"] == "self" else Path(subprocess.check_output(
             [str(root / "scripts/ziran.sh"), "pkg", "path", registration["package"]], cwd=root, text=True).strip())
-        manifest = source / registration["manifest"]
+        manifest = game_manifest(source, registration)
         game = json.loads(manifest.read_text())
         name, identifier = game["name"], game["id"]
         if not re.fullmatch(r"[a-z0-9][a-z0-9-]*", name):
@@ -98,6 +99,7 @@ def main():
     args = parser.parse_args()
     output = ROOT / "build/collection"
     catalog = stage(ROOT, args.apps_bundle, args.apps_sha256, output)
+    stage_children = list(catalog['children'])
     command = [args.ziran, "bundle", "--project", *(["--locked"] if args.locked else [])]
     env = os.environ.copy()
     def bundle(source, entry, assets, target):
@@ -108,9 +110,9 @@ def main():
     # One Shovey collection is both the standalone payload and the exact child
     # embedded in Arcade. Its leaves keep their independent verified IDs.
     editions = [child.copy() for child in catalog["children"]
-                if child["id"] in {"arcade.shovey", "arcade.shovey-island", "arcade.shovey-editor"}]
-    if len(editions) != 3:
-        raise ValueError("Shovey requires verified Classic, Island and Editor leaves")
+                if child["id"] in {"arcade.shovey", "arcade.shovey-editor"}]
+    if len(editions) != 2:
+        raise ValueError("Shovey requires verified Classic and Editor leaves")
     for child in editions:
         if child["id"] == "arcade.shovey":
             child["title"] = "Shovey Classic"
@@ -142,7 +144,8 @@ def main():
                            if child["id"] not in {"arcade.shovey", "arcade.shovey-island", "arcade.shovey-editor"}]
     catalog["children"].append(parent_entry)
     shutil.copyfile(ROOT / "build/shovey.zib", output / parent_entry["bundle"])
-    for child in editions:
+    for child in [entry for entry in stage_children
+                  if entry['id'] in {'arcade.shovey', 'arcade.shovey-island', 'arcade.shovey-editor'}]:
         (output / child["bundle"]).unlink()
         if child["preview"] != parent_entry["preview"]:
             (output / child["preview"]).unlink()

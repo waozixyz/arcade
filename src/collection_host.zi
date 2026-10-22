@@ -461,7 +461,18 @@ CollectionOpenChild :: (id: string) -> bool {
     request.operation = APPS_OPEN
     if !CopyCString(id, request.id[:]) { return false }
     queued := AppTreeQueue(*collection_host.tree, collection_host.tree.active, request)
-    if queued.status != APPS_QUEUED || !AppTreeDrain(*collection_host.tree) { return false }
+    if queued.status != APPS_QUEUED {
+        Report("Arcade: could not queue "); Report(id); Report(": "); Report(TextUntilNul(queued.reason[:])); Report("\n")
+        return false
+    }
+    if !AppTreeDrain(*collection_host.tree) { return false }
+    for index: cast(s64)0..collection_host.tree.pending.count - 1 {
+        reply := collection_host.tree.pending[index].reply
+        if reply.request == queued.request && reply.status == APPS_REJECTED {
+            Report("Arcade: could not open "); Report(id); Report(": "); Report(TextUntilNul(reply.reason[:])); Report("\n")
+            return false
+        }
+    }
     runtime := AppHostActiveRuntime(*collection_host)
     return runtime != null && TextUntilNul(runtime.node.identity.id[:]) == id &&
     AppHostRoute(*collection_host)
@@ -506,7 +517,10 @@ CollectionFrame :: (session: Session, viewport: Rectangle, key: s32, modifiers: 
     WidgetHostBegin(session, CollectionAssetAllowed, CollectionAssetPath)
     drawn := AppHostRun(*collection_host, APP_FRAME)
     WidgetHostEnd()
-    if !drawn { return false }
+    if !drawn {
+        Report("collection frame failed\n")
+        return false
+    }
     if collection_leave_to_library {
         collection_leave_to_library = false
         unused AppHostBack(*collection_host)

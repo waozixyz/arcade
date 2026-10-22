@@ -22,7 +22,7 @@ def main():
     output = root / 'build/shovey-standalone-ui-test'
     # Classic's heading counts its levels, which Shovey's level file lists.
     shovey = Path(subprocess.check_output([str(root / 'scripts/ziran.sh'), 'pkg', 'path', 'shovey'], text=True).strip())
-    classic_levels = len(json.loads((shovey / 'levels/classic.json').read_text())['levels'])
+    classic_levels = len(json.loads((shovey / 'levels/approved.json').read_text())['levels'])
     output.mkdir(parents=True, exist_ok=True)
     sys.path.insert(0, str(args.inbe_source / 'tests'))
     from ui_driver import UiDriver
@@ -39,7 +39,7 @@ def main():
             driver.attach(child, log_path)
             try:
                 driver.wait(label='Shovey Classic', role='button')
-                driver.wait(label='Shovey Island', role='button')
+                assert not driver.find(label='Shovey Island', role='button'), 'Island must stay unavailable'
                 driver.wait(label='Shovey Editor', role='button')
                 yield child
             finally:
@@ -86,9 +86,11 @@ def main():
                 time.sleep(.05)
         raise AssertionError(f'A swipe beside the board at {x}, {y} moved nothing')
 
-    def board_and_player():
-        board = driver.find(key=22000, visible=True)[0]
-        player = driver.find(label='Shovey', role='image', visible=True)[0]
+    def board_and_player(board_key=22000):
+        board = driver.find(key=board_key, visible=True)[0]
+        players = driver.find(label='Shovey', role='image', visible=True)
+        assert len(players) == 1, 'Only the player may be labelled Shovey; terrain must have its own name'
+        player = players[0]
         return board, player
 
     def resize_owned_window(child, width, height):
@@ -109,15 +111,15 @@ def main():
             time.sleep(.05)
         raise AssertionError('Shovey did not adopt the resized window')
 
-    def swipe_in_visible_direction():
-        board, player = board_and_player()
+    def swipe_in_visible_direction(board_key=22000):
+        board, player = board_and_player(board_key)
         before = UiDriver.center(player)
         start = (board['x'] + board['width'] / 2, board['y'] + board['height'] / 2)
         for dx, dy in ((-100, 0), (0, -100), (100, 0), (0, 100)):
             driver.drag(start, (start[0] + dx, start[1] + dy))
             deadline = time.monotonic() + .8
             while time.monotonic() < deadline:
-                _, player = board_and_player()
+                _, player = board_and_player(board_key)
                 after = UiDriver.center(player)
                 moved_x, moved_y = after[0] - before[0], after[1] - before[1]
                 if abs(moved_x) + abs(moved_y) > 2:
@@ -175,6 +177,19 @@ def main():
                 swipe_in_visible_direction()
             classic_saved = classic.read_bytes()
             assert not driver.find(label='Back', role='button'), 'Shovey must own all of its chrome'
+            driver.press(label='Select game', role='button')
+            driver.wait(label='Shovey Editor', role='button')
+            driver.press(label='Shovey Editor', role='button')
+            driver.wait(label='Explore', role='button')
+            driver.press(label='Classic', role='button')
+            driver.wait(label='Story levels', role='text')
+            driver.press(label='1', role='button')
+            driver.wait(label='Play', role='button')
+            driver.press(label='Play', role='button')
+            driver.wait(label='Testing', role='text')
+            window = resize_owned_window(child, 960, 600)
+            subprocess.run(['import', '-window', window, str(output / 'editor-landscape.png')], check=True)
+            swipe_in_visible_direction(board_key=200000)
         with application(profile, 'restore'):
             driver.press(label='Shovey Editor', role='button')
             driver.wait(label='Explore', role='button')

@@ -22,7 +22,7 @@ def main():
     output = root / "build/collection-ui-test"
     # The Classic heading counts its levels, which Shovey's level file lists.
     shovey = Path(subprocess.check_output([str(root / "scripts/ziran.sh"), "pkg", "path", "shovey"], text=True).strip())
-    classic = len(json.loads((shovey / "levels/classic.json").read_text())["levels"])
+    classic = len(json.loads((shovey / "levels/approved.json").read_text())["levels"])
     output.mkdir(parents=True, exist_ok=True)
     sys.path.insert(0, str(args.inbe_source / "tests"))
     from ui_driver import UiDriver
@@ -125,7 +125,7 @@ def main():
                 assert len(shot.convert("RGB").crop(box).getcolors(100000) or []) > 32, "Shovey sprite lost its colours"
             driver.key("escape")
             driver.wait(label="Shovey Classic", role="button")
-            driver.wait(label="Shovey Island", role="button")
+            assert not driver.find(label="Shovey Island", role="button"), 'Unapproved Island must not be offered'
             driver.wait(label="Shovey Editor", role="button")
             driver.key("escape")
             driver.wait(label="Arcade", role="text")

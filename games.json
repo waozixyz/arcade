@@ -6,15 +6,15 @@
     },
     {
       "package": "shovey",
-      "manifest": "apps/shovey/catalog.json"
+      "manifest": "src/catalog.json"
     },
     {
       "package": "shovey",
-      "manifest": "apps/shovey/island/catalog.json"
+      "manifest": "src/island/catalog.json"
     },
     {
       "package": "shovey",
-      "manifest": "apps/shovey/editor/catalog.json"
+      "manifest": "src/editor/catalog.json"
     }
   ]
 }

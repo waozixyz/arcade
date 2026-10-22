@@ -5,6 +5,7 @@ import json
 import shutil
 import subprocess
 from pathlib import Path
+from game_manifest import game_manifest
 
 ROOT = Path(__file__).resolve().parents[1]
 
@@ -19,7 +20,8 @@ def build(ziran, lock_flags):
     entries = []
     for registration in json.loads((ROOT / "games.json").read_text())["games"]:
         source = ROOT if registration["package"] == "self" else package(registration["package"])
-        descriptor = json.loads((source / registration["manifest"]).read_text())
+        manifest = game_manifest(source, registration)
+        descriptor = json.loads(manifest.read_text())
         if descriptor["kind"] != "game" or "arcade" not in descriptor["harnesses"]:
             raise ValueError("Only games registered for Arcade belong in its catalog")
         name = descriptor["name"]
@@ -31,7 +33,7 @@ def build(ziran, lock_flags):
         resources = staged / "assets" / name
         resources.mkdir(parents=True)
         shutil.copytree(source / descriptor["assets"], resources, dirs_exist_ok=True)
-        shared = (source / registration["manifest"]).with_name("shared_assets.json")
+        shared = manifest.with_name("shared_assets.json")
         for copy in json.loads(shared.read_text())["copies"] if shared.exists() else []:
             asset_source, target = source / copy["from"], resources / copy["to"]
             target.parent.mkdir(parents=True, exist_ok=True)
@@ -39,7 +41,13 @@ def build(ziran, lock_flags):
                 shutil.copytree(asset_source, target)
             else:
                 shutil.copyfile(asset_source, target)
-        shutil.copyfile(source / registration["manifest"], resources / "catalog.json")
+        # Build flags are source metadata, not part of the signed node/2
+        # descriptor schema accepted by existing hosts.
+        (resources / 'catalog.json').write_text(json.dumps(
+            {key: value for key, value in descriptor.items() if key != 'build_defines'}, indent=2) + '\n')
+        defines = descriptor.get('build_defines', [])
+        if 'SHOVEY_RELEASE' in defines:
+            subprocess.run(["python3", str(source / 'scripts/release_assets.py'), str(resources)], check=True)
         locales = resources / "locales"
         locales.mkdir(exist_ok=True)
         translations = {}
@@ -81,6 +89,7 @@ def build(ziran, lock_flags):
             "--module-path", "std=" + str(toolchain / "std"),
             "--module-path", str(toolchain / "std"),
             "--module-path", "apps=" + str(package("apps") / "src"),
+            *[flag for name in defines for flag in ('--define', name)],
             "--define", "KRYON_HOSTED_UI", "--asset-dir", "assets=" + str(staged / "assets"),
             "--entry", descriptor["entry"], "-o", str(bundle),
             str(source / descriptor["source"])], cwd=ROOT, check=True)

@@ -329,5 +329,14 @@ GameFrame :: (frame: AppUiFrame) -> bool {
     ok := HostedAppRun(*host.app, *answer)
     WidgetHostEnd()
     host.drawing = false
-    return ok && answer == 0 && host.received && host.succeeded
+    result := ok && answer == 0 && host.received && host.succeeded
+    if !result {
+        Report("game frame failed: run="); Report(ifx ok then "1" else "0")
+        Report(" answer="); Report(cast(u64)answer)
+        Report(" received="); Report(ifx host.received then "1" else "0")
+        Report(" succeeded="); Report(ifx host.succeeded then "1" else "0")
+        Report(" trapped="); Report(ifx host.app.failed then "1" else "0")
+        Report("\n")
+    }
+    return result
 }
