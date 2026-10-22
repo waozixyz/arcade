@@ -1,5 +1,15 @@
 # Arcade changelog
 
+## 0.6.30
+
+- Shovey includes approved Classic levels 1–26.
+- Animals and fish choose independent movement directions, including their first step.
+- Existing Shovey saves and completed levels are retained.
+## 0.6.29
+
+- Shovey includes approved Classic levels 1–26 with updated artwork and portal travel.
+- Island stays unavailable while its levels are being edited.
+- Existing Shovey saves and completed levels are retained.
 ## 0.6.28
 
 - Shovey includes approved Classic levels 1–25 with updated artwork and portal travel.
