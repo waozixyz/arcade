@@ -70,14 +70,17 @@ def main():
                         assert end and end[0]['visible_height'] >= end[0]['height'] - 1, 'Last level is unreachable'
                         assert driver.find(label='Continue', role='button', visible=True)[0]['y'] == header['y']
 
-                        driver.pointer(x, y, wheel=200)
-                        driver.wait_idle(frames=90)
-                        before = first_y()
-                        locked = driver.find(label='2', role='button', visible=True)[0]
-                        start = UiDriver.center(locked)
-                        driver.drag(start, (start[0], start[1] - 140))
-                        wait(lambda: first_y() < before - 20, 'Dragging a level card did not scroll')
-                        assert driver.find(label='Continue', role='button', visible=True), 'Scrolling opened a level'
+                        for label in ('2', '1'):
+                            # Both locked and playable cards must yield a swipe
+                            # to their scroll, without opening a puzzle.
+                            driver.pointer(x, y, wheel=200)
+                            driver.wait_idle(frames=90)
+                            before = first_y()
+                            card = driver.find(label=label, role='button', visible=True)[0]
+                            start = UiDriver.center(card)
+                            driver.drag(start, (start[0], start[1] - 140))
+                            wait(lambda: first_y() < before - 20, 'Dragging a level card did not scroll')
+                            assert driver.find(label='Continue', role='button', visible=True), 'Scrolling opened a level'
 
                         driver.pointer(x, y, wheel=200)
                         driver.wait_idle(frames=90)
