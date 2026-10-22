@@ -58,6 +58,13 @@ def main():
                 time.sleep(.05)
         raise AssertionError(f'No move was saved to {record}')
 
+    def campaign_progress(data):
+        # Animals keep wandering while the window rotates. Campaign unlocks,
+        # completion marks, player state and board identity must stay intact.
+        assert data[:2] in (b'C2', b'C3', b'C4')
+        assert data[179:181] in (b'P1', b'P2', b'P3')
+        return data[:179 + 32], data[-8:]
+
     def swipe_beside_board_until_saved(record):
         """A swipe on the game screen moves Shovey even where the board is not."""
         nodes = driver.tree()
@@ -167,17 +174,17 @@ def main():
             swipe_beside_board_until_saved(classic)
             # Rotation changes presentation without replacing the saved game.
             for width, height, columns, rows in ((960, 600, 20, 12), (480, 820, 12, 20)):
-                saved = classic.read_bytes()
+                saved = campaign_progress(classic.read_bytes())
                 window = resize_owned_window(child, width, height)
                 board, player = board_and_player()
                 assert abs(board['width'] / board['height'] - columns / rows) < .01
                 assert board['x'] >= 0 and board['y'] >= 0
                 assert board['x'] + board['width'] <= width and board['y'] + board['height'] <= height
-                assert classic.read_bytes() == saved, 'rotation changed or reset the saved game'
+                assert campaign_progress(classic.read_bytes()) == saved, 'rotation changed or reset the saved game'
                 orientation = 'landscape' if width > height else 'portrait'
                 subprocess.run(['import', '-window', window, str(output / (orientation + '.png'))], check=True)
                 swipe_in_visible_direction()
-            classic_saved = classic.read_bytes()
+            classic_saved = campaign_progress(classic.read_bytes())
             assert len(driver.find(label='Back', role='button', visible=True)) == 1, 'Shovey needs one clear Back action'
             driver.press(label='Back', role='button')
             driver.wait(label='Shovey Editor', role='button')
@@ -187,18 +194,48 @@ def main():
             driver.wait(label='Story levels', role='text')
             driver.press(label='1', role='button')
             driver.wait(label='Play', role='button')
+            # Editing follows the device, including portrait screens whose
+            # board area becomes wider after reserving the toolbar/palette.
+            for width, height in ((390, 844), (844, 390), (580, 600), (480, 820)):
+                resize_owned_window(child, width, height)
+                board = driver.find(key=200000, visible=True)[0]
+                aspect = 5 / 3 if width > height else 3 / 5
+                assert abs(board['width'] / board['height'] - aspect) < .01, ('editor paint orientation', width, height, board)
             driver.press(label='Play', role='button')
             driver.wait(label='Testing', role='text')
-            window = resize_owned_window(child, 960, 600)
-            subprocess.run(['import', '-window', window, str(output / 'editor-landscape.png')], check=True)
-            swipe_in_visible_direction(board_key=200000)
+            for width, height in ((390, 844), (844, 390), (480, 820)):
+                window = resize_owned_window(child, width, height)
+                board, player = board_and_player(200000)
+                aspect = 5 / 3 if width > height else 3 / 5
+                assert abs(board['width'] / board['height'] - aspect) < .01, ('editor play orientation', width, height, board)
+                swipe_in_visible_direction(board_key=200000)
+            # Island uses the same presentation and input mapping as Classic.
+            driver.key('escape')
+            driver.key('escape')
+            driver.key('escape')
+            driver.wait(label='Island', role='button')
+            driver.press(label='Island', role='button')
+            driver.press(label='New level', role='button')
+            for width, height in ((390, 844), (844, 390), (480, 820)):
+                resize_owned_window(child, width, height)
+                board = driver.find(key=200000, visible=True)[0]
+                aspect = 5 / 3 if width > height else 3 / 5
+                assert abs(board['width'] / board['height'] - aspect) < .01, ('Island paint orientation', width, height, board)
+            driver.press(label='Play', role='button')
+            driver.wait(label='Testing', role='text')
+            for width, height in ((390, 844), (844, 390), (480, 820)):
+                resize_owned_window(child, width, height)
+                board, player = board_and_player(200000)
+                aspect = 5 / 3 if width > height else 3 / 5
+                assert abs(board['width'] / board['height'] - aspect) < .01, ('Island play orientation', width, height, board)
+                swipe_in_visible_direction(board_key=200000)
         with application(profile, 'restore'):
             driver.press(label='Shovey Editor', role='button')
             driver.wait(label='Explore', role='button')
             driver.key('escape')
             driver.press(label='Shovey Classic', role='button')
             driver.wait(label=f'Level 1 / {classic_levels}')
-            assert classic.read_bytes() == classic_saved
+            assert campaign_progress(classic.read_bytes()) == classic_saved
     print('Standalone Shovey: portrait/landscape boards, swipe directions, rotation saves, chooser and independent saves passed')
 
 

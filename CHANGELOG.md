@@ -1,5 +1,49 @@
 # Arcade changelog
 
+## 0.6.39
+
+- Shovey’s integrated editor follows screen orientation while editing and testing levels.
+- Existing levels, drafts and progress are retained.
+## 0.6.38
+
+- Shovey includes approved Classic levels 1–28.
+- All objects stop at the abyss and leave it open.
+- Existing Shovey saves and completed levels are retained.
+## 0.6.37
+
+- Shovey includes approved Classic levels 1–28.
+- All objects stop at the abyss and leave it open.
+- Existing Shovey saves and completed levels are retained.
+## 0.6.36
+
+- Shovey includes approved Classic levels 1–27.
+- All objects stop at the abyss and leave it open.
+- Existing Shovey saves and completed levels are retained.
+## 0.6.35
+
+- Shovey includes approved Classic levels 1–27.
+- Balls stop at the abyss; falling objects leave it open.
+- Existing Shovey saves and completed levels are retained.
+## 0.6.34
+
+- Shovey includes approved Classic levels 1–27.
+- Animals and fish choose independent movement directions, including their first step.
+- Existing Shovey saves and completed levels are retained.
+## 0.6.33
+
+- Shovey includes approved Classic levels 1–27.
+- Animals and fish choose independent movement directions, including their first step.
+- Existing Shovey saves and completed levels are retained.
+## 0.6.32
+
+- Shovey includes approved Classic levels 1–27.
+- Animals and fish choose independent movement directions, including their first step.
+- Existing Shovey saves and completed levels are retained.
+## 0.6.31
+
+- Shovey includes approved Classic levels 1–27.
+- Animals and fish choose independent movement directions, including their first step.
+- Existing Shovey saves and completed levels are retained.
 ## 0.6.30
 
 - Shovey includes approved Classic levels 1–26.
