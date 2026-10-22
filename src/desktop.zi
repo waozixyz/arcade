@@ -1,9 +1,11 @@
 #import "std/c_string"
 #import "std/byte_text_linux"
+#import "std/timer_linux"
 #import "kryon/Desktop"
 #import "kryon/Widgets"
 #import "kryon/Frame"
 #import "kryon/test_driver"
+#import "kryon/ScrollDevice"
 #import "platform"
 #import "catalog"
 #import "collection_host"
@@ -49,7 +51,11 @@ Draw :: (session: Session) -> bool {
     pointer := TestDriverPointer(session, PollPointer())
     TreePointerUpdate(session, pointer)
     TreeSecondaryPointerUpdate(session, PollSecondaryPointer())
-    PointerWheelSend(session, pointer.x, pointer.y, TestDriverWheel(DesktopWheelMove()))
+    wheel := TestDriverWheel(DesktopWheelMove())
+    PointerWheelSend(session, pointer.x, pointer.y, wheel)
+    BeginScrollFrame(session, Vector2.{pointer.x, pointer.y}, pointer.pressed,
+        pointer.down, pointer.released, wheel,
+        cast(float64)MonotonicMilliseconds() / 1000.0)
     if BeginFrame(session, cast(u64)1, viewport) != FrameStatus.FrameOk { return false }
     collection := CollectionFrame(session, viewport, key, DesktopModifiers())
     if !collection {

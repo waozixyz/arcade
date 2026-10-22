@@ -115,6 +115,7 @@ make test
 make ui-test
 make standalone-ui-test
 make collection-ui-test
+make scroll-ui-test
 make inbe-ui-test INBE_BINARY=/absolute/path/to/intended/inbe
 make compatibility-test INBE_BINARY=/absolute/path/to/intended/inbe
 ```

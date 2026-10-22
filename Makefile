@@ -17,7 +17,7 @@ BIN_DIR ?= $(HOME)/.local/bin
 LIB_DIR ?= $(HOME)/.local/lib/arcade
 DATA_DIR ?= $(if $(XDG_DATA_HOME),$(XDG_DATA_HOME),$(HOME)/.local/share)
 
-.PHONY: all build/arcade build/shovey standalone-ui-test collection-ui-test games collection collection-test run test chess-engine-test chess-app-test ui-test inbe-ui-test compatibility-test install
+.PHONY: all build/arcade build/shovey standalone-ui-test collection-ui-test scroll-ui-test games collection collection-test run test chess-engine-test chess-app-test ui-test inbe-ui-test compatibility-test install
 all: collection build/entity.zib build/arcade build/shovey
 
 games:
@@ -91,6 +91,12 @@ collection-ui-test: all
 	env -u DISPLAY -u WAYLAND_DISPLAY -u XAUTHORITY -u DBUS_SESSION_BUS_ADDRESS \
 		-u SESSION_MANAGER -u GDK_DISPLAY YUE_DESKTOP_RECOVERY=0 SDL_AUDIODRIVER=dummy \
 		timeout 240s xvfb-run -a -n 400 -s '-screen 0 1280x1000x24' python3 tests/collection_ui_test.py --binary '$(CURDIR)/build/arcade' --inbe-source '$(INBE_SOURCE)'
+
+scroll-ui-test: all
+	env -u DISPLAY -u WAYLAND_DISPLAY -u XAUTHORITY -u DBUS_SESSION_BUS_ADDRESS \
+		-u SESSION_MANAGER -u GDK_DISPLAY YUE_DESKTOP_RECOVERY=0 SDL_VIDEODRIVER=x11 SDL_AUDIODRIVER=dummy \
+		timeout 120s xvfb-run -a -n 400 -s '-screen 0 1280x1000x24' python3 tests/shovey_scroll_ui_test.py \
+		--binary '$(CURDIR)/build/arcade' --binary '$(CURDIR)/build/shovey' --inbe-source '$(INBE_SOURCE)'
 
 install: all
 	mkdir -p '$(BIN_DIR)' '$(LIB_DIR)/games' '$(DATA_DIR)/applications'

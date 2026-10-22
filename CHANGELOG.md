@@ -1,5 +1,10 @@
 # Arcade changelog
 
+## 0.7.1
+
+- Scroll Shovey’s level list with the wheel, by swiping over cards, or by dragging the scrollbar.
+- Keep the level selector’s Back and Continue controls visible while browsing.
+
 ## 0.7.0
 
 - Browse games with full-screen covers, swipe or arrow navigation, and a clear Play or Open button.
