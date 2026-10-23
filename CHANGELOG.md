@@ -1,5 +1,30 @@
 # Arcade changelog
 
+## 0.7.9
+
+- Shovey includes approved Classic levels 1–38.
+- All objects stop at the abyss and leave it open.
+- Existing Shovey saves and completed levels are retained.
+## 0.7.8
+
+- Shovey includes approved Classic levels 1–37.
+- All objects stop at the abyss and leave it open.
+- Existing Shovey saves and completed levels are retained.
+## 0.7.7
+
+- Shovey includes approved Classic levels 1–36.
+- All objects stop at the abyss and leave it open.
+- Existing Shovey saves and completed levels are retained.
+## 0.7.6
+
+- Shovey includes approved Classic levels 1–36.
+- All objects stop at the abyss and leave it open.
+- Existing Shovey saves and completed levels are retained.
+## 0.7.5
+
+- Shovey includes approved Classic levels 1–35.
+- All objects stop at the abyss and leave it open.
+- Existing Shovey saves and completed levels are retained.
 ## 0.7.4
 
 - Show Dew balance inside the shared Profile and remove the separate Dew shortcut.
