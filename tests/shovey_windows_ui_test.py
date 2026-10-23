@@ -49,7 +49,9 @@ def main():
                                      stdout=log, stderr=subprocess.STDOUT)
             driver.attach(child, log_path)
             try:
-                # A new Wine prefix takes a while before the first frame.
+                # A new Wine prefix takes a while before the first frame, so
+                # the first reply may come long after the usual 15 seconds.
+                driver.send('status', timeout=180)
                 driver.wait(timeout=180, label='Play', role='button')
                 yield child
             finally:
@@ -73,6 +75,9 @@ def main():
     with application('play'):
         driver.press(label='Play', role='button')
         driver.wait(label=f'Level 1 / {classic_levels}')
+        # The first level asks how to move; until then it takes every key.
+        driver.press(label='Swipe and tap')
+        driver.wait_gone(label='How do you want to move?', role='text')
         # Entering play saves the untouched campaign.
         deadline = time.monotonic() + 10
         while not classic.exists() and time.monotonic() < deadline:
