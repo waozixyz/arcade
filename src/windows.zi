@@ -1,0 +1,91 @@
+// Windows: standalone Shovey on Kryon's raylib host. It draws the Frame
+// Android draws (src/app.zi), from the collection beside the program, and
+// adds the window, keyboard, scrolling and test driver src/desktop.zi gives
+// Linux.
+#import "kryon/raylib_runtime"
+#import "kryon/session"
+#import "kryon/tree"
+#import "kryon/geometry"
+#import "kryon/tree_input"
+#import "kryon/Frame"
+#import "kryon/ScrollDevice"
+#import "kryon/test_driver"
+#import "std/c_string"
+#import "std/byte_text_linux"
+#import "std/timer_linux"
+#import "app"
+#import "collection_host"
+#import "platform"
+
+windows_raylib :: #system_library "raylib";
+ApplicationDirectory :: () -> *u8 #foreign windows_raylib "GetApplicationDirectory";
+
+// raylib's Escape key, which steps back as it does on Linux.
+WINDOWS_ESCAPE_KEY :: 256
+
+WindowsDraw :: (session: Session) -> bool {
+    BeginRaylibFrame()
+    KeyboardModifiersSend(session, RaylibModifiers())
+    key := RaylibPressedKey()
+    if key == 0 { key = RaylibRepeatedKey() }
+    for candidate: cast(s32)0..269 {
+        if TestDriverKeyPressed(candidate) { key = candidate; break }
+    }
+    if key == WINDOWS_ESCAPE_KEY && CollectionBack() { key = 0 }
+    if key != 0 { KeyboardSend(session, key) }
+    codepoint := RaylibTypedCodepoint()
+    while codepoint != 0 {
+        unused TypedCodepointSend(session, codepoint)
+        codepoint = RaylibTypedCodepoint()
+    }
+    viewport := RaylibViewport()
+    pointer := TestDriverPointer(session, PollPointer())
+    TreePointerUpdate(session, pointer)
+    TreeSecondaryPointerUpdate(session, PollSecondaryPointer())
+    wheel := TestDriverWheel(RaylibWheelMove())
+    PointerWheelSend(session, pointer.x, pointer.y, wheel)
+    BeginScrollFrame(session, Vector2.{pointer.x, pointer.y}, pointer.pressed,
+        pointer.down, pointer.released, wheel, cast(float64)MonotonicMilliseconds() / 1000.0)
+    if BeginFrame(session, cast(u64)1, viewport) != FrameStatus.FrameOk {
+        unused EndRaylibFrame()
+        return false
+    }
+    if Frame(session, viewport) != 0 {
+        TreeCancel(session)
+        unused EndRaylibFrame()
+        return false
+    }
+    if EndFrame(session) != FrameStatus.FrameOk {
+        unused EndRaylibFrame()
+        return false
+    }
+    ok := EndRaylibFrame()
+    TestDriverFrame(session)
+    return ok
+}
+
+#program_export
+main :: () -> s32 {
+    // The collection, profile and font ship beside the program.
+    unused EnterDirectory(TextFromCString(ApplicationDirectory()))
+    if !OpenRaylib(480, 820, "Shovey") {
+        CloseRaylib()
+        Report("Shovey: could not open the window\n")
+        return 1
+    }
+    RaylibExitKey(0)
+    unused LoadTypefaceFile("default", "kryon-font.ttf", null, 0) && SelectTypeface("default")
+    session := SessionOpen()
+    if !SessionValid(session) {
+        CloseRaylib()
+        return 1
+    }
+    ok := true
+    while ok && PollRaylib() {
+        ok = WindowsDraw(session)
+    }
+    if !CollectionClose() { ok = false }
+    unused CloseSession(session)
+    CloseRaylib()
+    return ifx ok then 0 else 1
+}

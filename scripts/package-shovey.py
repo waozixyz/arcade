@@ -14,22 +14,27 @@ import zipfile
 ROOT = Path(__file__).resolve().parents[1]
 DATA = ['shovey.zib', 'shovey.json', 'entity.zib', 'startup/shovey/title-portrait.png',
         'startup/shovey/title-landscape.png', 'startup/shovey/logo.png']
+WINDOWS_DATA = [('arcade.zib', 'shovey.zib'), ('arcade.json', 'shovey.json'), ('entity.zib', 'entity.zib'),
+                ('kryon-font.ttf', 'kryon-font.ttf')]
 
 
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('platform', choices=('linux', 'windows'))
-    parser.add_argument('--binary', type=Path, help='The built player; build/shovey on Linux')
+    parser.add_argument('--binary', type=Path, help='The built player; build/shovey or build/shovey.exe')
     parser.add_argument('--output-dir', type=Path, default=ROOT / 'build/downloads')
     args = parser.parse_args()
     metadata = json.loads((ROOT / 'build/shovey.json').read_text())
     if hashlib.sha256((ROOT / 'build/shovey.zib').read_bytes()).hexdigest() != metadata['sha256']:
         raise ValueError('The Shovey payload changed; rebuild the collection first')
     version = metadata['version']
-    binary = args.binary or ROOT / 'build/shovey'
-    program = 'shovey.exe' if args.platform == 'windows' else 'shovey'
-    files = [(program, binary.read_bytes(), 0o755)]
-    files += [(name, (ROOT / 'build' / name).read_bytes(), 0o644) for name in DATA]
+    if args.platform == 'linux':
+        files = [('shovey', (args.binary or ROOT / 'build/shovey').read_bytes(), 0o755)]
+        files += [(name, (ROOT / 'build' / name).read_bytes(), 0o644) for name in DATA]
+    else:
+        # The Windows host reads the collection under the names Android uses.
+        files = [('shovey.exe', (args.binary or ROOT / 'build/shovey.exe').read_bytes(), 0o755)]
+        files += [(packed, (ROOT / 'build' / name).read_bytes(), 0o644) for packed, name in WINDOWS_DATA]
     stamp = int(os.environ.get('SOURCE_DATE_EPOCH') or time.time())
     args.output_dir.mkdir(parents=True, exist_ok=True)
     if args.platform == 'linux':

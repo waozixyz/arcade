@@ -2,6 +2,7 @@
 // a new sound replaces the one playing. Sounds are packed WAV assets of the
 // calling game. Without an audio device the games stay silent and run on.
 #import "std/byte_text_linux"
+#import "std/c_string"
 
 sound_muted: bool;
 
@@ -14,6 +15,67 @@ SoundSetMuted :: (muted: bool) { sound_muted = muted }
     SoundPlay :: (bytes: string) -> bool {
         unused bytes
         return false
+    }
+} else #if #defined(_WIN32) {
+    // Windows plays through the audio device of raylib, which draws the window.
+    sound_raylib :: #system_library "raylib";
+
+    SoundWave :: struct {
+        frames: u32
+        rate: u32
+        sample_size: u32
+        channels: u32
+        data: *void
+    }
+
+    SoundStream :: struct {
+        buffer: *void
+        processor: *void
+        rate: u32
+        sample_size: u32
+        channels: u32
+    }
+
+    SoundClip :: struct {
+        stream: SoundStream
+        frames: u32
+    }
+
+    SoundDeviceOpen :: () #foreign sound_raylib "InitAudioDevice";
+    SoundDeviceReady :: () -> bool #foreign sound_raylib "IsAudioDeviceReady";
+    SoundLoadWave :: (extension: *u8, bytes: *u8, count: s32) -> SoundWave #foreign sound_raylib "LoadWaveFromMemory";
+    SoundUnloadWave :: (wave: SoundWave) #foreign sound_raylib "UnloadWave";
+    SoundFromWave :: (wave: SoundWave) -> SoundClip #foreign sound_raylib "LoadSoundFromWave";
+    SoundStart :: (clip: SoundClip) #foreign sound_raylib "PlaySound";
+    SoundUnload :: (clip: SoundClip) #foreign sound_raylib "UnloadSound";
+
+    SOUND_BYTE_LIMIT :: 16777216
+
+    sound_clip: SoundClip;
+    sound_loaded: bool;
+    sound_unavailable: bool;
+
+    // Decodes the whole sound before it replaces the playing one, so a
+    // damaged file never interrupts the current sound.
+    SoundPlay :: (bytes: string) -> bool {
+        if SoundMuted() || bytes.count <= 0 || bytes.count > SOUND_BYTE_LIMIT || sound_unavailable { return false }
+        if !SoundDeviceReady() {
+            SoundDeviceOpen()
+            if !SoundDeviceReady() { sound_unavailable = true; return false }
+        }
+        extension: [8]u8
+        if !CopyCString(".wav", extension[:]) { return false }
+        descriptor := cast(*TextDescriptor)(*bytes)
+        wave := SoundLoadWave(*extension[0], descriptor.data, cast(s32)bytes.count)
+        if wave.data == null || wave.frames == cast(u32)0 { return false }
+        clip := SoundFromWave(wave)
+        SoundUnloadWave(wave)
+        if clip.stream.buffer == null { return false }
+        if sound_loaded { SoundUnload(sound_clip) }
+        sound_clip = clip
+        sound_loaded = true
+        SoundStart(clip)
+        return true
     }
 } else {
 

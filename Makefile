@@ -128,6 +128,11 @@ android-shovey: collection
 android-shovey-release: collection
 	python3 scripts/build-android.py --release
 
-.PHONY: shovey-linux-download
+.PHONY: shovey-linux-download shovey-windows-download
 shovey-linux-download: collection build/entity.zib build/shovey
 	python3 scripts/package-shovey.py linux
+
+# Cross-builds with MinGW (x86_64-w64-mingw32-gcc, -windres and CMake).
+shovey-windows-download: collection build/entity.zib
+	python3 scripts/build-windows.py
+	python3 scripts/package-shovey.py windows

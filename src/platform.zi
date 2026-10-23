@@ -50,6 +50,18 @@ DataDirectory :: () -> string {
     }
     exact := EnvironmentText("ARCADE_DATA")
     if exact != "" { return exact }
+    #if #defined(_WIN32) {
+        // Windows keeps per-user application data under Local AppData. File
+        // storage takes forward slashes, as Kryon's own players pass them.
+        local := EnvironmentText("LOCALAPPDATA")
+        if local == "" { return "" }
+        path: Vec(u8)
+        for byte: local {
+            unused VecPush(path, ifx byte == cast(u8)92 then cast(u8)47 else byte)
+        }
+        BuilderPrint(*path, "%", "/Arcade")
+        return BuilderFinish(path)
+    }
     base := EnvironmentText("XDG_DATA_HOME")
     if base == "" {
         home := EnvironmentText("HOME")
