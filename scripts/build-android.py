@@ -17,6 +17,7 @@ def package(name):
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('--release', action='store_true', help='Build an unsigned release APK for the release signer')
+    parser.add_argument('--bundle', action='store_true', help='Build an unsigned release Android App Bundle for Google Play')
     parser.add_argument('--application-id', help='Use an isolated package for device tests')
     args = parser.parse_args()
     subprocess.run(['make', 'build/entity.zib'], cwd=ROOT, check=True)
@@ -48,10 +49,16 @@ def main():
                '-Praylib.dir=' + str(package('raylib') / 'src'),
                '-Papp.versionName=' + metadata['version'], '-Papp.versionCode=' + str(release['sequence']),
                '-Pandroid.aapt2FromMavenOverride=' + str(sdk / 'build-tools/36.0.0/aapt2'),
-               'assembleRelease' if args.release else 'assembleDebug']
+               'bundleRelease' if args.bundle else 'assembleRelease' if args.release else 'assembleDebug']
     if args.application_id:
         command.insert(-1, '-Papp.id=' + args.application_id)
     subprocess.run(command, cwd=ROOT, env=env, check=True)
+    if args.bundle:
+        bundle = ROOT / 'droid/app/build/outputs/bundle/release/app-release.aab'
+        output = ROOT / ('build/shovey-test-unsigned.aab' if args.application_id else 'build/shovey-unsigned.aab')
+        shutil.copyfile(bundle, output)
+        print(f'Standalone Shovey Android App Bundle: {output}')
+        return
     apk = ROOT / ('droid/app/build/outputs/apk/release/app-release-unsigned.apk' if args.release else
                   'droid/app/build/outputs/apk/debug/app-debug.apk')
     output = ROOT / ('build/shovey-test-unsigned.apk' if args.application_id else
