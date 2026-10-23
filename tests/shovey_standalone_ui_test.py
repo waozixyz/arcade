@@ -210,26 +210,12 @@ def main():
                 aspect = 5 / 3 if width > height else 3 / 5
                 assert abs(board['width'] / board['height'] - aspect) < .01, ('editor play orientation', width, height, board)
                 swipe_in_visible_direction(board_key=200000)
-            # Island uses the same presentation and input mapping as Classic.
+            # Island stays unavailable in the editor until it is offered for sale.
             driver.key('escape')
             driver.key('escape')
             driver.key('escape')
-            driver.wait(label='Island', role='button')
-            driver.press(label='Island', role='button')
-            driver.press(label='New level', role='button')
-            for width, height in ((390, 844), (844, 390), (480, 820)):
-                resize_owned_window(child, width, height)
-                board = driver.find(key=200000, visible=True)[0]
-                aspect = 5 / 3 if width > height else 3 / 5
-                assert abs(board['width'] / board['height'] - aspect) < .01, ('Island paint orientation', width, height, board)
-            driver.press(label='Play', role='button')
-            driver.wait(label='Testing', role='text')
-            for width, height in ((390, 844), (844, 390), (480, 820)):
-                resize_owned_window(child, width, height)
-                board, player = board_and_player(200000)
-                aspect = 5 / 3 if width > height else 3 / 5
-                assert abs(board['width'] / board['height'] - aspect) < .01, ('Island play orientation', width, height, board)
-                swipe_in_visible_direction(board_key=200000)
+            driver.wait(label='Classic', role='button')
+            assert not driver.find(label='Island', role='button'), 'The editor offers Island'
         with application(profile, 'restore'):
             driver.press(label='Next', role='button')
             driver.press(label='Open', role='button')
