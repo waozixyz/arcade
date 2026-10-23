@@ -127,3 +127,7 @@ android-shovey: collection
 
 android-shovey-release: collection
 	python3 scripts/build-android.py --release
+
+.PHONY: shovey-linux-download
+shovey-linux-download: collection build/entity.zib build/shovey
+	python3 scripts/package-shovey.py linux
