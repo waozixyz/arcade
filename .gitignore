@@ -8,3 +8,6 @@ __pycache__/
 /droid/app/build/
 /droid/build/
 /droid/local.properties
+
+# Design proposals and video material stay local.
+/design/
