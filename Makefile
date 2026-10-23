@@ -7,7 +7,6 @@ KRYON_DIR = $(shell $(ZIRAN) pkg path kryon $(LOCK_FLAGS))
 # The shared Apps controller is built from the locked Apps package. Arcade
 # trusts only the reviewed digest committed in apps-controller.sha256.
 ENTITY_DIR = $(shell $(ZIRAN) pkg path entity $(LOCK_FLAGS))
-APPS_DIR = $(shell $(ZIRAN) pkg path apps $(LOCK_FLAGS))
 APPS_BUNDLE := build/apps-ui/apps.zib
 APPS_SHA256 := $(shell cat apps-controller.sha256)
 INBE_SOURCE ?= $(shell $(ZIRAN) pkg path inbe $(LOCK_FLAGS))
@@ -24,11 +23,11 @@ games:
 	python3 scripts/check-games.py
 	python3 scripts/build-games.py --ziran '$(ZIRAN)' $(LOCK_FLAGS)
 
-$(APPS_BUNDLE): ziran.lock apps-controller.sha256
+$(APPS_BUNDLE): ziran.lock apps-controller.sha256 scripts/build-apps.py Makefile
 	$(ZIRAN) version > /dev/null
 	env -u DISPLAY -u WAYLAND_DISPLAY \
 		PATH="$(if $(wildcard $(ZIRAN_ROOT)/build/bin/ziran),$(ZIRAN_ROOT)/build/bin,$(CURDIR)/build/toolchain/bin):$$PATH" \
-		python3 '$(APPS_DIR)/scripts/build-ui.py' --output '$(abspath $(dir $@))'
+		python3 scripts/build-apps.py --output '$(abspath $(dir $@))'
 
 collection: games $(APPS_BUNDLE)
 	python3 scripts/build-collection.py --ziran '$(ZIRAN)' $(LOCK_FLAGS) \
@@ -59,6 +58,7 @@ test: all
 	python3 tests/chess_locale_test.py
 	INBE_SOURCE='$(INBE_SOURCE)' python3 tests/catalog_test.py
 	python3 tests/publisher_test.py
+	python3 tests/apps_controller_test.py
 	./build/arcade --list
 	sh tests/chess_engine_zi_test.sh '$(ZIRAN)'
 	sh tests/chess_app_test.sh '$(ZIRAN)'
