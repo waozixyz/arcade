@@ -1,5 +1,20 @@
 # Arcade changelog
 
+## 0.7.16
+
+- Shovey includes approved Classic levels 1–50.
+- All objects stop at the abyss and leave it open.
+- Existing Shovey saves and completed levels are retained.
+## 0.7.15
+
+- Shovey includes approved Classic levels 1–50.
+- All objects stop at the abyss and leave it open.
+- Existing Shovey saves and completed levels are retained.
+## 0.7.14
+
+- Shovey includes approved Classic levels 1–48.
+- All objects stop at the abyss and leave it open.
+- Existing Shovey saves and completed levels are retained.
 ## 0.7.13
 
 - Shovey includes approved Classic levels 1–47.
