@@ -1,5 +1,10 @@
 # Arcade changelog
 
+## 0.7.37
+
+- Shovey shows a glow and sparks when the first lightning touch grants a charge.
+- Shovey downloads include the approved Classic campaign through level 100.
+
 ## 0.7.36
 
 - Shovey includes approved Classic levels 1–100.
