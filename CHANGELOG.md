@@ -1,5 +1,12 @@
 # Arcade changelog
 
+## 0.7.34
+
+- Shovey includes approved Classic levels 1–90.
+- Shovey asks for swipe or a movement pad before the first level.
+- All objects stop at the abyss and leave it open.
+- Existing Shovey saves and completed levels are retained.
+
 ## 0.7.32
 
 - Shovey includes approved Classic levels 1–88.
