@@ -95,6 +95,9 @@ def main():
             driver.wait(label="Play", role="button")
             driver.key("enter")
             driver.wait(label=f"Level 1 / {classic}")
+            driver.wait(label="How do you want to move?", role="text")
+            driver.press(label="Swipe and tap")
+            driver.wait_gone(label="How do you want to move?", role="text")
             assert not driver.find(label="Play", role="button"), "Arcade must skip the second title screen"
             assert len(driver.find(label="Back", role="button", visible=True)) == 1
             capture(child, "classic-playing")

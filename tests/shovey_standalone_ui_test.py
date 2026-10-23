@@ -145,6 +145,18 @@ def main():
             assert not driver.find(label='Arcade', role='text')
             driver.press(label='Play', role='button')
             driver.wait(label=f'Level 1 / {classic_levels}')
+            # The first level asks how to move: swipe and tap, or the pad.
+            driver.wait(label='How do you want to move?', role='text')
+            assert driver.find(label='Swipe and tap', visible=True) and driver.find(label='Movement pad', visible=True)
+            for width, height in ((412, 860), (960, 600)):
+                window = resize_owned_window(child, width, height)
+                driver.wait_idle(frames=5)
+                orientation = 'landscape' if width > height else 'portrait'
+                subprocess.run(['import', '-window', window, str(output / ('controls-choice-' + orientation + '.png'))], check=True)
+            resize_owned_window(child, 480, 820)
+            driver.press(label='Swipe and tap')
+            driver.wait_gone(label='How do you want to move?', role='text')
+            assert (profile / 'games/arcade.shovey-player/records/controls').read_text() == 'off'
             assert not driver.find(label='Continue', role='button'), 'Classic must open straight on a level'
             assert driver.find(label='Shovey', role='image', visible=True), 'Shovey must be drawn as a picture'
             assert driver.find(label='Back', role='button', visible=True), 'Classic lacks its return control'
