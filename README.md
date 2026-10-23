@@ -60,7 +60,7 @@ Standalone Arcade and Shovey provide Profile at the top right, alongside Dew
 for connected Waozi-node accounts. Shovey overlays its title controls on the
 cover artwork; Help, level selection and play use that same header space.
 They use the shared Entity profile for account creation, key recovery and device
-connection. Connected Waozi-node accounts can view Dew,
+connection. Connected Waozi-node accounts see Dew directly in Profile and can
 get a funding address and confirm a storage-plan purchase. These services belong
 to the outer native host. Portable Arcade and Shovey collections carry no profile
 bundle, so Inbe supplies its existing profile and account. Inbe retains its

@@ -625,16 +625,9 @@ CollectionToolbar :: (session: Session, viewport: Rectangle) {
     if Button(session, ButtonProps.{.key = cast(u64)49200, .id = 49200, .label = "Profile",
             .bounds = Rectangle.{viewport.x + viewport.width - 56.0, viewport.y + 6.0, 44.0, 44.0},
             .icon_shape = ProfileIcon.Shape, .icon_only = true,
-            .selected = entity_visible && !entity_dew,
+            .selected = entity_visible,
             .tone = ButtonTone.ButtonToneNeutral, .emphasis = ButtonEmphasis.ButtonEmphasisSoft}) != 0 {
         unused EntityShow()
-    }
-    if EntityDewAvailable() && Button(session, ButtonProps.{.key = cast(u64)49201, .id = 49201, .label = "Dew",
-            .bounds = Rectangle.{viewport.x + viewport.width - 108.0, viewport.y + 6.0, 44.0, 44.0},
-            .icon_shape = "S1.7rr:M12 3C10 6 5 11 5 15C5 24 19 24 19 15C19 11 14 6 12 3ZM8 15C8 18 10 19 12 19", .icon_only = true,
-            .selected = entity_visible && entity_dew,
-            .tone = ButtonTone.ButtonToneNeutral, .emphasis = ButtonEmphasis.ButtonEmphasisSoft}) != 0 {
-        unused EntityShowDew()
     }
 }
 

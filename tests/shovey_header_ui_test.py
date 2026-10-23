@@ -85,32 +85,33 @@ def main():
                 driver.press(label='Back', role='button')
                 driver.wait(label='Play', role='button')
                 driver.press(label='Profile', role='button')
-                driver.wait(label='Intention', role='text')
+                driver.wait(label='Dew balance', role='text')
+                assert not driver.find(label='Intention', role='text')
+                assert not driver.find(label='Name', role='text')
                 driver.press(label='Connect an account', role='button')
                 driver.press(label='Create account', role='button')
                 driver.wait(contains='Account connected on this device', timeout=30)
                 driver.press(key=49001)
                 driver.press(key=49001)
                 driver.wait(label='Play', role='button')
-                assert driver.wait(label='Dew', role='button')['y'] < 16
-                driver.press(label='Dew', role='button')
-                driver.wait(label='Add Dew with Monero', role='button')
-                assert len(driver.find(label='Back', role='button', visible=True)) == 1
+                assert not driver.find(label='Dew', role='button')
+                driver.press(label='Profile', role='button')
+                driver.wait(label='Dew balance', role='text')
+                assert not driver.find(label='Intention', role='text')
+                assert not driver.find(label='Name', role='text')
                 assert not driver.find(label='Settings', role='button')
-                driver.press(key=49001)
-                driver.wait(label='Profile', role='text')
                 driver.press(key=49001)
                 driver.wait(label='Play', role='button')
                 (output / 'receipt.json').write_text(json.dumps({
                     'passed': True, 'sizes': [[390, 844], [480, 820], [960, 600]],
-                    'guide_pieces': 137, 'shared_entity_intention': True, 'shared_dew_route': True,
+                    'guide_pieces': 137, 'game_identity_fields_hidden': True, 'inline_dew_balance': True,
                     'screenshots': False, 'network': False,
                 }, indent=2) + '\n')
             finally:
                 if child.poll() is None:
                     child.terminate()
                 child.wait(timeout=10)
-    print('Shovey: full-cover top controls, one Help row, 137 guide entries, shared Profile and Dew passed')
+    print('Shovey: full-cover top controls, one Help row, 137 guide entries, shared Profile and inline Dew passed')
 
 
 if __name__ == '__main__':

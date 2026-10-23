@@ -13,8 +13,8 @@
     "shovey": {
       "id": "arcade.shovey",
       "title": "Shovey",
-      "version": "0.6.76",
-      "sequence": 84,
+      "version": "0.6.77",
+      "sequence": 85,
       "host_api": 12
     },
     "shovey-island": {
@@ -34,8 +34,8 @@
     "arcade": {
       "id": "inbe.arcade",
       "title": "Arcade",
-      "version": "0.7.3",
-      "sequence": 82,
+      "version": "0.7.4",
+      "sequence": 83,
       "host_api": 28
     }
   }

@@ -24,7 +24,6 @@ entity_bundle: string;
 entity_ready: bool;
 entity_visible: bool;
 entity_shovey: bool;
-entity_dew: bool;
 entity_typed: [1024]u8;
 
 EntityOpen :: (bytes: string, data: string, shovey: bool = false) -> bool {
@@ -58,22 +57,13 @@ EntityShow :: () -> bool {
     // Return through Entity's own routes before opening either entry point.
     for depth: cast(s32)0..7 { if !EntityHostBack() { break } }
     EntityHostReload()
-    entity_dew = false
     entity_visible = true
     return true
 }
 
-EntityShowDew :: () -> bool {
-    if !EntityShow() || !EntityHostDew() { return false }
-    entity_dew = true
-    return true
-}
-
-EntityDewAvailable :: () -> bool { return EntityHostDewAvailable() }
-
 EntityBack :: () -> bool {
     if !entity_visible { return false }
-    if EntityHostBack() { entity_dew = false; return true }
+    if EntityHostBack() { return true }
     if EntityHostSave() { entity_visible = false }
     return true
 }
@@ -86,7 +76,7 @@ EntityFrame :: (session: Session, viewport: Rectangle, key: s32, modifiers: s32)
     bounds := Rectangle.{viewport.x, viewport.y + 56.0, viewport.width, viewport.height - 56.0}
     input := TextFieldInputFor(key, modifiers, TypedTextTake(session, entity_typed[:]))
     if !EntityHostFrame(session, bounds, key, modifiers, input, entity_shovey) { return false }
-    Text(session, TextProps.{.key = cast(u64)49002, .text = ifx entity_dew then "Dew" else "Profile", .font = 20,
+    Text(session, TextProps.{.key = cast(u64)49002, .text = "Profile", .font = 20,
             .bounds = Rectangle.{viewport.x + 100.0, viewport.y + 12.0, viewport.width - 220.0, 36.0}})
     if Button(session, ButtonProps.{.key = cast(u64)49001, .id = 49001, .label = "Back",
             .bounds = Rectangle.{viewport.x + 8.0, viewport.y + 6.0, 76.0, 44.0}}) != 0 {

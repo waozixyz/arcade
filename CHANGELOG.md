@@ -1,5 +1,11 @@
 # Arcade changelog
 
+## 0.7.4
+
+- Show Dew balance inside the shared Profile and remove the separate Dew shortcut.
+- Identify Shovey players by username or public ID without Name and Intention fields.
+- Restore Dew requests for connected standalone accounts.
+
 ## 0.7.3
 
 - Place Shovey’s title controls over the full-screen artwork, with Levels, Help and sound at the top.
