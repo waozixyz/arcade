@@ -138,6 +138,34 @@ def main():
                 time.sleep(.05)
         raise AssertionError('No visible swipe direction moved Shovey')
 
+    def press_pad_in_visible_direction(pad):
+        """A short press on an arm steps Shovey that way on the screen."""
+        third = pad['width'] / 3
+        arms = {(-1, 0): (pad['x'] + third / 2, pad['y'] + third * 1.5), (0, -1): (pad['x'] + third * 1.5, pad['y'] + third / 2),
+                (1, 0): (pad['x'] + third * 2.5, pad['y'] + third * 1.5), (0, 1): (pad['x'] + third * 1.5, pad['y'] + third * 2.5)}
+        for (dx, dy), (x, y) in arms.items():
+            before = UiDriver.center(board_and_player()[1])
+            driver.pointer(x, y)
+            driver.pointer(x, y, down=True)
+            driver.pointer(x, y, down=False)
+            driver.release_pointer()
+            deadline = time.monotonic() + .8
+            while time.monotonic() < deadline:
+                after = UiDriver.center(board_and_player()[1])
+                moved_x, moved_y = after[0] - before[0], after[1] - before[1]
+                if abs(moved_x) + abs(moved_y) > 2:
+                    if dx:
+                        assert moved_x * dx > 0 and abs(moved_y) < 2, 'a horizontal arm moved Shovey another way'
+                    else:
+                        assert moved_y * dy > 0 and abs(moved_x) < 2, 'a vertical arm moved Shovey another way'
+                    return
+                time.sleep(.05)
+        raise AssertionError('No arm of the movement pad moved Shovey')
+
+    def overlaps(a, b):
+        return a['x'] < b['x'] + b['width'] and b['x'] < a['x'] + a['width'] and \
+            a['y'] < b['y'] + b['height'] and b['y'] < a['y'] + a['height']
+
     with tempfile.TemporaryDirectory(prefix='profile-', dir=output) as temporary:
         profile = Path(temporary)
         classic = profile / 'games/arcade.shovey/records/campaign'
@@ -185,10 +213,12 @@ def main():
             move_until_saved(classic)
             swipe_beside_board_until_saved(classic)
             # Rotation changes presentation without replacing the saved game.
+            swipe_boards = {}
             for width, height, columns, rows in ((960, 600, 20, 12), (480, 820, 12, 20)):
                 saved = campaign_progress(classic.read_bytes())
                 window = resize_owned_window(child, width, height)
                 board, player = board_and_player()
+                swipe_boards[width, height] = board
                 assert abs(board['width'] / board['height'] - columns / rows) < .01
                 assert board['x'] >= 0 and board['y'] >= 0
                 assert board['x'] + board['width'] <= width and board['y'] + board['height'] <= height
@@ -196,6 +226,32 @@ def main():
                 orientation = 'landscape' if width > height else 'portrait'
                 subprocess.run(['import', '-window', window, str(output / (orientation + '.png'))], check=True)
                 swipe_in_visible_direction()
+            # The movement pad floats over the board's bottom left corner: the
+            # board keeps its place and size, and the pad's arms step Shovey.
+            driver.press(key=20017)
+            driver.press(label='Movement pad', role='button')
+            driver.press(key=20017)
+            driver.wait(key=20040, role='button')
+            assert (profile / 'games/arcade.shovey-player/records/controls').read_text() == 'on'
+            for width, height in ((480, 820), (960, 600)):
+                resize_owned_window(child, width, height)
+                board = board_and_player()[0]
+                pad = driver.find(key=20040, visible=True)[0]
+                before = swipe_boards[width, height]
+                assert all(abs(board[field] - before[field]) <= 1 for field in ('x', 'y', 'width', 'height')), \
+                    ('the pad moved the board', width, height, before, board)
+                assert pad['x'] < width / 3 and height * .7 < pad['y'] + pad['height'] <= height, ('pad corner', pad)
+                assert overlaps(pad, board), ('the pad should float over the board', pad, board)
+                press_pad_in_visible_direction(pad)
+            # Back to swipe and tap: the pad goes and the board stays put.
+            driver.press(key=20017)
+            driver.press(label='Swipe and tap', role='button')
+            driver.press(key=20017)
+            driver.wait_gone(key=20040, role='button')
+            assert (profile / 'games/arcade.shovey-player/records/controls').read_text() == 'off'
+            board = board_and_player()[0]
+            assert all(abs(board[field] - swipe_boards[960, 600][field]) <= 1 for field in ('x', 'y', 'width', 'height'))
+            swipe_in_visible_direction()
             classic_saved = campaign_progress(classic.read_bytes())
             assert len(driver.find(label='Back', role='button', visible=True)) == 1, 'Shovey needs one clear Back action'
             driver.press(label='Back', role='button')
@@ -239,7 +295,7 @@ def main():
             driver.press(label='Play', role='button')
             driver.wait(label=f'Level 1 / {classic_levels}')
             assert campaign_progress(classic.read_bytes()) == classic_saved
-    print('Standalone Shovey: portrait/landscape boards, swipe directions, rotation saves, covers and independent saves passed')
+    print('Standalone Shovey: portrait/landscape boards, swipe directions, the floating movement pad, rotation saves, covers and independent saves passed')
 
 
 if __name__ == '__main__':
