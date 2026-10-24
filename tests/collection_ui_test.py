@@ -94,7 +94,15 @@ def main():
         chess = profile / "games/inbe.chess/records/computer"
         chess.parent.mkdir(parents=True)
         chess.write_bytes(b"existing private Chess save")
-        record = profile / "games/arcade.shovey/records/campaign"
+        # Classic keeps its progress in the shared account record.
+        record = profile / "entity/records/local/game-progress/fd65a3d7ac3d5ceb2d4d96cc5224a740.json"
+
+        def progress(data):
+            # Unlocks, completion marks and the board in play.
+            value = json.loads(data)
+            assert value["game"] == "shovey.classic"
+            return value["unlocked"], value["completed"], value["state"][10:42]
+
         with application(profile, "carousel") as child:
             driver.wait(label="Play", role="button")
             cover(child, "classic-portrait")
@@ -142,7 +150,7 @@ def main():
             cover(child, "classic-landscape")
         with application(profile, "restore", "--app", "arcade.shovey"):
             driver.wait(label=f"Level 1 / {classic}")
-            assert record.read_bytes()[:210] == saved[:210], "Classic progress changed on restart"
+            assert progress(record.read_bytes()) == progress(saved), "Classic progress changed on restart"
         assert chess.read_bytes() == b"existing private Chess save"
         assert not (profile / "inbe.db").exists()
         refused = subprocess.run([str(args.binary.resolve()), "--app", "chess"], env=os.environ | {"ARCADE_DATA": str(profile)}, capture_output=True, timeout=10)
