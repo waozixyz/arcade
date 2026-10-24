@@ -5,7 +5,9 @@ python3 - <<'PY'
 from pathlib import Path
 import re
 import json
-import subprocess
+import sys
+sys.path.insert(0, 'scripts')
+from game_packages import declared_apps
 version = re.search(r'^## (\d+\.\d+\.\d+)\s*$', Path('CHANGELOG.md').read_text(), re.M)
 if version is None:
     raise SystemExit('CHANGELOG.md needs a numeric release entry')
@@ -15,14 +17,11 @@ if ledger_path.exists():
     ledger = json.loads(ledger_path.read_text())
     # New games get their initial version from their numeric changelog,
     # through the same synchronizer as subsequent game releases.
-    registrations = json.loads(Path('games.json').read_text())['games']
     changelogs = {}
-    for registration in registrations:
+    for app in declared_apps('.'):
         # Games from other packages (Shovey) keep their changelog there.
-        source = Path('.') if registration['package'] == 'self' else Path(subprocess.check_output(
-            ['scripts/ziran.sh', 'pkg', 'path', registration['package']], text=True).strip())
-        game = json.loads((source / registration['manifest']).read_text())
-        changelogs[game['name']] = (source / registration['manifest']).parent / 'CHANGELOG.md'
+        game = app['descriptor']
+        changelogs[game['name']] = app['manifest'].parent / 'CHANGELOG.md'
         if game['name'] not in ledger['node_apps']:
             entry = re.search(r'^## \[(\d+\.\d+\.\d+)\] - \d{4}-\d{2}-\d{2}$',
                               changelogs[game['name']].read_text(), re.M)
