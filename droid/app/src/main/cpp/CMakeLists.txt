@@ -100,6 +100,8 @@ add_library(main SHARED ${APP_ZIRAN_GENERATED_SOURCES} "${MONOCYPHER_DIR}/src/mo
 target_link_libraries(main oqs)
 kryon_android_app(main)
 kryon_android_host(main ${APP_ZIRAN_GENERATED_SOURCES})
+# Keep independently built APKs identical after their debug symbols are stripped.
+target_link_options(main PRIVATE -Wl,--build-id=none)
 
 target_include_directories(main PRIVATE "${ZIRAN_DIR}/include")
 # Generated module names such as math.h must not shadow libc's <math.h> in
