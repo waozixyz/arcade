@@ -13,8 +13,11 @@ ZIRAN = str(ROOT / 'scripts/ziran.sh')
 BUILD = ROOT / 'build/windows'
 DEFINES = ['--define', '_WIN32', '--define', 'PLATFORM_DESKTOP', '--define', 'SHOVEY_STANDALONE',
            '--define', '__x86_64__']
+# Kryon's parallel image decoding runs on Ziran's threads, so the static
+# link takes MinGW's winpthreads too.
 LIBRARIES = ['-lgdi32', '-lwinmm', '-lopengl32', '-luser32', '-lshell32', '-lole32', '-lcomdlg32', '-lcomctl32',
-             '-luuid', '-lws2_32', '-liphlpapi', '-lcrypt32', '-lsecur32', '-lbcrypt', '-ladvapi32', '-lz', '-lm']
+             '-luuid', '-lws2_32', '-liphlpapi', '-lcrypt32', '-lsecur32', '-lbcrypt', '-ladvapi32', '-lz', '-lm',
+             '-lpthread']
 
 
 def package(name):
