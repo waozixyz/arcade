@@ -40,6 +40,7 @@ def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('--binary', type=Path, required=True)
     parser.add_argument('--inbe-source', type=Path, required=True)
+    parser.add_argument('--classic-levels', type=int, help='Expected campaign length of an already built artifact')
     args = parser.parse_args()
     assert int(os.environ['DISPLAY'].split(':')[-1].split('.')[0]) >= 400
     assert os.environ['YUE_DESKTOP_RECOVERY'] == '0'
@@ -47,7 +48,7 @@ def main():
     output = root / 'build/shovey-standalone-ui-test'
     # Classic's heading counts its levels, which Shovey's level file lists.
     shovey = Path(subprocess.check_output([str(root / 'scripts/ziran.sh'), 'pkg', 'path', 'shovey'], text=True).strip())
-    classic_levels = len(json.loads((shovey / 'levels/approved.json').read_text())['levels'])
+    classic_levels = args.classic_levels or len(json.loads((shovey / 'levels/approved.json').read_text())['levels'])
     output.mkdir(parents=True, exist_ok=True)
     sys.path.insert(0, str(args.inbe_source / 'tests'))
     from ui_driver import UiDriver
@@ -86,9 +87,11 @@ def main():
     def campaign_progress(data):
         # Animals keep wandering while the window rotates. Campaign unlocks,
         # completion marks, player state and board identity must stay intact.
-        assert data[:2] in (b'C2', b'C3', b'C4')
-        assert data[179:181] in (b'P1', b'P2', b'P3')
-        return data[:179 + 32], data[-8:]
+        record = json.loads(data)
+        state = record['state']
+        assert record['game'] == 'shovey.classic' and state[:2] == 'M1'
+        assert state[10:12] in ('P1', 'P2', 'P3')
+        return (record['unlocked'], record['completed'], state[10:42]), state[2:10]
 
     def swipe_beside_board_until_saved(record):
         """A swipe on the game screen moves Shovey even where the board is not."""
@@ -193,7 +196,7 @@ def main():
 
     with tempfile.TemporaryDirectory(prefix='profile-', dir=output) as temporary:
         profile = Path(temporary)
-        classic = profile / 'games/arcade.shovey/records/campaign'
+        classic = profile / 'entity/records/local/game-progress/fd65a3d7ac3d5ceb2d4d96cc5224a740.json'
         with application(profile, 'play') as child:
             assert not driver.find(label='Arcade', role='text')
             driver.press(label='Play', role='button')

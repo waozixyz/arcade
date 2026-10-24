@@ -17,6 +17,7 @@ def build(ziran, lock_flags):
 
     kryon = package("kryon")
     toolchain = package("ziran")
+    entity = package("entity")
     entries = []
     for app in declared_apps(ROOT, ziran, lock_flags):
         source, manifest, descriptor = app["source"], app["manifest"], app["descriptor"]
@@ -88,6 +89,7 @@ def build(ziran, lock_flags):
             "--module-path", str(toolchain / "std"),
             "--module-path", "apps=" + str(package("apps") / "src"),
             "--module-path", "mingcute=" + str(package("mingcute") / "src"),
+            "--module-path", "entity=" + str(entity / "src"),
             *[flag for name in defines for flag in ('--define', name)],
             "--define", "KRYON_HOSTED_UI", "--asset-dir", "assets=" + str(staged / "assets"),
             "--entry", descriptor["entry"], "-o", str(bundle),
