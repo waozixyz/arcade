@@ -13,8 +13,8 @@
     "shovey": {
       "id": "arcade.shovey",
       "title": "Shovey",
-      "version": "0.6.114",
-      "sequence": 122,
+      "version": "0.6.115",
+      "sequence": 123,
       "host_api": 12
     },
     "shovey-island": {
@@ -27,15 +27,15 @@
     "shovey-editor": {
       "id": "arcade.shovey-editor",
       "title": "Shovey Editor",
-      "version": "0.2.107",
-      "sequence": 109,
+      "version": "0.2.108",
+      "sequence": 110,
       "host_api": 12
     },
     "arcade": {
       "id": "inbe.arcade",
       "title": "Arcade",
-      "version": "0.7.41",
-      "sequence": 120,
+      "version": "0.7.42",
+      "sequence": 121,
       "host_api": 28
     }
   }
