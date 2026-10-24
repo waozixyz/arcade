@@ -25,6 +25,13 @@ def package(name):
     return Path(subprocess.check_output([ZIRAN, 'pkg', 'path', name, *lock], cwd=ROOT, text=True).strip())
 
 
+def source_key(path):
+    """A locked package's path names its commit; a local checkout's path does
+    not, so its commit is added and a new commit rebuilds what it made."""
+    head = subprocess.run(['git', '-C', str(path), 'rev-parse', 'HEAD'], capture_output=True, text=True)
+    return str(path) + ('@' + head.stdout.strip() if head.returncode == 0 else '')
+
+
 def built(output, source):
     """A dependency is rebuilt only when its locked source changes."""
     stamp = output.parent / (output.name + '.source')
@@ -74,11 +81,11 @@ def main():
                     '-o', str(generated), str(ir / 'windows.zir')], cwd=ROOT, check=True)
 
     runtime = BUILD / 'runtime/libziran.a'
-    if not built(runtime, toolchain):
+    if not built(runtime, source_key(toolchain)):
         subprocess.run(['make', '-B', '-j4', '-C', str(toolchain), 'BOOTSTRAP=1', 'BUILD_DIR=' + str(runtime.parent),
                         'CC=' + tools + 'gcc', 'AR=' + tools + 'ar', 'OBJCOPY=' + tools + 'objcopy', 'CFLAGS=-O2',
                         str(runtime)], check=True)
-        record(runtime, toolchain)
+        record(runtime, source_key(toolchain))
 
     # Windows raylib as Inner Breeze ships it: RGFW and OpenGL 1.1.
     raylib_source = package('raylib') / 'src'
