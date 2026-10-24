@@ -54,6 +54,14 @@ public class ArcadeActivity extends NativeActivity {
     private native void nativeTextInputEnter();
     private native int nativeSyncLifecycleState(boolean paused, boolean windowFocused);
     private native void nativeInvalidateGraphicsResources();
+    // Kryon's android_picker: a picked file arrives as a private copy's path.
+    private native void nativeImportSelectedFile(int request, String path);
+    private native void nativeImportCancelled(int request);
+
+    private static final int REQUEST_OPEN_DOCUMENT = 4101;
+    private static final int REQUEST_SAVE_DOCUMENT = 4102;
+    private int pendingPickerRequest;
+    private android.net.Uri pendingSaveUri;
 
     public void onNativeFirstFrame() {
         runOnUiThread(() -> {
@@ -384,6 +392,107 @@ public class ArcadeActivity extends NativeActivity {
             requestInsetRefresh();
         }
         syncLifecycleState();
+    }
+
+    // Account keys: Entity imports from and backs up to documents the person
+    // chooses, through the system pickers (kryon/android_picker).
+    public void openImportPicker(final String mimeTypes, final int request) {
+        runOnUiThread(() -> {
+            pendingPickerRequest = request;
+            try {
+                Intent intent = new Intent(Intent.ACTION_OPEN_DOCUMENT);
+                intent.addCategory(Intent.CATEGORY_OPENABLE);
+                intent.setType(mimeTypes == null || mimeTypes.isEmpty() ? "*/*" : mimeTypes);
+                startActivityForResult(intent, REQUEST_OPEN_DOCUMENT);
+            } catch (Exception error) {
+                Log.e(TAG, "Could not open the document picker", error);
+                nativeImportSelectedFile(request, "");
+            }
+        });
+    }
+
+    public void openSavePicker(final String filename, final String mime, final int request) {
+        runOnUiThread(() -> {
+            pendingPickerRequest = request;
+            pendingSaveUri = null;
+            try {
+                Intent intent = new Intent(Intent.ACTION_CREATE_DOCUMENT);
+                intent.addCategory(Intent.CATEGORY_OPENABLE);
+                intent.setType(mime == null || mime.isEmpty() ? "application/octet-stream" : mime);
+                intent.putExtra(Intent.EXTRA_TITLE, filename);
+                startActivityForResult(intent, REQUEST_SAVE_DOCUMENT);
+            } catch (Exception error) {
+                Log.e(TAG, "Could not open the save picker", error);
+                nativeImportSelectedFile(request, "");
+            }
+        });
+    }
+
+    // Copies the staged file into the document the person chose, then
+    // removes the staged copy.
+    public boolean savePickedFile(String path) {
+        android.net.Uri target = pendingSaveUri;
+        pendingSaveUri = null;
+        File staged = new File(path);
+        if (target == null || !staged.getAbsolutePath().startsWith(getCacheDir().getAbsolutePath())) {
+            staged.delete();
+            return false;
+        }
+        try (InputStream input = new java.io.FileInputStream(staged);
+             java.io.OutputStream output = getContentResolver().openOutputStream(target, "wt")) {
+            if (output == null) return false;
+            byte[] bytes = new byte[8192];
+            int count;
+            while ((count = input.read(bytes)) != -1) output.write(bytes, 0, count);
+            return true;
+        } catch (Exception error) {
+            Log.e(TAG, "Could not write the chosen document", error);
+            return false;
+        } finally {
+            staged.delete();
+        }
+    }
+
+    @Override
+    protected void onActivityResult(int requestCode, int resultCode, Intent data) {
+        super.onActivityResult(requestCode, resultCode, data);
+        if (requestCode != REQUEST_OPEN_DOCUMENT && requestCode != REQUEST_SAVE_DOCUMENT) return;
+        final int request = pendingPickerRequest;
+        if (resultCode != RESULT_OK || data == null || data.getData() == null) {
+            nativeImportCancelled(request);
+            return;
+        }
+        File folder = new File(getCacheDir(), "picked");
+        if (!folder.isDirectory() && !folder.mkdirs()) {
+            nativeImportSelectedFile(request, "");
+            return;
+        }
+        if (requestCode == REQUEST_SAVE_DOCUMENT) {
+            pendingSaveUri = data.getData();
+            File staged = new File(folder, "save-" + request);
+            staged.delete();
+            nativeImportSelectedFile(request, staged.getAbsolutePath());
+            return;
+        }
+        File copy = new File(folder, "open-" + request);
+        try (InputStream input = getContentResolver().openInputStream(data.getData());
+             FileOutputStream output = new FileOutputStream(copy)) {
+            if (input == null) throw new java.io.IOException("Unavailable document");
+            byte[] bytes = new byte[8192];
+            long size = 0;
+            int count;
+            while ((count = input.read(bytes)) != -1) {
+                size += count;
+                // Account keys are a few kilobytes.
+                if (size > 1024 * 1024) throw new java.io.IOException("Document too large");
+                output.write(bytes, 0, count);
+            }
+            nativeImportSelectedFile(request, copy.getAbsolutePath());
+        } catch (Exception error) {
+            copy.delete();
+            Log.w(TAG, "Could not read the chosen document", error);
+            nativeImportSelectedFile(request, "");
+        }
     }
 
     @Override

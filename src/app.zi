@@ -5,6 +5,9 @@
 #import "kryon/geometry"
 #import "kryon/tree_input"
 #import "kryon/app_asset"
+#import "kryon/ScrollDevice"
+#import "kryon/raylib_runtime"
+#import "std/timer_linux"
 #import "collection_host"
 #import "entity_host"
 #import "platform"
@@ -16,6 +19,14 @@ ARCADE_BACK_KEY :: 4
 arcade_state: s32;
 
 ArcadeStart :: () -> bool {
+    // Android before 10 cannot name its system font; the APK carries the
+    // same font as the Windows build, so text never falls back to raylib's
+    // bitmap font.
+    #if #defined(ANDROID_BUILD) {
+        if !SelectTypeface("ui") && LoadTypefaceFile("default", "kryon-font.ttf", null, 0) {
+            unused SelectTypeface("default")
+        }
+    }
     data := DataDirectory()
     bundle := ReadAppAsset("arcade.zib")
     metadata := ReadAppAsset("arcade.json")
@@ -47,6 +58,13 @@ ArcadeStart :: () -> bool {
 Frame :: (session: Session, viewport: Rectangle) -> s32 {
     if arcade_state == 0 { arcade_state = ifx ArcadeStart() then 1 else 2 }
     if arcade_state != 1 { return 1 }
+    #if #defined(ANDROID_BUILD) {
+        // Drags scroll the host's own pages, such as the profile, as the
+        // desktop and Windows hosts already do.
+        pointer := PointerSample(session)
+        BeginScrollFrame(session, Vector2.{pointer.x, pointer.y}, pointer.pressed, pointer.down,
+            pointer.released, 0.0, cast(float64)MonotonicMilliseconds() / 1000.0)
+    }
     // Back leaves a game for its library. At the library it stays unused,
     // so the host closes the app as Android users expect.
     key := KeyboardTake(session)

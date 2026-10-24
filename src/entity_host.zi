@@ -26,8 +26,20 @@ entity_visible: bool;
 entity_shovey: bool;
 entity_typed: [1024]u8;
 
+// The profile's theme tokens in Shovey's slate, like the game around it.
+EntityShoveyTokens :: () {
+    names: [6]string = .["canvas", "surface", "border", "text", "accent", "link"]
+    colors: [6]u32 = .[0x2a2e2dff, 0x3b403fff, 0x5d6261ff, 0xe8eceaff, 0x34b930ff, 0x34b930ff]
+    for index: 0..5 {
+        name: [16]u8
+        for byte, at: names[index] { name[at] = byte }
+        unused SetStyleTokenColorBytes(name[:names[index].count], colors[index])
+    }
+}
+
 EntityOpen :: (bytes: string, data: string, shovey: bool = false) -> bool {
     entity_shovey = shovey
+    if shovey { EntityShoveyTokens() }
     root := Join(data, "entity")
     defer { EntityFree(root) }
     entity_ready = EntityHostOpen(bytes, root, "arcade", true)

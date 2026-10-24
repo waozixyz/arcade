@@ -78,7 +78,7 @@
       "url": "https://github.com/open-quantum-safe/liboqs.git"
     },
     {
-      "commit": "16ba6e2d374c6fd1f03b3d85ad8fc5e0b9626d1b",
+      "commit": "e726597f219fddd88997a1b8ddaf96dd1cefe57e",
       "dependencies": {"daochi_client": "p0cff069893bdc938", "kryon": "p62b1df489d9e5c45", "monocypher": "p809b4d31a48625a3", "qrcode": "p0dfa70137405b096"},
       "id": "p594ecc48e8bf4b50",
       "name": "Entity",

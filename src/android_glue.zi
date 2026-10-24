@@ -1,11 +1,48 @@
 #import "android_device"
 #import "android_jni"
+#import "android_picker"
+#import "c_string"
 
-// Registers Kryon's canonical Android natives on this activity. Keep your
-// own JNI_OnLoad and call AndroidJniOnLoad yourself to add application
-// methods on top.
+// Kryon's document picker answers through two more natives on this activity.
+PickerSelectedFn :: #type (*JniEnv, *void, s32, *void) -> void #c_call;
+PickerProcedure :: union {
+    selected: PickerSelectedFn
+    integer: AndroidNativeIntegerFn
+}
+PickerMethod :: struct {
+    name: *u8
+    signature: *u8
+    procedure: PickerProcedure
+}
+
+// Registers Kryon's canonical Android natives on this activity, then the
+// picker's. Keep your own JNI_OnLoad and call AndroidJniOnLoad yourself to
+// add application methods on top.
 #program_export
 JNI_OnLoad :: (vm: *JniVm, reserved: *void) -> s32 {
     unused reserved
-    return AndroidJniOnLoad(vm, "xyz/waozi/arcade/ArcadeActivity")
+    version := AndroidJniOnLoad(vm, "xyz/waozi/arcade/ArcadeActivity")
+    if version != JniVersion { return version }
+    env: *JniEnv
+    if vm.functions.GetEnv(vm, *env, JniVersion) != 0 || env == null { return -1 }
+    class_name: [64]u8
+    unused CopyCString("xyz/waozi/arcade/ArcadeActivity", class_name[:])
+    klass := env.functions.FindClass(env, *class_name[0])
+    if klass == null { return -1 }
+    methods: [2]PickerMethod
+    names: [2][64]u8
+    signatures: [2][64]u8
+    unused CopyCString("nativeImportSelectedFile", names[0][:])
+    unused CopyCString("(ILjava/lang/String;)V", signatures[0][:])
+    methods[0].name = *names[0][0]
+    methods[0].signature = *signatures[0][0]
+    methods[0].procedure.selected = AndroidNativePickerSelected
+    unused CopyCString("nativeImportCancelled", names[1][:])
+    unused CopyCString("(I)V", signatures[1][:])
+    methods[1].name = *names[1][0]
+    methods[1].signature = *signatures[1][0]
+    methods[1].procedure.integer = AndroidNativePickerCancelled
+    result := env.functions.RegisterNatives(env, klass, cast(*void)*methods[0], 2)
+    env.functions.DeleteLocalRef(env, klass)
+    return ifx result == 0 then JniVersion else result
 }

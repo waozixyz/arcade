@@ -32,6 +32,8 @@ def main():
     assets.mkdir(parents=True, exist_ok=True)
     for suffix in ('zib', 'json'):
         shutil.copyfile(ROOT / f'build/shovey.{suffix}', assets / f'arcade.{suffix}')
+    # Android before 10 has no font lookup; the Windows build ships the same font.
+    shutil.copyfile(package('kryon') / 'assets/fonts/LiberationSans-Regular.ttf', assets / 'kryon-font.ttf')
     # Density variants are mechanical packaging of the original generated logo.
     icon = Image.open(package('shovey') / 'assets/branding/shovey-icon.png').convert('RGBA')
     resources = ROOT / 'build/android-shovey-res'
