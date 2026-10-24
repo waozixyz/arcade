@@ -22,6 +22,8 @@ def ledger = new groovy.json.JsonSlurper().parse(file('../../apps/versions.json'
 def appRelease = ledger.node_apps[standaloneShovey ? 'shovey' : 'arcade']
 
 def appCodegen = envOrProp('KRYON_PROJECT_CODEGEN', 'app.codegen') ?: 'c99'
+def verificationOutput = project.findProperty('app.outputDir')
+if (verificationOutput != null) { buildDir = file(verificationOutput) }
 
 android {
     namespace 'xyz.waozi.arcade'
@@ -54,6 +56,7 @@ android {
         cmake {
             path 'src/main/cpp/CMakeLists.txt'
             version '3.22.1'
+            if (verificationOutput != null) { buildStagingDirectory file("${verificationOutput}/cxx") }
         }
     }
 

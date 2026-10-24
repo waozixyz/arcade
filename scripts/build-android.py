@@ -19,6 +19,8 @@ def main():
     parser.add_argument('--release', action='store_true', help='Build an unsigned release APK for the release signer')
     parser.add_argument('--bundle', action='store_true', help='Build an unsigned release Android App Bundle for Google Play')
     parser.add_argument('--application-id', help='Use an isolated package for device tests')
+    parser.add_argument('--abis', default='arm64-v8a,armeabi-v7a', help='Native ABIs to build')
+    parser.add_argument('--build-dir', type=Path, help='Separate Gradle and CMake output for verification')
     args = parser.parse_args()
     subprocess.run(['make', 'build/entity.zx'], cwd=ROOT, check=True)
     metadata = json.loads((ROOT / 'build/shovey.json').read_text())
@@ -45,8 +47,8 @@ def main():
     env = {key: value for key, value in os.environ.items() if key not in ('DISPLAY', 'WAYLAND_DISPLAY', 'XAUTHORITY', 'DBUS_SESSION_BUS_ADDRESS')}
     env.update(ANDROID_HOME=str(sdk), ANDROID_SDK_ROOT=str(sdk),
                LIBOQS_DIR=str(package('liboqs')), MONOCYPHER_DIR=str(package('monocypher')))
-    command = ['sh', str(ROOT / 'droid/gradlew'), '-p', str(ROOT / 'droid'), '--no-daemon', '--max-workers=4',
-               '-Papp.product=shovey', '-Papp.abis=arm64-v8a,armeabi-v7a',
+    command = ['sh', str(ROOT / 'droid/gradlew'), '-p', str(ROOT / 'droid'), '--no-daemon', '--max-workers=2',
+               '-Papp.product=shovey', '-Papp.abis=' + args.abis,
                '-Pkryon.dir=' + str(package('kryon')), '-Pziran.dir=' + str(package('ziran')),
                '-Praylib.dir=' + str(package('raylib') / 'src'),
                '-Papp.versionName=' + metadata['version'], '-Papp.versionCode=' + str(release['sequence']),
@@ -54,15 +56,18 @@ def main():
                'bundleRelease' if args.bundle else 'assembleRelease' if args.release else 'assembleDebug']
     if args.application_id:
         command.insert(-1, '-Papp.id=' + args.application_id)
+    if args.build_dir:
+        command.insert(-1, '-Papp.outputDir=' + str(args.build_dir.resolve()))
     subprocess.run(command, cwd=ROOT, env=env, check=True)
+    app_output = args.build_dir.resolve() if args.build_dir else ROOT / 'droid/app/build'
     if args.bundle:
-        bundle = ROOT / 'droid/app/build/outputs/bundle/release/app-release.aab'
+        bundle = app_output / 'outputs/bundle/release/app-release.aab'
         output = ROOT / ('build/shovey-test-unsigned.aab' if args.application_id else 'build/shovey-unsigned.aab')
         shutil.copyfile(bundle, output)
         print(f'Standalone Shovey Android App Bundle: {output}')
         return
-    apk = ROOT / ('droid/app/build/outputs/apk/release/app-release-unsigned.apk' if args.release else
-                  'droid/app/build/outputs/apk/debug/app-debug.apk')
+    apk = app_output / ('outputs/apk/release/app-release-unsigned.apk' if args.release else
+                        'outputs/apk/debug/app-debug.apk')
     output = ROOT / ('build/shovey-test-unsigned.apk' if args.application_id else
                      'build/shovey-unsigned.apk' if args.release else 'build/shovey.apk')
     shutil.copyfile(apk, output)
