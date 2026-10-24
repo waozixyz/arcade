@@ -11,6 +11,13 @@ import tempfile
 import time
 
 
+
+def wait_level_one(driver, classic_levels):
+    """Level 1 of the campaign. The live campaign on the server may already
+    hold levels published after this checkout, so it is never shorter."""
+    label = driver.wait(contains='Level 1 / ', role='text')['label']
+    assert label.startswith('Level 1 / ') and int(label.rsplit(' ', 1)[1]) >= classic_levels, label
+
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('--binary', type=Path, required=True)
@@ -172,7 +179,7 @@ def main():
         with application(profile, 'play') as child:
             assert not driver.find(label='Arcade', role='text')
             driver.press(label='Play', role='button')
-            driver.wait(label=f'Level 1 / {classic_levels}')
+            wait_level_one(driver, classic_levels)
             # The first level asks how to move: swipe and tap, or the pad.
             driver.wait(label='How do you want to move?', role='text')
             assert driver.find(label='Swipe and tap', visible=True) and driver.find(label='Movement pad', visible=True)
@@ -204,12 +211,12 @@ def main():
             subprocess.run(['import', '-window', window, str(output / 'level-selector-landscape.png')], check=True)
             # Back from the level list returns to the level, then to the covers.
             driver.press(key=20022)
-            driver.wait(label=f'Level 1 / {classic_levels}')
+            wait_level_one(driver, classic_levels)
             assert not driver.find(label='Continue', role='button', visible=True)
             driver.press(label='Back', role='button')
             driver.wait(label='Play', role='button')
             driver.press(label='Play', role='button')
-            driver.wait(label=f'Level 1 / {classic_levels}')
+            wait_level_one(driver, classic_levels)
             move_until_saved(classic)
             swipe_beside_board_until_saved(classic)
             # Rotation changes presentation without replacing the saved game.
@@ -293,7 +300,7 @@ def main():
             driver.wait(label='Open', role='button')
             driver.press(label='Previous', role='button')
             driver.press(label='Play', role='button')
-            driver.wait(label=f'Level 1 / {classic_levels}')
+            wait_level_one(driver, classic_levels)
             assert campaign_progress(classic.read_bytes()) == classic_saved
     print('Standalone Shovey: portrait/landscape boards, swipe directions, the floating movement pad, rotation saves, covers and independent saves passed')
 

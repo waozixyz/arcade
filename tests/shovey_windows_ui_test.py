@@ -12,6 +12,13 @@ import sys
 import time
 
 
+
+def wait_level_one(driver, classic_levels):
+    """Level 1 of the campaign. The live campaign on the server may already
+    hold levels published after this checkout, so it is never shorter."""
+    label = driver.wait(contains='Level 1 / ', role='text')['label']
+    assert label.startswith('Level 1 / ') and int(label.rsplit(' ', 1)[1]) >= classic_levels, label
+
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('--program', type=Path, required=True, help='shovey.exe in the unpacked download')
@@ -74,7 +81,7 @@ def main():
     classic = profile / 'games/arcade.shovey/records/campaign'
     with application('play'):
         driver.press(label='Play', role='button')
-        driver.wait(label=f'Level 1 / {classic_levels}')
+        wait_level_one(driver, classic_levels)
         # The first level asks how to move; until then it takes every key.
         driver.press(label='Swipe and tap')
         driver.wait_gone(label='How do you want to move?', role='text')
@@ -93,7 +100,7 @@ def main():
         driver.wait(label='Play', role='button')
     with application('restart'):
         driver.press(label='Play', role='button')
-        driver.wait(label=f'Level 1 / {classic_levels}')
+        wait_level_one(driver, classic_levels)
         assert classic.read_bytes() != fresh, 'The move was lost across a restart'
     print('Windows Shovey under Wine: title, Classic, sound, saved move, Back and restart passed')
 
