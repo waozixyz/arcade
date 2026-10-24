@@ -1,5 +1,8 @@
 # Arcade changelog
 
+## 0.7.38
+
+- Shovey's profile has simpler account screens, key import on Android, scrolling pages and clear text on Android 9 and older.
 ## 0.7.37
 
 - Shovey shows a glow and sparks when the first lightning touch grants a charge.
