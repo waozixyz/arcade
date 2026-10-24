@@ -50,7 +50,9 @@ def main():
                     *[item for path in generated.rglob('*') if path.is_dir()
                       for item in ('-iquote', str(path))],
                     *map(str, generated.rglob('*.c')), str(ROOT / 'build/ziran/libziran.a'),
-                    str(package('monocypher') / 'src/monocypher.c'), str(oqs / 'lib/liboqs.a'),
+                    '-I' + str(package('monocypher') / 'src'), str(package('monocypher') / 'src/monocypher.c'),
+                    # Entity's device keys sign with Monocypher's standard Ed25519.
+                    str(package('monocypher') / 'src/optional/monocypher-ed25519.c'), str(oqs / 'lib/liboqs.a'),
                     '-Wl,--gc-sections', *libraries, '-lX11', '-l:libcurl.so.4', '-lm', '-lpthread', '-o', str(temporary)], check=True)
     temporary.replace(output)
     if args.standalone_shovey:

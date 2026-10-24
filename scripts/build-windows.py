@@ -125,11 +125,12 @@ def main():
     output = args.output.resolve()
     temporary = output.with_suffix('.new.exe')
     output.parent.mkdir(parents=True, exist_ok=True)
-    includes = ['-I' + str(toolchain / 'include')]
+    includes = ['-I' + str(toolchain / 'include'), '-I' + str(package('monocypher') / 'src')]
     for folder in sorted({generated, *(path for path in generated.rglob('*') if path.is_dir())}):
         includes += ['-iquote', str(folder)]
     subprocess.run([tools + 'gcc', '-std=c11', '-O2', '-ffunction-sections', '-fdata-sections', *includes,
                     *map(str, sorted(generated.rglob('*.c'))), str(package('monocypher') / 'src/monocypher.c'),
+                    str(package('monocypher') / 'src/optional/monocypher-ed25519.c'),
                     str(runtime), str(oqs), str(curl), str(raylib), str(resource),
                     '-Wl,--gc-sections', '-static', '-static-libgcc', '-mwindows', *LIBRARIES, '-o', str(temporary)],
                    check=True)

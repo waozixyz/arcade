@@ -96,14 +96,16 @@ foreach(feature ADX AES AVX AVX2 AVX512 AVX512BW AVX512DQ AVX512F BMI1 BMI2 FMA 
     set(OQS_USE_${feature}_INSTRUCTIONS OFF CACHE BOOL "" FORCE)
 endforeach()
 add_subdirectory("${LIBOQS_DIR}" "${CMAKE_BINARY_DIR}/entity-oqs")
-add_library(main SHARED ${APP_ZIRAN_GENERATED_SOURCES} "${MONOCYPHER_DIR}/src/monocypher.c")
+# Entity's device keys sign with Monocypher's standard Ed25519.
+add_library(main SHARED ${APP_ZIRAN_GENERATED_SOURCES} "${MONOCYPHER_DIR}/src/monocypher.c"
+    "${MONOCYPHER_DIR}/src/optional/monocypher-ed25519.c")
 target_link_libraries(main oqs)
 kryon_android_app(main)
 kryon_android_host(main ${APP_ZIRAN_GENERATED_SOURCES})
 # Keep independently built APKs identical after their debug symbols are stripped.
 target_link_options(main PRIVATE -Wl,--build-id=none)
 
-target_include_directories(main PRIVATE "${ZIRAN_DIR}/include")
+target_include_directories(main PRIVATE "${ZIRAN_DIR}/include" "${MONOCYPHER_DIR}/src")
 # Generated module names such as math.h must not shadow libc's <math.h> in
 # raylib and other native dependencies. Zi imports use quoted includes.
 foreach(directory ${APP_ZIRAN_INCLUDE_DIRS})
