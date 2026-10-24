@@ -39,6 +39,7 @@ Codec :: #import "apps/node_codec";
 #import "entity_host"
 #import "entity/publications_read"
 #import "entity/entity_records"
+#import "entity/entity_dew"
 #import "kryon/widget_palette"
 #import "shovey/shovey_theme"
 ProfileIcon :: #import "mingcute/mingcute_regular_user_4";
@@ -116,7 +117,7 @@ CollectionAllows :: (context: *void, node: *AppNode, name: string) -> bool {
     name == "AppInvitationHost" || name == "RefreshAppSharedHost" || name == "SendAppSharedHost" ||
     name == "SmoothFramesHost" || name == "AppLocaleHost" || name == "AppSoundHost" ||
     name == "tile_map.sampling" || name == "arcade.controls" || name == "arcade.sound" || name == "arcade.navigation" ||
-    name == PUBLICATIONS_READ_SERVICE || name == ENTITY_RECORDS_SERVICE
+    name == PUBLICATIONS_READ_SERVICE || name == ENTITY_RECORDS_SERVICE || name == ENTITY_DEW_SERVICE
 }
 
 CollectionCall :: (context: *void, node: *AppNode, module: *u8, function: *u8,
@@ -168,6 +169,11 @@ CollectionCall :: (context: *void, node: *AppNode, module: *u8, function: *u8,
         // by the outer native app's Entity host.
         if service == ENTITY_RECORDS_SERVICE {
             result.* = AppHostText(EntityRecordsAnswer(request))
+            return 1
+        }
+        // The account's Dew to show and rewards a game claims from the node.
+        if service == ENTITY_DEW_SERVICE {
+            result.* = AppHostText(EntityDewAnswer(request))
             return 1
         }
         if service == "entity.profile" && request == "open" {
