@@ -13,6 +13,24 @@ import time
 
 
 
+
+LEVEL_UPDATES = 'Download new levels when they come out?'
+
+
+def answer_level_updates(driver, timeout=20):
+    """An installed Shovey first asks once whether to download new levels;
+    tests keep the levels it ships with. Returns once a level takes input
+    or asks how to move."""
+    deadline = time.monotonic() + timeout
+    while time.monotonic() < deadline:
+        if driver.find(label=LEVEL_UPDATES, role='text'):
+            driver.press(label='Not now', role='button')
+            driver.wait_gone(label=LEVEL_UPDATES, role='text')
+            return
+        if driver.find(label='How do you want to move?', role='text') or driver.find(label='Restart', role='button'):
+            return
+        time.sleep(0.05)
+
 def wait_level_one(driver, classic_levels):
     """Level 1 of the campaign. The live campaign on the server may already
     hold levels published after this checkout, so it is never shorter."""
@@ -83,6 +101,7 @@ def main():
         driver.press(label='Play', role='button')
         wait_level_one(driver, classic_levels)
         # The first level asks how to move; until then it takes every key.
+        answer_level_updates(driver)
         driver.press(label='Swipe and tap')
         driver.wait_gone(label='How do you want to move?', role='text')
         # Entering play saves the untouched campaign.

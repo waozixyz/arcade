@@ -4,6 +4,7 @@ import os
 from pathlib import Path
 import subprocess
 import sys
+import time
 import tempfile
 
 parser = argparse.ArgumentParser(description=__doc__)
@@ -14,6 +15,23 @@ assert int(os.environ['DISPLAY'].split(':')[-1].split('.')[0]) >= 400
 assert os.environ['YUE_DESKTOP_RECOVERY'] == '0'
 sys.path.insert(0, str(args.inbe_source / 'tests'))
 from ui_driver import UiDriver
+LEVEL_UPDATES = 'Download new levels when they come out?'
+
+
+def answer_level_updates(driver, timeout=20):
+    """An installed Shovey first asks once whether to download new levels;
+    tests keep the levels it ships with. Returns once a level takes input
+    or asks how to move."""
+    deadline = time.monotonic() + timeout
+    while time.monotonic() < deadline:
+        if driver.find(label=LEVEL_UPDATES, role='text'):
+            driver.press(label='Not now', role='button')
+            driver.wait_gone(label=LEVEL_UPDATES, role='text')
+            return
+        if driver.find(label='How do you want to move?', role='text') or driver.find(label='Restart', role='button'):
+            return
+        time.sleep(0.05)
+
 output = Path(__file__).resolve().parents[1] / 'build/standalone-navigation-ui-test'
 output.mkdir(parents=True, exist_ok=True)
 with tempfile.TemporaryDirectory(prefix='native-navigation-') as temporary:
@@ -60,6 +78,7 @@ with tempfile.TemporaryDirectory(prefix='native-navigation-') as temporary:
                 profile()
                 driver.press(label='Play', role='button')
                 driver.wait(label='Restart', role='button')
+                answer_level_updates(driver)
                 if driver.find(label='How do you want to move?', role='text'):
                     driver.press(label='Swipe and tap')
                     driver.wait_gone(label='How do you want to move?', role='text')

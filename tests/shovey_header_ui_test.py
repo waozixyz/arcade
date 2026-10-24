@@ -13,6 +13,24 @@ import tempfile
 import time
 
 
+
+LEVEL_UPDATES = 'Download new levels when they come out?'
+
+
+def answer_level_updates(driver, timeout=20):
+    """An installed Shovey first asks once whether to download new levels;
+    tests keep the levels it ships with. Returns once a level takes input
+    or asks how to move."""
+    deadline = time.monotonic() + timeout
+    while time.monotonic() < deadline:
+        if driver.find(label=LEVEL_UPDATES, role='text'):
+            driver.press(label='Not now', role='button')
+            driver.wait_gone(label=LEVEL_UPDATES, role='text')
+            return
+        if driver.find(label='How do you want to move?', role='text') or driver.find(label='Restart', role='button'):
+            return
+        time.sleep(0.05)
+
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('--binary', type=Path, required=True)
@@ -64,6 +82,7 @@ def main():
                     # Play opens the level directly, with the game's own header.
                     driver.press(label='Play', role='button')
                     driver.wait(label='Restart', role='button')
+                    answer_level_updates(driver)
                     if driver.find(label='How do you want to move?', role='text'):
                         driver.press(label='Swipe and tap')
                         driver.wait_gone(label='How do you want to move?', role='text')
