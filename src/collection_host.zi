@@ -43,6 +43,8 @@ Codec :: #import "apps/node_codec";
 #import "kryon/widget_palette"
 #import "shovey/shovey_theme"
 ProfileIcon :: #import "mingcute/mingcute_regular_user_4";
+DewIcon :: #import "mingcute/mingcute_filled_drop";
+collection_dew_text: [32]u8;
 
 using HostValueKind;
 
@@ -586,6 +588,15 @@ CollectionToolbar :: (session: Session, viewport: Rectangle) {
     if !entity_ready || !collection_toolbar_visible { return }
     if entity_shovey { unused WidgetPaletteUse(session, ShoveyPalette()) }
     defer { if entity_shovey { unused WidgetPaletteRestore(session) } }
+    // The account's Dew beside the Profile: a drop and the number, 0 until an
+    // account is connected; it opens the Profile too.
+    dew := EntityDewBalanceText(collection_dew_text[:])
+    dew_width := 52.0 + 10.0 * cast(float32)dew.count
+    if Button(session, ButtonProps.{.key = cast(u64)49201, .id = 49201, .label = dew,
+            .bounds = Rectangle.{viewport.x + viewport.width - 64.0 - dew_width, viewport.y + 6.0, dew_width, 44.0},
+            .icon_shape = DewIcon.Shape, .tone = ButtonTone.ButtonToneNeutral, .emphasis = ButtonEmphasis.ButtonEmphasisSoft}) != 0 {
+        unused EntityShow()
+    }
     if Button(session, ButtonProps.{.key = cast(u64)49200, .id = 49200, .label = "Profile",
             .bounds = Rectangle.{viewport.x + viewport.width - 56.0, viewport.y + 6.0, 44.0, 44.0},
             .icon_shape = ProfileIcon.Shape, .icon_only = true,
