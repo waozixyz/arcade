@@ -30,14 +30,14 @@ assert b"arcade.shovey\n" in listed.stderr + listed.stdout
 unknown = subprocess.run([str(ROOT / "build/arcade"), "--app", "unknown"],
                          env=env, capture_output=True, timeout=10)
 assert unknown.returncode == 1 and b"unknown game" in unknown.stderr
-original = (ROOT / 'build/games/chess.zib').read_bytes()
-container = (ROOT / 'build/arcade.zib').read_bytes()
+original = (ROOT / 'build/games/chess.zx').read_bytes()
+container = (ROOT / 'build/arcade.zx').read_bytes()
 metadata = json.loads((ROOT / 'build/arcade.json').read_text())
 assert original not in container, 'Disabled Chess must not remain in the published collection'
 assert {child['id'] for child in metadata['children']} == {'arcade.shovey', 'arcade.shovey-editor'}
 for child in metadata['children']:
     name = child['expected_id']
-    exact = (ROOT / f'build/games/{name}.zib').read_bytes()
+    exact = (ROOT / f'build/games/{name}.zx').read_bytes()
     assert container.count(exact) == 1, 'A game must be packed once without a nested chooser'
     assert hashlib.sha256(exact).hexdigest() == child['sha256']
     assert child['cover']['portrait'] and child['cover']['landscape'] and child['cover']['logo']

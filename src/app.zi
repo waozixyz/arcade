@@ -28,7 +28,7 @@ ArcadeStart :: () -> bool {
         }
     }
     data := DataDirectory()
-    bundle := ReadAppAsset("arcade.zib")
+    bundle := ReadAppAsset("arcade.zx")
     metadata := ReadAppAsset("arcade.json")
     defer { FreeAppAsset(bundle); FreeAppAsset(metadata) }
     if data == "" || bundle.count == 0 || metadata.count == 0 {
@@ -37,8 +37,8 @@ ArcadeStart :: () -> bool {
     }
     opened := false
     #if #defined(SHOVEY_STANDALONE) {
-        // Standalone Shovey opens on the game's title screen.
-        opened = CollectionOpenShoveyBytes(bundle, metadata, data) && CollectionOpenGame("arcade.shovey")
+        // Standalone Shovey opens on its covers, as Arcade opens on its library.
+        opened = CollectionOpenShoveyBytes(bundle, metadata, data)
     } else {
         opened = CollectionOpenBytes(bundle, metadata, data)
     }
@@ -46,7 +46,7 @@ ArcadeStart :: () -> bool {
         Report("Arcade: could not open the collection")
         return false
     }
-    entity := ReadAppAsset("entity.zib")
+    entity := ReadAppAsset("entity.zx")
     defer { FreeAppAsset(entity) }
     #if #defined(SHOVEY_STANDALONE) {
         return entity.count > 0 && EntityOpen(entity, data, true)

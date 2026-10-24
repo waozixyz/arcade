@@ -15,7 +15,7 @@ if __name__ == '__main__':
             component = json.loads((ROOT / 'apps/versions.json').read_text())['node_apps']['chess']
             valid = all(receipt.get(key) == component[field] for key, field in
                         [('app_id', 'id'), ('version', 'version'), ('sequence', 'sequence')])
-            valid = valid and receipt.get('sha256') == sha256((ROOT / 'build/games/chess.zib').read_bytes()).hexdigest()
+            valid = valid and receipt.get('sha256') == sha256((ROOT / 'build/games/chess.zx').read_bytes()).hexdigest()
             valid = valid and all(receipt.get(key) is True for key in
                                   ['arcade', 'inbe', 'oldest_inbe', 'rules', 'friend_protocol', 'rendering', 'save_restore'])
         except (OSError, ValueError, KeyError):

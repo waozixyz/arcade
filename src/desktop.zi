@@ -11,7 +11,7 @@
 #import "collection_host"
 #import "entity_host"
 #import "entity/model"
-Title :: #import "shovey/title_art";
+#import "kryon/carousel"
 
 sdl :: #system_library "SDL2";
 SetTitle :: (window: *void, title: *u8) #foreign sdl "SDL_SetWindowTitle";
@@ -25,7 +25,7 @@ DrawStartup :: (session: Session, directory: string) -> bool {
     logo := Join(directory, "startup/shovey/logo.png")
     defer { EntityFree(art); EntityFree(logo) }
     if BeginFrame(session, cast(u64)1, viewport) != FrameStatus.FrameOk { return false }
-    unused Title.TitleArtwork(session, viewport, cast(u64)48000, art, logo, "Shovey")
+    unused CarouselArtwork(session, viewport, cast(u64)48000, art, logo, "Shovey")
     if EndFrame(session) != FrameStatus.FrameOk { return false }
     ok := EndDesktopFrame()
     TestDriverFrame(session)
@@ -78,6 +78,15 @@ Draw :: (session: Session) -> bool {
     return ok
 }
 
+// Standalone Shovey offers only the apps Shovey's package declares.
+GameAvailable :: (game: Game) -> bool {
+    #if #defined(SHOVEY_STANDALONE) {
+        return game.enabled && game.package == "shovey"
+    } else {
+        return game.enabled
+    }
+}
+
 #program_export
 main :: (argc: s32, argv: **u8) -> s32 {
     standalone := false
@@ -86,13 +95,8 @@ main :: (argc: s32, argv: **u8) -> s32 {
     }
     product := ifx standalone then "Shovey" else "Arcade"
     if argc == 2 && TextFromCString(argv[1]) == "--list" {
-        if standalone {
-            shovey_ids: [3]string = .["arcade.shovey", "arcade.shovey-island", "arcade.shovey-editor"]
-            for game: shovey_ids { Report(game); Report("\n") }
-            return 0
-        }
         for index: cast(s32)0..GameCount - 1 {
-            if !GameAt(index).enabled { continue }
+            if !GameAvailable(GameAt(index)) { continue }
             Report(GameAt(index).id)
             Report("\n")
         }
@@ -106,18 +110,11 @@ main :: (argc: s32, argv: **u8) -> s32 {
         }
         for index: cast(s32)0..GameCount - 1 {
             game := GameAt(index)
-            if game.enabled && (TextFromCString(argv[2]) == game.name || TextFromCString(argv[2]) == game.id) {
+            if GameAvailable(game) && (TextFromCString(argv[2]) == game.name || TextFromCString(argv[2]) == game.id) {
                 first = index
             }
         }
-        standalone_game := false
-        if standalone && first >= 0 {
-            shovey_names: [3]string = .["shovey", "shovey-island", "shovey-editor"]
-            for game: shovey_names {
-                if GameAt(first).name == game { standalone_game = true }
-            }
-        }
-        if first < 0 || (standalone && !standalone_game) {
+        if first < 0 {
             Report(product)
             Report(": unknown game\n")
             return 1
@@ -142,16 +139,10 @@ main :: (argc: s32, argv: **u8) -> s32 {
     if !SessionValid(session) { return 1 }
     defer { SessionClose(session) }
     if standalone && !DrawStartup(session, directory) { return 0 }
-    opened := false
-    if standalone {
-        // Standalone Shovey opens on the game's title screen.
-        opened = CollectionOpenShovey(directory, data)
-        if opened && !DrawStartup(session, directory) { unused CollectionClose(); return 0 }
-        opened = opened && CollectionOpenGame(ifx first < 0 then "arcade.shovey" else GameAt(first).id)
-    } else {
-        opened = CollectionOpenFiles(directory, data) &&
-        (first < 0 || CollectionOpenGame(GameAt(first).id))
-    }
+    // Both open on their library's covers, or straight into a named game.
+    opened := ifx standalone then CollectionOpenShovey(directory, data) else CollectionOpenFiles(directory, data)
+    if opened && standalone && !DrawStartup(session, directory) { unused CollectionClose(); return 0 }
+    opened = opened && (first < 0 || CollectionOpenGame(GameAt(first).id))
     if !opened {
         Report(product)
         Report(": could not open collection or game\n")

@@ -1,4 +1,4 @@
-// Arcade owns its catalog and games. The verified shared apps.zib controller
+// Arcade owns its catalog and games. The verified shared apps.zx controller
 // supplies the library; the native host owns child navigation and storage.
 #import "kryon/app_context"
 #import "kryon/app_protocol"

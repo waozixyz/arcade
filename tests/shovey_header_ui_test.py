@@ -54,13 +54,23 @@ def main():
                     while driver.tree()[0]['width'] != width:
                         assert time.monotonic() < deadline
                         time.sleep(.03)
-                    for label in ('Levels', 'Help', 'Mute', 'Profile'):
-                        control = driver.wait(label=label, role='button')
-                        assert control['y'] < 16 and control['height'] >= 44, (label, control)
+                    # The covers keep only Profile over the full artwork.
+                    profile = driver.wait(label='Profile', role='button')
+                    assert profile['y'] < 16 and profile['height'] >= 44, profile
                     assert not driver.find(label='Settings', role='button')
                     assert not driver.find(key=49202), 'The native header must not cover the artwork'
                     covers = driver.find(role='image', visible=True)
                     assert any(image['y'] == 0 and image['height'] == height for image in covers), covers
+                    # Play opens the level directly, with the game's own header.
+                    driver.press(label='Play', role='button')
+                    driver.wait(label='Restart', role='button')
+                    if driver.find(label='How do you want to move?', role='text'):
+                        driver.press(label='Swipe and tap')
+                        driver.wait_gone(label='How do you want to move?', role='text')
+                    for label in ('Back', 'Levels', 'Help', 'Mute'):
+                        control = driver.wait(label=label, role='button')
+                        assert control['y'] < 16 and control['height'] >= 44, (label, control)
+                    assert not driver.find(label='Profile', role='button', visible=True), 'Play fills the screen'
                     driver.press(label='Help', role='button')
                     header = driver.wait(label='Help', role='text')
                     back = driver.wait(label='Back', role='button')
@@ -78,20 +88,25 @@ def main():
                         if driver.find(label='Tree stump', role='text', visible=True):
                             break
                     driver.wait(label='Tree stump', role='text')
+                    # Back closes the guide, then returns from the level to the covers.
+                    driver.press(label='Back', role='button')
+                    driver.wait(label='Restart', role='button')
                     driver.press(label='Back', role='button')
                     driver.wait(label='Play', role='button')
+                driver.press(label='Play', role='button')
                 driver.press(label='Levels', role='button')
                 assert driver.wait(label='Back', role='button')['y'] < 16
                 driver.press(label='Back', role='button')
+                driver.wait(label='Restart', role='button')
+                driver.press(label='Back', role='button')
                 driver.wait(label='Play', role='button')
                 driver.press(label='Profile', role='button')
-                driver.wait(label='Dew balance', role='text')
+                driver.wait(label='Not signed in', role='text')
                 assert not driver.find(label='Intention', role='text')
                 assert not driver.find(label='Name', role='text')
-                driver.press(label='Connect an account', role='button')
                 driver.press(label='Create account', role='button')
-                driver.wait(contains='Account connected on this device', timeout=30)
-                driver.press(key=49001)
+                driver.wait(label='Account connected', role='text', timeout=30)
+                driver.wait(label='Dew balance', role='text')
                 driver.press(key=49001)
                 driver.wait(label='Play', role='button')
                 assert not driver.find(label='Dew', role='button')
@@ -111,7 +126,7 @@ def main():
                 if child.poll() is None:
                     child.terminate()
                 child.wait(timeout=10)
-    print('Shovey: full-cover top controls, one Help row, 137 guide entries, shared Profile and inline Dew passed')
+    print('Shovey: Profile over the covers, game header in play, one Help row, 137 guide entries, shared Profile and inline Dew passed')
 
 
 if __name__ == '__main__':

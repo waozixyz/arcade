@@ -47,7 +47,7 @@ EntityOpen :: (bytes: string, data: string, shovey: bool = false) -> bool {
 }
 
 EntityOpenFile :: (directory: string, data: string, shovey: bool = false) -> bool {
-    path := Join(directory, "entity.zib")
+    path := Join(directory, "entity.zx")
     defer { EntityFree(path) }
     file := OpenRead(path)
     if !file.valid { return false }

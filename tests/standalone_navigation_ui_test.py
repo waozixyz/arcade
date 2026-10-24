@@ -1,4 +1,4 @@
-"""Check native Profile/Settings navigation without touching owner data."""
+"""Check native Profile and cover navigation without touching owner data."""
 import argparse
 import os
 from pathlib import Path
@@ -18,13 +18,13 @@ output = Path(__file__).resolve().parents[1] / 'build/standalone-navigation-ui-t
 output.mkdir(parents=True, exist_ok=True)
 with tempfile.TemporaryDirectory(prefix='native-navigation-') as temporary:
     for binary in args.binary:
-        profile = Path(temporary) / binary.name
+        profile_root = Path(temporary) / binary.name
         driver = UiDriver(output / binary.name / 'driver')
         log_path = output / (binary.name + '.log')
         with log_path.open('w') as log:
             child = subprocess.Popen([str(binary.resolve())], cwd=binary.resolve().parent,
                                      env=os.environ | driver.environment() |
-                                     {'ARCADE_DATA': str(profile), 'LANG': 'en_US.UTF-8'},
+                                     {'ARCADE_DATA': str(profile_root), 'LANG': 'en_US.UTF-8'},
                                      stdout=log, stderr=subprocess.STDOUT)
             driver.attach(child, log_path)
             try:
@@ -32,12 +32,12 @@ with tempfile.TemporaryDirectory(prefix='native-navigation-') as temporary:
 
                 def toolbar():
                     screen = driver.tree()[0]
-                    for label in ('Profile', 'Settings'):
-                        buttons = driver.find(label=label, role='button', visible=True)
-                        assert len(buttons) == 1, (label, buttons)
-                        button = buttons[0]
-                        assert button['y'] <= 12 and button['width'] >= 44 and button['height'] >= 44
-                        assert button['x'] >= screen['width'] - 112, 'Action is not at the top right'
+                    buttons = driver.find(label='Profile', role='button', visible=True)
+                    assert len(buttons) == 1, buttons
+                    button = buttons[0]
+                    assert button['y'] <= 12 and button['width'] >= 44 and button['height'] >= 44
+                    assert button['x'] >= screen['width'] - 112, 'Profile is not at the top right'
+                    assert not driver.find(label='Settings', role='button', visible=True)
 
                 def capture(name):
                     windows = subprocess.check_output(['xdotool', 'search', '--onlyvisible', '--pid', str(child.pid)], text=True).split()
@@ -45,35 +45,40 @@ with tempfile.TemporaryDirectory(prefix='native-navigation-') as temporary:
                     assert int(subprocess.check_output(['xdotool', 'getwindowpid', windows[0]], text=True)) == child.pid
                     subprocess.run(['import', '-window', windows[0], str(output / (binary.name + '-' + name + '.png'))], check=True)
 
-                def profile_and_settings(return_label):
+                def profile():
                     toolbar()
                     driver.press(label='Profile', role='button')
                     driver.wait(label='Profile', role='text')
-                    driver.wait(label='Change picture', role='button')
-                    toolbar()
-                    driver.press(label='Settings', role='button')
-                    driver.wait(label='Settings', role='text')
-                    driver.wait(label='Nodes', role='text', visible=False)
-                    toolbar()
-                    capture('settings')
-                    driver.press(label='Back', role='button')
-                    driver.wait(label=return_label, role='button')
+                    driver.wait(label='Account', role='text')
+                    capture('profile')
+                    driver.press(key=49001)
+                    driver.wait(label='Play', role='button')
 
+                # The library's covers carry Profile at the top right.
                 toolbar()
                 capture('home')
-                profile_and_settings('Play')
+                profile()
                 driver.press(label='Play', role='button')
                 driver.wait(label='Restart', role='button')
+                if driver.find(label='How do you want to move?', role='text'):
+                    driver.press(label='Swipe and tap')
+                    driver.wait_gone(label='How do you want to move?', role='text')
                 for direction in ('left', 'up', 'right', 'down'):
                     driver.key(direction)
-                record = profile / 'games/arcade.shovey/records/campaign'
+                record = profile_root / 'games/arcade.shovey/records/campaign'
+                driver.wait_idle(frames=5)
                 before = record.read_bytes()
-                profile_and_settings('Restart')
-                assert record.read_bytes() == before, 'Native pages changed game progress'
-                toolbar()
+                # Play fills the screen; its one Back returns to the covers.
+                assert not driver.find(label='Profile', role='button', visible=True)
                 assert len(driver.find(label='Back', role='button', visible=True)) == 1
                 capture('playing')
-                print(f'PASS: {binary.name}: top-right Profile/Settings, shared pages, return navigation, retained save')
+                driver.press(label='Back', role='button')
+                driver.wait(label='Play', role='button')
+                profile()
+                assert record.read_bytes() == before, 'Native pages changed game progress'
+                driver.press(label='Play', role='button')
+                driver.wait(label='Restart', role='button')
+                print(f'PASS: {binary.name}: top-right Profile on the covers, full-screen play, return navigation, retained save')
             finally:
                 if child.poll() is None:
                     child.terminate()

@@ -34,8 +34,8 @@ android {
         targetSdk 36
         versionCode Integer.parseInt((project.findProperty('app.versionCode') ?: appRelease.sequence).toString())
         versionName project.findProperty('app.versionName') ?: appRelease.version
-        manifestPlaceholders = [appLabel: standaloneShovey ? 'Shovey' : 'Arcade', appIcon: standaloneShovey ? '@mipmap/ic_launcher' : '@android:drawable/sym_def_app_icon', zibPlayer: (appCodegen == 'zib').toString(),
-            nativeLaunchMode: appCodegen == 'zib' ? 'singleTask' : 'standard']
+        manifestPlaceholders = [appLabel: standaloneShovey ? 'Shovey' : 'Arcade', appIcon: standaloneShovey ? '@mipmap/ic_launcher' : '@android:drawable/sym_def_app_icon', zxPlayer: (appCodegen == 'zx').toString(),
+            nativeLaunchMode: appCodegen == 'zx' ? 'singleTask' : 'standard']
         ndk {
             abiFilters += androidAbis
         }
@@ -64,10 +64,10 @@ android {
         sourceSets.main.res.srcDir "${rootProject.projectDir}/../build/android-shovey-res"
     }
 
-    if (appCodegen == 'zib') {
-        sourceSets.main.assets.srcDir "${rootProject.projectDir}/../build/android/zib-assets"
-        sourceSets.debug.manifest.srcFile 'src/zib/AndroidManifest.xml'
-        sourceSets.release.manifest.srcFile 'src/zib/AndroidManifest.xml'
+    if (appCodegen == 'zx') {
+        sourceSets.main.assets.srcDir "${rootProject.projectDir}/../build/android/zx-assets"
+        sourceSets.debug.manifest.srcFile 'src/zx/AndroidManifest.xml'
+        sourceSets.release.manifest.srcFile 'src/zx/AndroidManifest.xml'
     }
 
     buildTypes {

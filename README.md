@@ -4,8 +4,8 @@ Games and entertainment, alongside Werkzeug for practical tools and Inner
 Breeze for personal growth. The library opens Shovey Classic and Editor
 directly from full-screen covers.
 Swipe, turn the arrows, scroll the wheel, or use the arrow keys to choose;
-press Play/Open or Enter to launch. Standalone Shovey uses the same carousel
-on its title screen. Chess is temporarily disabled in Arcade; its code and
+press Play/Open or Enter to launch. Standalone Shovey opens on the same
+carousel with its own covers. Chess is temporarily disabled in Arcade; its code and
 existing saved games remain available for a later return.
 Each edition has a separate save and earned unlocks. Unlocked puzzles show
 their whole board; locked puzzles keep their lock until earned.
@@ -32,12 +32,14 @@ review are not implemented.
 
 ## Shared Apps library
 
-Arcade embeds the shared `apps.zib` controller and exact game bundles in a
-verified collection. Arcade presents the verified Classic and Editor leaves
-directly, without
-a second chooser. Shovey’s separate standalone collection uses the same
-leaves and saves. Cover entries declare portrait art, landscape art, logo,
-caption and action in `games.json`; Kryon’s shared `Carousel` handles
+Arcade embeds the shared `apps.zx` controller and exact game bundles in a
+verified collection. Each game package lists its apps in its own `apps.json`:
+the app's `catalog.json`, and for an app the library opens from a cover, the
+cover's portrait art, landscape art, logo, caption and action. `games.json`
+names the game packages, and Arcade's own `apps.json` its own apps. Arcade
+presents every declared leaf directly, without a second chooser, and a cover
+opens its app straight into play or editing. Shovey’s separate standalone
+collection uses the same leaves and saves. Kryon’s shared `Carousel` handles
 navigation and painting. The local player does not offer node updates or OS
 actions it
 cannot perform. Inbe supplies its own account and package policy.
@@ -51,14 +53,14 @@ assets, translations and release ledger at `apps/chess/`. Inbe consumes the
 same signed package from its node. Both harnesses recognize `inbe.chess`.
 The game's `catalog.json` declares its membership in both harnesses.
 
-Arcade builds that source into a `.zib` and runs it through the same bounded
+Arcade builds that source into a `.zx` and runs it through the same bounded
 app and Kryon widget interface Inbe uses. The bundle contains its existing
 piece images and translated Chess text. Arcade validates its game identity,
 capabilities and resource paths before opening it.
 
-Standalone Arcade and Shovey provide Profile at the top right, with the Dew
-balance directly inside it for connected Waozi-node accounts. Shovey overlays its title controls on the
-cover artwork; Help, level selection and play use that same header space.
+Standalone Arcade and Shovey provide Profile at the top right of their
+covers, with the Dew balance directly inside it for connected Waozi-node
+accounts. A game opened from a cover fills the screen with its own header.
 They use the shared Entity profile for account creation, key recovery and device
 connection. Connected Waozi-node accounts see Dew directly in Profile and can
 get a funding address and confirm a storage-plan purchase. These services belong
@@ -94,9 +96,9 @@ and desktop-menu entry for the current user; it does not publish a release.
 Harmony registry delivery and Android builds are not implemented in this first
 desktop version.
 
-Games are registered in `games.json`, which points to the owning package's
-game descriptor. `scripts/build-games.py` generates the catalog and bundles
-the owned game. Inbe remains a dependency for the existing shared interface
+Game packages are registered in `games.json`; each declares its apps in its
+`apps.json`. `scripts/build-games.py` generates the catalog and bundles
+every declared app. Inbe remains a dependency for the existing shared interface
 and signed publisher, rather than for the Chess implementation.
 
 ## Saved games
@@ -160,7 +162,7 @@ puzzle. Shovey also runs as its own desktop app.
 
 ## Shared Entity profile
 
-Standalone Shovey's title-screen Profile control opens the shared `entity.zib`
+Standalone Shovey's Profile control on its covers opens the shared `entity.zx`
 supplied by the Entity package. The host keeps account keys and native file
 access behind Entity's versioned management service. Returning from Profile
 keeps the current game and its existing save directory. Account connection does

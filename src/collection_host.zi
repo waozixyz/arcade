@@ -1,5 +1,5 @@
 // Arcade's native provider for the shared Apps runtime. Children retain
-// their original game record directories; the library belongs to apps.zib.
+// their original game record directories; the library belongs to apps.zx.
 #import "std/file"
 #import "std/bundle_host"
 #import "std/vec"
@@ -73,10 +73,6 @@ collection_item_codec: Codec.WidgetAppSharedItemCodec;
 collection_invitation_codec: Codec.WidgetAppInvitationCodec;
 collection_ready: bool;
 collection_leave_to_library: bool;
-// Standalone Shovey has no library: its title screen is the start.
-collection_standalone: bool;
-// A game another one asked for, opened after the frame.
-collection_open_next: [64]u8;
 
 CollectionTouchFirst :: () -> bool {
     #if #defined(PLATFORM_DESKTOP) {
@@ -171,24 +167,10 @@ CollectionCall :: (context: *void, node: *AppNode, module: *u8, function: *u8,
             result.* = AppHostText(ifx EntityShow() then "queued" else "unavailable")
             return 1
         }
+        // A game leaves for the cover that opened it after its frame.
         if service == "arcade.navigation" && request == "back" {
-            if collection_standalone { unused CopyCString("arcade.shovey", collection_open_next[:]) }
-            else { collection_leave_to_library = true }
+            collection_leave_to_library = true
             result.* = AppHostText("queued")
-            return 1
-        }
-        if service == "arcade.navigation" && request == "library" {
-            result.* = AppHostText(ifx collection_standalone then "none" else "available")
-            return 1
-        }
-        if service == "arcade.navigation" && request == "editor" {
-            unused CopyCString("arcade.shovey-editor", collection_open_next[:])
-            result.* = AppHostText("queued")
-            return 1
-        }
-        if service == "arcade.navigation" && request == "toolbar" {
-            collection_toolbar_visible = true
-            result.* = AppHostText("overlay")
             return 1
         }
         if service == "arcade.sound" {
@@ -380,7 +362,7 @@ CollectionOpen :: (bundle: string, digest: string, harness_digest: string,
 }
 
 CollectionOpenFiles :: (directory: string, data: string) -> bool {
-    bundle_path := Join(directory, "arcade.zib")
+    bundle_path := Join(directory, "arcade.zx")
     metadata_path := Join(directory, "arcade.json")
     defer { AppFileFree(bundle_path); AppFileFree(metadata_path) }
     bytes, found := ReadEntireFile(bundle_path)
@@ -412,7 +394,7 @@ CollectionOpenBytes :: (bytes: string, metadata: string, data: string) -> bool {
 // stable identity and existing record directory are shared with Arcade.
 CollectionOpenShovey :: (directory: string, data: string) -> bool {
     if collection_ready { return false }
-    payload_path := Join(directory, "shovey.zib")
+    payload_path := Join(directory, "shovey.zx")
     metadata_path := Join(directory, "shovey.json")
     defer { AppFileFree(payload_path); AppFileFree(metadata_path) }
     bytes, found := ReadEntireFile(payload_path)
@@ -430,7 +412,6 @@ CollectionOpenShoveyBytes :: (bytes: string, metadata: string, data: string) -> 
     !AppsReadText(metadata, 0, "id", id[:]) || TextUntilNul(id[:]) != "arcade.shovey-player" ||
     !AppsReadText(metadata, 0, "sha256", digest[:]) ||
     !AppsReadText(metadata, 0, "apps_sha256", harness[:]) { return false }
-    collection_standalone = true
     collection_directory = data
     collection_resource_root = Join(data, "resources")
     if !AppFilesOpen(*collection_resources, collection_resource_root) { return false }
@@ -444,32 +425,11 @@ CollectionOpenShoveyBytes :: (bytes: string, metadata: string, data: string) -> 
     return collection_ready
 }
 
-// Steps back from a game to its library, as Android's Back key does.
+// Steps back from a game to its library, as Android's Back key does. At the
+// library it is unused, so the app closes.
 CollectionBack :: () -> bool {
     if EntityBack() { return true }
-    runtime := AppHostActiveRuntime(*collection_host)
-    leaving := runtime != null && TextUntilNul(runtime.node.identity.id[:]) == "arcade.shovey"
-    if AppHostBack(*collection_host) <= 0 { return false }
-    if !collection_standalone || !CollectionAtLibrary() { return true }
-    // Back on Shovey's title screen leaves the app; from another game it
-    // returns to that title screen.
-    return !leaving && CollectionOpenGame("arcade.shovey")
-}
-
-CollectionAtLibrary :: () -> bool {
-    runtime := AppHostActiveRuntime(*collection_host)
-    return runtime != null && runtime.node.collection
-}
-
-// Opens the game another one asked for, from the library.
-CollectionOpenNext :: () -> bool {
-    id: [64]u8
-    for at: cast(s32)0..63 { id[at] = collection_open_next[at] }
-    collection_open_next[0] = 0
-    while !CollectionAtLibrary() {
-        if AppHostBack(*collection_host) <= 0 { break }
-    }
-    return CollectionOpenGame(TextUntilNul(id[:]))
+    return AppHostBack(*collection_host) > 0
 }
 
 CollectionCollect :: () {
@@ -512,20 +472,6 @@ CollectionClose :: () -> bool {
 CollectionOpenGame :: (id: string) -> bool {
     root := AppTreeNode(*collection_host.tree, collection_host.tree.active)
     if root == null || !root.collection { Report("Arcade: no collection is open to start "); Report(id); Report("\n"); return false }
-    shovey_ids: [3]string = .["arcade.shovey", "arcade.shovey-island", "arcade.shovey-editor"]
-    if AppCatalogFind(*root.catalog, id) < 0 {
-        child := false
-        for game: shovey_ids {
-            if id == game { child = true }
-        }
-        if child && !CollectionOpenChild("arcade.shovey-player") { return false }
-    }
-    return CollectionOpenChild(id)
-}
-
-CollectionOpenChild :: (id: string) -> bool {
-    root := AppTreeNode(*collection_host.tree, collection_host.tree.active)
-    if root == null || !root.collection { Report("Arcade: no collection is open to start "); Report(id); Report("\n"); return false }
     request: AppsRequest
     request.operation = APPS_OPEN
     if !CopyCString(id, request.id[:]) { return false }
@@ -561,14 +507,12 @@ CollectionFrame :: (session: Session, viewport: Rectangle, key: s32, modifiers: 
     runtime := AppHostActiveRuntime(*collection_host)
     if runtime == null { Report("Arcade: no app is running\n"); return false }
     nested := runtime.node.parent.generation != 0 && !runtime.node.collection
-    identifier := TextUntilNul(runtime.node.identity.id[:])
-    owns_chrome := identifier == "arcade.shovey" || identifier == "arcade.shovey-island" ||
-    identifier == "arcade.shovey-editor"
-    classic := identifier == "arcade.shovey"
-    // Classic owns one full-width header. Its title requests the native
-    // account controls over the cover; Help and play replace that row.
-    collection_toolbar_visible = !classic
-    top: s32 = ifx (entity_ready && !runtime.node.collection && !classic) || (nested && !owns_chrome) then 56 else 0
+    // An app opened from its cover fills the screen with its own navigation.
+    // Other apps get a bar with Back and their title; the library and that
+    // bar keep Profile at the top right.
+    covered := runtime.node.entry.cover.portrait[0] != 0
+    collection_toolbar_visible = !covered
+    top: s32 = ifx !covered && !runtime.node.collection && (entity_ready || nested) then 56 else 0
     now := cast(float64)MonotonicMilliseconds() / 1000.0
     runtime.app.session = session
     runtime.app.bounds = Rectangle.{viewport.x, viewport.y + cast(float32)top, viewport.width, viewport.height - cast(float32)top}
@@ -601,13 +545,12 @@ CollectionFrame :: (session: Session, viewport: Rectangle, key: s32, modifiers: 
         Report("collection frame failed\n")
         return false
     }
-    if collection_open_next[0] != 0 { return CollectionOpenNext() }
     if collection_leave_to_library {
         collection_leave_to_library = false
         unused AppHostBack(*collection_host)
         return true
     }
-    if nested && !owns_chrome {
+    if nested && !covered {
         title_bytes: Vec(u8)
         BuilderPrint(*title_bytes, "%", TextUntilNul(runtime.node.entry.title[:]))
         title := BuilderFinish(title_bytes)

@@ -36,7 +36,7 @@ def wait(predicate, message):
 def application(profile, name):
     log_path = OUTPUT / (name + '.log')
     env = os.environ | driver.environment() | {
-        'APP_DATA_ROOT': str(profile), 'INBE_NODE_APP_FILE': str(ROOT / 'build/games/chess.zib')}
+        'APP_DATA_ROOT': str(profile), 'INBE_NODE_APP_FILE': str(ROOT / 'build/games/chess.zx')}
     with log_path.open('w') as log:
         child = subprocess.Popen([str(BINARY)], cwd=INBE, env=env,
                                  stdout=log, stderr=subprocess.STDOUT)

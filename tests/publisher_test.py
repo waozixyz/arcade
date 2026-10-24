@@ -41,7 +41,7 @@ with tempfile.TemporaryDirectory(prefix='arcade-publisher-') as directory:
     value = stage()
     assert stage() == value
     assert value['app_id'] == 'inbe.chess'
-    assert value['artifacts'][0]['sha256'] == sha256((ROOT / 'build/games/chess.zib').read_bytes()).hexdigest()
+    assert value['artifacts'][0]['sha256'] == sha256((ROOT / 'build/games/chess.zx').read_bytes()).hexdigest()
     key.public_key().verify(bytes.fromhex(value['signature']), publisher.signing_message(value))
     # The upload carries the release files; the node writes its own history.
     entries = {str(path.relative_to(store)): path.read_bytes() for path in store.rglob('*')

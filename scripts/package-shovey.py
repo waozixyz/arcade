@@ -12,9 +12,9 @@ import time
 import zipfile
 
 ROOT = Path(__file__).resolve().parents[1]
-DATA = ['shovey.zib', 'shovey.json', 'entity.zib', 'startup/shovey/title-portrait.png',
+DATA = ['shovey.zx', 'shovey.json', 'entity.zx', 'startup/shovey/title-portrait.png',
         'startup/shovey/title-landscape.png', 'startup/shovey/logo.png']
-WINDOWS_DATA = [('arcade.zib', 'shovey.zib'), ('arcade.json', 'shovey.json'), ('entity.zib', 'entity.zib'),
+WINDOWS_DATA = [('arcade.zx', 'shovey.zx'), ('arcade.json', 'shovey.json'), ('entity.zx', 'entity.zx'),
                 ('kryon-font.ttf', 'kryon-font.ttf')]
 
 
@@ -25,7 +25,7 @@ def main():
     parser.add_argument('--output-dir', type=Path, default=ROOT / 'build/downloads')
     args = parser.parse_args()
     metadata = json.loads((ROOT / 'build/shovey.json').read_text())
-    if hashlib.sha256((ROOT / 'build/shovey.zib').read_bytes()).hexdigest() != metadata['sha256']:
+    if hashlib.sha256((ROOT / 'build/shovey.zx').read_bytes()).hexdigest() != metadata['sha256']:
         raise ValueError('The Shovey payload changed; rebuild the collection first')
     version = metadata['version']
     if args.platform == 'linux':

@@ -1,5 +1,5 @@
-"""Run the standalone Shovey app privately: the title pages, Classic and Editor
-opening directly, Island's status screen, and independent saves."""
+"""Run the standalone Shovey app privately: its covers, Classic and Editor
+opening directly from them, Island staying unavailable, and independent saves."""
 import argparse
 import contextlib
 import json
@@ -174,10 +174,10 @@ def main():
             landscape_preview = driver.find(label='1', role='image', visible=True)[0]
             assert abs(landscape_preview['width'] / landscape_preview['height'] - 5 / 3) < .01
             subprocess.run(['import', '-window', window, str(output / 'level-selector-landscape.png')], check=True)
+            # Back from the level list returns to the level, then to the covers.
             driver.press(key=20022)
-            driver.wait(label='Play', role='button')
-            driver.press(label='Play', role='button')
             driver.wait(label=f'Level 1 / {classic_levels}')
+            assert not driver.find(label='Continue', role='button', visible=True)
             driver.press(label='Back', role='button')
             driver.wait(label='Play', role='button')
             driver.press(label='Play', role='button')
@@ -232,11 +232,14 @@ def main():
             driver.press(label='Next', role='button')
             driver.press(label='Open', role='button')
             driver.wait(label='Explore', role='button')
+            # Escape returns to the editor's cover, which stays selected.
             driver.key('escape')
+            driver.wait(label='Open', role='button')
+            driver.press(label='Previous', role='button')
             driver.press(label='Play', role='button')
             driver.wait(label=f'Level 1 / {classic_levels}')
             assert campaign_progress(classic.read_bytes()) == classic_saved
-    print('Standalone Shovey: portrait/landscape boards, swipe directions, rotation saves, title pages and independent saves passed')
+    print('Standalone Shovey: portrait/landscape boards, swipe directions, rotation saves, covers and independent saves passed')
 
 
 if __name__ == '__main__':

@@ -18,7 +18,7 @@ if __name__ == '__main__':
     subprocess.run(['make', '-s', 'test', 'ui-test'], cwd=ROOT, check=True)
     inbe = Path(subprocess.check_output([str(ROOT / 'scripts/ziran.sh'), 'pkg', 'path', 'inbe'],
                                        cwd=ROOT, text=True).strip())
-    bundle = ROOT / 'build/games/chess.zib'
+    bundle = ROOT / 'build/games/chess.zx'
     subprocess.run(['sh', str(inbe / 'tests/chess_ui_test.sh'), str(binary), str(bundle)],
                    cwd=inbe, check=True)
     subprocess.run(['make', '-s', 'inbe-ui-test', 'INBE_BINARY=' + str(binary)], cwd=ROOT, check=True)

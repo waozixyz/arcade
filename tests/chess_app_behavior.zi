@@ -793,7 +793,7 @@ InvitationChecks :: () -> s32 {
 
 #program_export
 main :: () -> s32 {
-    bytes, read := ReadEntireFile("chess.zib")
+    bytes, read := ReadEntireFile("chess.zx")
     if !read {
         return 1
     }

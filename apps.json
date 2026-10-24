@@ -1,0 +1,10 @@
+{
+  "id": "inbe.arcade",
+  "title": "Arcade",
+  "apps": [
+    {
+      "manifest": "apps/chess/catalog.json",
+      "enabled": false
+    }
+  ]
+}

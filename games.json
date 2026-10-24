@@ -1,36 +1,3 @@
 {
-  "games": [
-    {
-      "package": "self",
-      "manifest": "apps/chess/catalog.json",
-      "enabled": false
-    },
-    {
-      "package": "shovey",
-      "manifest": "src/catalog.json",
-      "cover": {
-        "portrait": "assets/shovey/title-portrait.png",
-        "landscape": "assets/shovey/title-landscape.png",
-        "logo": "assets/shovey/logo.png",
-        "caption": "Classic",
-        "action": "play"
-      }
-    },
-    {
-      "package": "shovey",
-      "manifest": "src/island/catalog.json",
-      "enabled": false
-    },
-    {
-      "package": "shovey",
-      "manifest": "src/editor/catalog.json",
-      "cover": {
-        "portrait": "assets/shovey/editor-portrait.png",
-        "landscape": "assets/shovey/editor-landscape.png",
-        "logo": "assets/shovey/logo.png",
-        "caption": "Editor",
-        "action": "open"
-      }
-    }
-  ]
+  "packages": ["shovey"]
 }

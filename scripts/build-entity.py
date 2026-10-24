@@ -22,9 +22,9 @@ subprocess.run([ZIRAN, 'bundle', '--root', str(entity),
                 '--module-path', 'qrcode=' + str(qrcode / 'src'),
                 '--module-path', str(toolchain / 'std'),
                 '--define', 'KRYON_HOSTED_UI', '--asset-dir', 'assets=' + str(entity / 'assets'),
-                '--entry', 'entity:Main', '-o', str(ROOT / 'build/entity.zib'), str(entity / 'src/entity.zi')],
+                '--entry', 'entity:Main', '-o', str(ROOT / 'build/entity.zx'), str(entity / 'src/entity.zi')],
                cwd=entity, check=True)
 
 assets = ROOT / 'build/entity-assets'
 assets.mkdir(parents=True, exist_ok=True)
-shutil.copyfile(ROOT / 'build/entity.zib', assets / 'entity.zib')
+shutil.copyfile(ROOT / 'build/entity.zx', assets / 'entity.zx')

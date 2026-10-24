@@ -22,12 +22,11 @@ class CollectionTests(unittest.TestCase):
         self.addCleanup(self.directory.cleanup)
         self.root = Path(self.directory.name)
         (self.root / "apps").mkdir()
-        shutil.copyfile(ROOT / "games.json", self.root / "games.json")
-        shutil.copyfile(ROOT / "apps/versions.json", self.root / "apps/versions.json")
-        for registration in json.loads((ROOT / "games.json").read_text())["games"]:
-            if registration["package"] != "self":
-                continue
-            manifest = Path(registration["manifest"])
+        for name in ("games.json", "apps.json", "apps/versions.json"):
+            shutil.copyfile(ROOT / name, self.root / name)
+        # Arcade's own apps are declared beside it.
+        for app in json.loads((ROOT / "apps.json").read_text())["apps"]:
+            manifest = Path(app["manifest"])
             (self.root / manifest).parent.mkdir(parents=True, exist_ok=True)
             shutil.copyfile(ROOT / manifest, self.root / manifest)
         # Games from another package (Shovey) resolve through Arcade's own pins.
@@ -40,16 +39,16 @@ class CollectionTests(unittest.TestCase):
         shutil.copyfile(ROOT / "assets/arcade/sidebar.shape", self.root / "assets/arcade/sidebar.shape")
         # Only a native VM identity gate can trust a controller. This fixture
         # tests packing and its exact-content requirement, not that handshake.
-        self.controller = self.root / "controller.zib"
+        self.controller = self.root / "controller.zx"
         self.controller.write_bytes(b"controller exact-content fixture")
         self.controller_digest = builder.digest(self.controller)
         self.output = self.root / "staged"
 
     def stage(self):
-        return builder.stage(self.root, self.controller, self.controller_digest, self.output)
+        return builder.stage(self.root, self.controller, self.controller_digest, self.output)[0]
 
     def test_unchanged_games_keep_canonical_identity_and_version(self):
-        catalog = self.stage()
+        catalog, packages = builder.stage(self.root, self.controller, self.controller_digest, self.output)
         self.assertEqual(catalog["id"], "inbe.arcade")
         # Inbe draws the launcher icon from the collection's own assets.
         self.assertEqual((self.output / "assets/arcade/sidebar.shape").read_bytes(),
@@ -58,10 +57,14 @@ class CollectionTests(unittest.TestCase):
         ledger = json.loads((ROOT / "apps/versions.json").read_text())["node_apps"]
         self.assertEqual({c["id"] for c in catalog["children"]},
                          {"arcade.shovey", "arcade.shovey-editor"})
+        # Each leaf keeps the cover its own package declares.
+        self.assertEqual([c["cover"]["caption"] for c in catalog["children"]], ["Classic", "Editor"])
+        self.assertEqual([(p["name"], p["id"], p["children"]) for p in packages],
+                         [("shovey", "arcade.shovey-player", ["arcade.shovey", "arcade.shovey-editor"])])
         for child in catalog["children"]:
             name = child["expected_id"]
             packed = self.output / child["bundle"]
-            self.assertEqual(packed.read_bytes(), (ROOT / f"build/games/{name}.zib").read_bytes())
+            self.assertEqual(packed.read_bytes(), (ROOT / f"build/games/{name}.zx").read_bytes())
             self.assertEqual(builder.digest(packed), child["sha256"])
             self.assertEqual(child["version"], ledger[name]["version"])
             self.assertEqual(child["protocol"], "node/2")
@@ -85,11 +88,11 @@ class CollectionTests(unittest.TestCase):
     def test_duplicate_game_rejected_before_replacing_stage(self):
         self.stage()
         registrations = json.loads((self.root / "games.json").read_text())
-        registrations["games"].append(registrations["games"][1])
+        registrations["packages"].append(registrations["packages"][0])
         (self.root / "games.json").write_text(json.dumps(registrations))
         with self.assertRaisesRegex(ValueError, "Duplicate"):
             self.stage()
-        self.assertTrue((self.output / "assets/arcade/games/shovey.zib").is_file())
+        self.assertTrue((self.output / "assets/arcade/games/shovey.zx").is_file())
 
     def test_ledger_identity_mismatch_rejected(self):
         ledger_path = self.root / "apps/versions.json"
@@ -100,14 +103,20 @@ class CollectionTests(unittest.TestCase):
             self.stage()
         self.assertFalse(self.output.exists())
 
-    def test_removed_game_leaves_no_stale_payload(self):
+    def test_removed_package_leaves_no_stale_payload(self):
         self.stage()
-        registrations = json.loads((self.root / "games.json").read_text())
-        registrations["games"] = registrations["games"][3:]
-        (self.root / "games.json").write_text(json.dumps(registrations))
-        self.stage()
-        self.assertFalse((self.output / "assets/arcade/games/shovey.zib").exists())
-        self.assertFalse((self.output / "assets/arcade/previews/shovey-island.png").exists())
+        (self.root / "games.json").write_text(json.dumps({"packages": []}))
+        self.assertEqual(self.stage()["children"], [])
+        self.assertFalse((self.output / "assets/arcade/games/shovey.zx").exists())
+        self.assertFalse((self.output / "assets/arcade/covers/shovey-portrait.png").exists())
+
+    def test_unknown_declaration_field_rejected(self):
+        declaration = json.loads((self.root / "apps.json").read_text())
+        declaration["apps"][0]["cover_art"] = "assets/chess/preview.png"
+        (self.root / "apps.json").write_text(json.dumps(declaration))
+        with self.assertRaisesRegex(ValueError, "unknown apps.json field"):
+            self.stage()
+        self.assertFalse(self.output.exists())
 
 
 if __name__ == "__main__":

@@ -1,5 +1,6 @@
 """Check the real level selector's wheel, content drag and scrollbar privately."""
 import argparse
+import json
 import os
 from pathlib import Path
 import subprocess
@@ -17,6 +18,9 @@ def main():
     assert os.environ['YUE_DESKTOP_RECOVERY'] == '0'
     sys.path.insert(0, str(args.inbe_source / 'tests'))
     from ui_driver import UiDriver
+    root = Path(__file__).resolve().parents[1]
+    shovey = Path(subprocess.check_output([str(root / 'scripts/ziran.sh'), 'pkg', 'path', 'shovey'], text=True).strip())
+    last = str(len(json.loads((shovey / 'levels/approved.json').read_text())['levels']))
 
     def wait(predicate, message):
         deadline = time.monotonic() + 5
@@ -39,13 +43,22 @@ def main():
                 driver.attach(child, log_path)
                 try:
                     driver.press(label='Play', role='button')
+                    # The first level asks how to move before its bar takes input.
+                    driver.press(label='Swipe and tap')
+                    driver.wait_gone(label='How do you want to move?', role='text')
                     driver.press(label='Levels', role='button')
                     driver.wait(label='Continue', role='button')
-                    numbers = [int(n['label']) for n in driver.find(role='button') if n['label'].isdigit()]
-                    last = str(max(numbers))
 
                     def first_y():
-                        return driver.find(label='1', role='button')[0]['y']
+                        """Where level 1's row is, from whichever cards are built:
+                        only the cards in view exist."""
+                        cards = [n for n in driver.find(role='button')
+                                 if n['label'].isdigit() and 33000 < n['key'] < 34000]
+                        columns = len({round(card['x']) for card in cards})
+                        rows = sorted({round(card['y']) for card in cards})
+                        pitch = rows[1] - rows[0] if len(rows) > 1 else 0
+                        card = min(cards, key=lambda card: int(card['label']))
+                        return card['y'] - (int(card['label']) - 1) // columns * pitch
 
                     for width, height in ((480, 820), (960, 600)):
                         windows = subprocess.check_output(

@@ -20,9 +20,9 @@ def main():
     parser.add_argument('--bundle', action='store_true', help='Build an unsigned release Android App Bundle for Google Play')
     parser.add_argument('--application-id', help='Use an isolated package for device tests')
     args = parser.parse_args()
-    subprocess.run(['make', 'build/entity.zib'], cwd=ROOT, check=True)
+    subprocess.run(['make', 'build/entity.zx'], cwd=ROOT, check=True)
     metadata = json.loads((ROOT / 'build/shovey.json').read_text())
-    payload = (ROOT / 'build/shovey.zib').read_bytes()
+    payload = (ROOT / 'build/shovey.zx').read_bytes()
     if hashlib.sha256(payload).hexdigest() != metadata['sha256']:
         raise ValueError('The Shovey payload changed; rebuild the collection first')
     release = json.loads((ROOT / 'apps/versions.json').read_text())['node_apps']['shovey']
@@ -30,7 +30,7 @@ def main():
         raise ValueError('The Shovey version changed; rebuild the collection first')
     assets = ROOT / 'build/android-shovey-assets'
     assets.mkdir(parents=True, exist_ok=True)
-    for suffix in ('zib', 'json'):
+    for suffix in ('zx', 'json'):
         shutil.copyfile(ROOT / f'build/shovey.{suffix}', assets / f'arcade.{suffix}')
     # Android before 10 has no font lookup; the Windows build ships the same font.
     shutil.copyfile(package('kryon') / 'assets/fonts/LiberationSans-Regular.ttf', assets / 'kryon-font.ttf')

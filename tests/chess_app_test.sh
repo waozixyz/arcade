@@ -13,7 +13,7 @@ work=${CHESS_APP_TEST_DIR:-"$root/build/chess-app-test"}
 unset DISPLAY WAYLAND_DISPLAY XAUTHORITY DBUS_SESSION_BUS_ADDRESS
 rm -rf "$work"
 mkdir -p "$work/c"
-cp "$root/build/games/chess.zib" "$work/chess.zib"
+cp "$root/build/games/chess.zx" "$work/chess.zx"
 "$ziran" build --target=c --no-main --entry chess_app_behavior:main --root "$root/tests" \
     --module-path "$root/src" --module-path "apps=$apps/src" \
     --module-path "$root/build/game-generated/chess" \

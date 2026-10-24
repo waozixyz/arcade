@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 """Build native Arcade, or standalone Shovey, from the project's locked packages."""
 import argparse
+import fcntl
 import os
 from pathlib import Path
 import shutil
@@ -33,11 +34,15 @@ def main():
         return Path(subprocess.check_output([ZIRAN, 'pkg', 'path', name, *lock], cwd=ROOT, text=True).strip())
     oqs_source = package('liboqs')
     oqs = ROOT / 'build' / ('entity-oqs-' + oqs_source.name)
-    subprocess.run(['cmake', '-S', str(oqs_source), '-B', str(oqs),
-                    '-DCMAKE_BUILD_TYPE=MinSizeRel', '-DBUILD_SHARED_LIBS=OFF',
-                    '-DOQS_BUILD_ONLY_LIB=ON', '-DOQS_USE_OPENSSL=OFF', '-DOQS_DIST_BUILD=OFF',
-                    '-DOQS_OPT_TARGET=generic', '-DOQS_MINIMAL_BUILD=SIG_ml_dsa_44'], check=True)
-    subprocess.run(['cmake', '--build', str(oqs), '--target', 'oqs', '-j2'], check=True)
+    # Arcade and standalone Shovey share this library; parallel make builds
+    # both, so only one may configure and build it at a time.
+    with open(oqs.with_name(oqs.name + '.lock'), 'w') as exclusive:
+        fcntl.flock(exclusive, fcntl.LOCK_EX)
+        subprocess.run(['cmake', '-S', str(oqs_source), '-B', str(oqs),
+                        '-DCMAKE_BUILD_TYPE=MinSizeRel', '-DBUILD_SHARED_LIBS=OFF',
+                        '-DOQS_BUILD_ONLY_LIB=ON', '-DOQS_USE_OPENSSL=OFF', '-DOQS_DIST_BUILD=OFF',
+                        '-DOQS_OPT_TARGET=generic', '-DOQS_MINIMAL_BUILD=SIG_ml_dsa_44'], check=True)
+        subprocess.run(['cmake', '--build', str(oqs), '--target', 'oqs', '-j2'], check=True)
     temporary = output.with_suffix('.new')
     output.parent.mkdir(parents=True, exist_ok=True)
     subprocess.run([os.environ.get('CC', 'cc'), '-std=c11', '-O2', '-ffunction-sections',

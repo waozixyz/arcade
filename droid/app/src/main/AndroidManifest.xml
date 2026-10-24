@@ -28,10 +28,10 @@
             </intent-filter>
         </activity>
         <activity-alias
-            android:name=".Zib"
+            android:name=".Zx"
             android:targetActivity=".ArcadeActivity"
-            android:label="ZIB"
-            android:enabled="${zibPlayer}"
+            android:label="ZX"
+            android:enabled="${zxPlayer}"
             android:exported="true">
             <intent-filter>
                 <action android:name="android.intent.action.VIEW" />

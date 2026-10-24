@@ -1,11 +1,11 @@
 #!/usr/bin/env python3
-"""Build registered games from their owning Ziran packages, without copying source."""
+"""Build the apps Arcade and its game packages declare, without copying source."""
 import argparse
 import json
 import shutil
 import subprocess
 from pathlib import Path
-from game_manifest import game_manifest
+from game_packages import declared_apps
 
 ROOT = Path(__file__).resolve().parents[1]
 
@@ -18,10 +18,8 @@ def build(ziran, lock_flags):
     kryon = package("kryon")
     toolchain = package("ziran")
     entries = []
-    for registration in json.loads((ROOT / "games.json").read_text())["games"]:
-        source = ROOT if registration["package"] == "self" else package(registration["package"])
-        manifest = game_manifest(source, registration)
-        descriptor = json.loads(manifest.read_text())
+    for app in declared_apps(ROOT, ziran, lock_flags):
+        source, manifest, descriptor = app["source"], app["manifest"], app["descriptor"]
         if descriptor["kind"] != "game" or "arcade" not in descriptor["harnesses"]:
             raise ValueError("Only games registered for Arcade belong in its catalog")
         name = descriptor["name"]
@@ -76,7 +74,7 @@ def build(ziran, lock_flags):
                 code += '    }\n'
         code += '    return ""\n}\n'
         (generated / 'translations.zi').write_text(code)
-        bundle = ROOT / "build/games" / (name + ".zib")
+        bundle = ROOT / "build/games" / (name + ".zx")
         bundle.parent.mkdir(parents=True, exist_ok=True)
         subprocess.run([
             ziran, "bundle", "--root", str(source),
@@ -96,17 +94,17 @@ def build(ziran, lock_flags):
             str(source / descriptor["source"])], cwd=ROOT, check=True)
         preview = ROOT / "build/games" / (name + "-preview.png")
         shutil.copyfile(source / descriptor["preview"], preview)
-        entries.append(descriptor | {"enabled": registration.get("enabled", True)})
+        entries.append(descriptor | {"enabled": app["enabled"], "package": app["package"]})
     if not entries or len(entries) > 16 or len({entry["id"] for entry in entries}) != len(entries):
         raise ValueError("Arcade needs 1 to 16 distinct games")
-    text = ("// Generated from games.json and the owning packages' game catalogs.\n"
-            "Game :: struct {\n    id: string\n    name: string\n    title: string\n    bundle: string\n    preview: string\n    enabled: bool\n}\n\n"
+    text = ("// Generated from the apps.json of Arcade and its game packages.\n"
+            "Game :: struct {\n    id: string\n    name: string\n    title: string\n    bundle: string\n    preview: string\n    package: string\n    enabled: bool\n}\n\n"
             f"GameCount :: {len(entries)}\n\nGameAt :: (index: s32) -> Game {{\n")
     for index, entry in enumerate(entries):
         fields = ", ".join("." + field + " = " + json.dumps(value, ensure_ascii=False)
                            for field, value in [("id", entry["id"]), ("name", entry["name"]),
-                                                ("title", entry["title"]), ("bundle", entry["name"] + ".zib"),
-                                                ("preview", entry["name"] + "-preview.png")])
+                                                ("title", entry["title"]), ("bundle", entry["name"] + ".zx"),
+                                                ("preview", entry["name"] + "-preview.png"), ("package", entry["package"])])
         fields += ", .enabled = " + str(entry["enabled"]).lower()
         text += f"    if index == {index} {{ return Game.{{{fields}}} }}\n"
     text += "    return Game.{}\n}\n"
