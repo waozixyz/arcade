@@ -96,7 +96,8 @@ def main():
                 time.sleep(.05)
         raise AssertionError(f'No move was saved to {record}')
 
-    classic = profile / 'games/arcade.shovey/records/campaign'
+    # Classic's progress is the account's shared record, as on Linux.
+    classic = profile / 'entity/records/local/game-progress/fd65a3d7ac3d5ceb2d4d96cc5224a740.json'
     with application('play'):
         driver.press(label='Play', role='button')
         wait_level_one(driver, classic_levels)
@@ -104,11 +105,12 @@ def main():
         answer_level_updates(driver)
         driver.press(label='Swipe and tap')
         driver.wait_gone(label='How do you want to move?', role='text')
-        # Entering play saves the untouched campaign.
+        # Entering play may save the untouched campaign; a fresh profile may
+        # have no record until the first move.
         deadline = time.monotonic() + 10
         while not classic.exists() and time.monotonic() < deadline:
             time.sleep(.05)
-        fresh = classic.read_bytes()
+        fresh = classic.read_bytes() if classic.exists() else b''
         driver.press(label='Mute', role='button')
         driver.wait(label='Unmute', role='button')
         assert (profile / 'games/arcade.shovey-player/records/sound').read_text() == 'muted'
