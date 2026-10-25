@@ -37,6 +37,14 @@ def build(ziran, lock_flags):
     kryon = package("kryon")
     toolchain = package("ziran")
     entity = package("entity")
+    compiler = toolchain / "build/bin/ziran"
+    if not compiler.is_file():
+        compiler = ROOT / "build/toolchain/bin/ziran"
+    def dependency(name, project):
+        return Path(subprocess.check_output(
+            [str(compiler), "pkg", "path", name, *lock_flags], cwd=project, text=True).strip())
+    daochi_client = dependency("daochi_client", entity)
+    crypto = dependency("crypto", daochi_client)
     entries = []
     for app in declared_apps(ROOT, ziran, lock_flags):
         source, manifest, descriptor = app["source"], app["manifest"], app["descriptor"]
@@ -110,6 +118,8 @@ def build(ziran, lock_flags):
             "--module-path", "apps=" + str(package("apps") / "src"),
             "--module-path", "mingcute=" + str(package("mingcute") / "src"),
             "--module-path", "entity=" + str(entity / "src"),
+            "--module-path", "daochi_client=" + str(daochi_client),
+            "--module-path", "crypto=" + str(crypto / "src"),
             *[flag for name in defines for flag in ('--define', name)],
             "--define", "KRYON_HOSTED_UI", "--asset-dir", "assets=" + str(staged / "assets"),
             "--entry", descriptor["entry"], "-o", str(bundle),
