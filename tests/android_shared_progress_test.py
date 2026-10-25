@@ -249,7 +249,7 @@ try:
         for depth in range(8):
             if driver.find(label='Play', role='button', visible=True):
                 break
-            driver.press(key=49001)
+            driver.press(label='Back', role='button')
         driver.wait(label='Play', role='button')
         driver.press(label='Play', role='button')
         driver.wait(contains='Level 1 / ', role='text')
