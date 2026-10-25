@@ -90,6 +90,7 @@ def main():
         driver.wait_idle(frames=20)
         driver.wait(label="Arcade", role="text")
         assert not driver.find(label="Chess"), "Chess is temporarily disabled"
+        assert not driver.find(label="Monkey"), "Monkey does not belong in Arcade"
         assert not driver.find(label="Next", role="button"), "Arcade must open on its app grid"
         classic_card = driver.wait(label="Shovey", role="button")
         editor_card = driver.wait(label="Shovey Editor", role="button")
