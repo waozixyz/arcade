@@ -14,11 +14,9 @@ from PIL import Image
 
 LEVEL_UPDATES = 'Download new levels when they come out?'
 
-def answer_cover_question(driver):
-    """Standalone Arcade and Shovey ask once on their covers whether games
-    download new levels; tests keep the levels they ship with. The question
-    shows in the covers' first frame."""
-    driver.wait(label='Play', role='button', timeout=60)
+def answer_library_question(driver):
+    """Keep the test's bundled levels when the library asks about updates."""
+    driver.wait(label='Shovey', role='button', timeout=60)
     if driver.find(label=LEVEL_UPDATES, role='text'):
         driver.press(label='Not now', role='button')
         driver.wait_gone(label=LEVEL_UPDATES, role='text')
@@ -62,7 +60,8 @@ def main():
         with log_path.open("w") as log:
             child = subprocess.Popen([str(args.binary.resolve()), *arguments], cwd=root,
                                      env=os.environ | driver.environment() |
-                                     {"ARCADE_DATA": str(profile), "LANG": "en_US.UTF-8"},
+                                     {"ARCADE_DATA": str(profile), "ENTITY_DATA": str(profile / "entity"),
+                                      "LANG": "en_US.UTF-8"},
                                      stdout=log, stderr=subprocess.STDOUT)
             driver.attach(child, log_path)
             try:
@@ -87,16 +86,18 @@ def main():
         assert int(subprocess.check_output(["xdotool", "getwindowpid", window], text=True, timeout=10)) == child.pid
         subprocess.run(["import", "-window", window, str(output / (name + ".png"))], check=True, timeout=10)
 
-    def cover(child, name):
+    def grid(child, name):
         driver.wait_idle(frames=20)
-        assert not driver.find(label="Arcade", role="text"), "Library must have no heading"
+        driver.wait(label="Arcade", role="text")
         assert not driver.find(label="Chess"), "Chess is temporarily disabled"
-        images = driver.find(role="image", visible=True)
-        screen = driver.tree()[0]
-        assert max(n["visible_width"] * n["visible_height"] for n in images) >= screen["width"] * screen["height"] * .95
+        assert not driver.find(label="Next", role="button"), "Arcade must open on its app grid"
+        classic_card = driver.wait(label="Shovey", role="button")
+        editor_card = driver.wait(label="Shovey Editor", role="button")
+        assert classic_card['y'] == editor_card['y'], "Apps must share a grid row"
+        assert classic_card['x'] != editor_card['x']
         capture(child, name)
         with Image.open(output / (name + ".png")) as image:
-            assert len(image.convert("RGB").getcolors(1000000) or []) > 1000, "Cover artwork was not painted"
+            assert len(image.convert("RGB").getcolors(1000000) or []) > 100, "App icons were not painted"
 
     with tempfile.TemporaryDirectory(prefix="profile-", dir=output) as temporary:
         profile = Path(temporary)
@@ -104,33 +105,23 @@ def main():
         chess = profile / "games/inbe.chess/records/computer"
         chess.parent.mkdir(parents=True)
         chess.write_bytes(b"existing private Chess save")
-        # Classic keeps its progress in the shared account record.
-        record = profile / "entity/records/local/game-progress/fd65a3d7ac3d5ceb2d4d96cc5224a740.json"
+        # Active play stays on this device; account sync shares completions.
+        record = profile / "games/arcade.shovey/records/local.campaign"
 
         def progress(data):
             # Unlocks, completion marks and the board in play.
-            value = json.loads(data)
-            assert value["game"] == "shovey.classic"
-            return value["unlocked"], value["completed"], value["state"][10:42]
+            value = data.decode()
+            assert value[:2] in ("C2", "C3", "C4", "C5")
+            start = value.index("P")
+            state = value[start:]
+            assert state[:2] in ("P1", "P2", "P3")
+            return value[:start], state[:32]
 
-        with application(profile, "carousel") as child:
-            driver.wait(label="Play", role="button")
-            answer_cover_question(driver)
-            cover(child, "classic-portrait")
-            driver.press(label="Next", role="button")
-            driver.wait(label="Open", role="button")
-            driver.wait(label="Editor", role="text")
-            cover(child, "editor-portrait")
-            driver.press(label="Previous", role="button")
-            driver.key("right")
-            driver.wait(label="Open", role="button")
-            driver.key("left")
-            driver.wait(label="Play", role="button")
-            driver.drag((350, 400), (100, 400))
-            driver.wait(label="Open", role="button")
-            driver.pointer(240, 400, wheel=1)
-            driver.wait(label="Play", role="button")
-            driver.key("enter")
+        with application(profile, "grid") as child:
+            driver.wait(label="Shovey", role="button")
+            answer_library_question(driver)
+            grid(child, "apps-portrait")
+            driver.press(label="Shovey", role="button")
             driver.wait(label=f"Level 1 / {classic}")
             answer_level_updates(driver)
             driver.wait(label="How do you want to move?", role="text")
@@ -144,22 +135,16 @@ def main():
                 driver.wait_idle(frames=5)
             saved = wait(lambda: record.read_bytes() if record.exists() else None, "Classic did not save")
             driver.press(label="Back", role="button")
-            driver.wait(label="Play", role="button")
-            driver.press(label="Next", role="button")
-            driver.press(label="Open", role="button")
+            driver.wait(label="Shovey Editor", role="button")
+            driver.press(label="Shovey Editor", role="button")
             # The editor opens on a blank board.
             driver.wait(label="New level", role="text")
             capture(child, "editor-open")
             driver.key("escape")
-            driver.wait(label="Open", role="button")
-            # Keep the selected editor when returning from its screen.
-            driver.wait(label="Editor", role="text")
+            driver.wait(label="Shovey Editor", role="button")
             window = subprocess.check_output(["xdotool", "search", "--onlyvisible", "--pid", str(child.pid)], text=True).splitlines()[0]
             subprocess.run(["xdotool", "windowsize", window, "900", "540"], check=True)
-            cover(child, "editor-landscape")
-            driver.press(label="Previous", role="button")
-            driver.wait(label="Play", role="button")
-            cover(child, "classic-landscape")
+            grid(child, "apps-landscape")
         with application(profile, "restore", "--app", "arcade.shovey"):
             driver.wait(label=f"Level 1 / {classic}")
             assert progress(record.read_bytes()) == progress(saved), "Classic progress changed on restart"
@@ -167,7 +152,7 @@ def main():
         assert not (profile / "inbe.db").exists()
         refused = subprocess.run([str(args.binary.resolve()), "--app", "chess"], env=os.environ | {"ARCADE_DATA": str(profile)}, capture_output=True, timeout=10)
         assert refused.returncode == 1 and b"unknown game" in refused.stderr
-    print("Arcade: full covers, arrows/swipe/wheel/Enter, direct play/editor, Back, rotation and retained saves passed")
+    print("Arcade: app grid and icons, direct play/editor, Back, rotation and retained saves passed")
 
 
 if __name__ == "__main__":

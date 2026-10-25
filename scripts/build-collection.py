@@ -70,7 +70,8 @@ def stage(root, controller, expected_controller_digest, output):
                 bundle=f"assets/arcade/games/{name}.zx", protocol="node/2",
                 expected_id=name, version=component["version"],
                 sha256=hashlib.sha256(bundle_bytes).hexdigest(),
-                preview=f"assets/arcade/previews/{name}.png")
+                preview=f"assets/arcade/previews/{name}.png",
+                icon=f"assets/arcade/previews/{name}.png")
             # The package's declared cover: the library opens the app from it.
             cover = app["cover"]
             if cover:

@@ -1,11 +1,11 @@
 # Arcade
 
 Games and entertainment, alongside Werkzeug for practical tools and Inner
-Breeze for personal growth. The library opens Shovey Classic and Editor
-directly from full-screen covers.
-Swipe, turn the arrows, scroll the wheel, or use the arrow keys to choose;
-press Play/Open or Enter to launch. Standalone Shovey opens on the same
-carousel with its own covers. Chess is temporarily disabled in Arcade; its code and
+Breeze for personal growth. Desktop Arcade opens on a grid of its installed
+apps, using the shared Apps cards and their previews. Select an app to open
+its game or editor directly. Standalone Shovey opens on its own cover carousel;
+swipe, use the arrows or scroll the wheel to choose, then press Play/Open.
+Chess is temporarily disabled in Arcade; its code and
 existing saved games remain available for a later return.
 Each edition has a separate save and earned unlocks. Unlocked puzzles show
 their whole board; locked puzzles keep their lock until earned.
