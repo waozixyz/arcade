@@ -287,9 +287,14 @@ def main():
             driver.wait(label='Play', role='button')
             driver.press(label='Next', role='button')
             driver.press(label='Open', role='button')
-            driver.wait(label='Explore', role='button')
-            driver.press(label='Classic', role='button')
+            # The editor opens on a blank board; Levels loads a story level.
+            driver.wait(label='New level', role='text')
+            driver.press(label='Levels', role='button')
             driver.wait(label='Story levels', role='text')
+            # Island stays unavailable in the editor until it is offered for sale.
+            assert not driver.find(label='Island', role='button'), 'The editor offers Island'
+            # Only levels Classic has unlocked can be a starting point.
+            assert driver.find(label='Play Classic to unlock this level.', role='button'), 'Locked story levels can be edited'
             driver.press(label='1', role='button')
             driver.wait(label='Play', role='button')
             # Editing follows the device, including portrait screens whose
@@ -307,17 +312,16 @@ def main():
                 aspect = 5 / 3 if width > height else 3 / 5
                 assert abs(board['width'] / board['height'] - aspect) < .01, ('editor play orientation', width, height, board)
                 swipe_in_visible_direction(board_key=200000)
-            # Island stays unavailable in the editor until it is offered for sale.
+            # Escape returns from testing to the board, then leaves the editor.
             driver.key('escape')
+            driver.wait(label='Levels', role='button')
             driver.key('escape')
-            driver.key('escape')
-            driver.wait(label='Classic', role='button')
-            assert not driver.find(label='Island', role='button'), 'The editor offers Island'
+            driver.wait(label='Open', role='button')
         with application(profile, 'restore'):
             driver.press(label='Next', role='button')
             driver.press(label='Open', role='button')
-            driver.wait(label='Explore', role='button')
-            # Escape returns to the editor's cover, which stays selected.
+            driver.wait(label='New level', role='text')
+            # Escape on the board returns to the editor's cover, which stays selected.
             driver.key('escape')
             driver.wait(label='Open', role='button')
             driver.press(label='Previous', role='button')
