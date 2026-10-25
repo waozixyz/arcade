@@ -160,8 +160,8 @@
       "url": "https://github.com/ziranlang/crypto.git"
     },
     {
-      "commit": "9f824c4eac1ce04df727f8e7a08d2992a8ca45a4",
-      "dependencies": {"oqs": "p7098ac9cd92f7e5f"},
+      "commit": "19f50275329f2fb6bfdeca64765fd1e57328ede8",
+      "dependencies": {"crypto": "pf039d7a776333200", "oqs": "p7098ac9cd92f7e5f"},
       "id": "pf64f159dfdbd5ee5",
       "name": "DaochiClient",
       "ref": "master",
