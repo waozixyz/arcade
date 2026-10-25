@@ -7,7 +7,6 @@
 - Download each game from the server before playing, including Apfelwurm.
 - Use clean title-screen covers without repeated game names underneath.
 - Recognize Shovey Editor by its matching Editor title logo.
-- Play Apfelwurm’s 200-level journey with its own controls and stage selection.
 - Shovey includes approved Classic levels 1–175.
 - All objects stop at the abyss and leave it open.
 - Existing Shovey saves and completed levels are retained.

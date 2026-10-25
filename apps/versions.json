@@ -36,13 +36,13 @@
       "title": "Arcade",
       "version": "0.7.76",
       "sequence": 155,
-      "host_api": 34
+      "host_api": 33
     },
     "wurm": {
       "id": "xyz.waozi.wurm",
       "title": "Apfelwurm",
-      "version": "0.1.3",
-      "sequence": 3,
+      "version": "0.1.2",
+      "sequence": 2,
       "host_api": 12
     }
   }

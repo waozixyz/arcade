@@ -103,14 +103,6 @@
       "url": "https://github.com/raysan5/raylib.git"
     },
     {
-      "commit": "eb35fe68995083b8d30018dafb9523ca11b0b32e",
-      "dependencies": {"apps": "p00c3077d466cc4cc", "kryon": "p2d318e48a4d2aa44", "mingcute": "pe1027b9d16704793"},
-      "id": "p6d18fc0c6ca7f809",
-      "name": "Apfelwurm",
-      "ref": "master",
-      "url": "https://github.com/waozixyz/wurm.git"
-    },
-    {
       "commit": "22d2ddbdc236796953c905a05a2cebf5ab1b4ff3",
       "dependencies": {"liboqs": "p4b0a50b49959e674"},
       "id": "p7098ac9cd92f7e5f",
@@ -152,6 +144,14 @@
       "url": "https://github.com/kryonlabs/plot.git"
     },
     {
+      "commit": "a6aebdbb5af7491b9303e70aed85b32c70a127a2",
+      "dependencies": {"apps": "p00c3077d466cc4cc", "kryon": "p2d318e48a4d2aa44", "mingcute": "pe1027b9d16704793"},
+      "id": "pb047b340fde29f6b",
+      "name": "Apfelwurm",
+      "ref": "master",
+      "url": "https://github.com/waozixyz/wurm.git"
+    },
+    {
       "commit": "944826f70779a6b6cd53f6b06a75b36f4d8a2558",
       "dependencies": {},
       "id": "pc23fbf455e97614d",
@@ -177,7 +177,7 @@
     }
   ],
   "root": {
-    "dependencies": {"apps": "p00c3077d466cc4cc", "entity": "p2b0009b9bbaa09de", "inbe": "p48228a6b7e2920d3", "kryon": "p2d318e48a4d2aa44", "mingcute": "pe1027b9d16704793", "shovey": "ped09a2b79138be62", "wurm": "p6d18fc0c6ca7f809"},
+    "dependencies": {"apps": "p00c3077d466cc4cc", "entity": "p2b0009b9bbaa09de", "inbe": "p48228a6b7e2920d3", "kryon": "p2d318e48a4d2aa44", "mingcute": "pe1027b9d16704793", "shovey": "ped09a2b79138be62", "wurm": "pb047b340fde29f6b"},
     "name": "Arcade"
   },
   "toolchain": {
