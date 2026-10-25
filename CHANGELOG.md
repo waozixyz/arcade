@@ -1,5 +1,37 @@
 # Arcade changelog
 
+## 0.7.75
+
+- Read secondary profile labels clearly in the dark theme.
+- Browse a dark Arcade library with large rounded title covers; click a cover to play or download its game.
+- Download games individually, including Apfelwurm, and keep downloaded games available offline.
+- Return from Shovey levels with the fixed Back control while retaining existing progress.
+
+## 0.7.74
+
+- Shovey includes approved Classic levels 1–175.
+- All objects stop at the abyss and leave it open.
+- Existing Shovey saves and completed levels are retained.
+## 0.7.73
+
+- Shovey includes approved Classic levels 1–175.
+- All objects stop at the abyss and leave it open.
+- Existing Shovey saves and completed levels are retained.
+## 0.7.72
+
+- Shovey includes approved Classic levels 1–175.
+- All objects stop at the abyss and leave it open.
+- Existing Shovey saves and completed levels are retained.
+## 0.7.71
+
+- Shovey includes approved Classic levels 1–175.
+- All objects stop at the abyss and leave it open.
+- Existing Shovey saves and completed levels are retained.
+## 0.7.70
+
+- Shovey includes approved Classic levels 1–175.
+- All objects stop at the abyss and leave it open.
+- Existing Shovey saves and completed levels are retained.
 ## 0.7.69
 
 - Arcade downloads each selected game separately, keeping its initial download smaller.

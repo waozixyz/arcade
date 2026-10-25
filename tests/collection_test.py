@@ -57,11 +57,12 @@ class CollectionTests(unittest.TestCase):
         # The ledger also versions Arcade itself, which is not one of its games.
         ledger = json.loads((ROOT / "apps/versions.json").read_text())["node_apps"]
         self.assertEqual({c["id"] for c in catalog["children"]},
-                         {"arcade.shovey", "arcade.shovey-editor"})
+                         {"arcade.shovey", "arcade.shovey-editor", "xyz.waozi.wurm"})
         # Each leaf keeps the cover its own package declares.
-        self.assertEqual([c["cover"]["caption"] for c in catalog["children"]], ["Classic", "Editor"])
+        self.assertEqual([c["cover"].get("caption", "") for c in catalog["children"]], ["Classic", "Editor", ""])
         self.assertEqual([(p["name"], p["id"], p["children"]) for p in packages],
-                         [("shovey", "arcade.shovey-player", ["arcade.shovey", "arcade.shovey-editor"])])
+                         [("shovey", "arcade.shovey-player", ["arcade.shovey", "arcade.shovey-editor"]),
+                          ("wurm", "xyz.waozi.wurm-player", ["xyz.waozi.wurm"])])
         for child in catalog["children"]:
             name = child["expected_id"]
             packed = self.output / child["bundle"]
@@ -96,7 +97,7 @@ class CollectionTests(unittest.TestCase):
             self.assertEqual((games / (child["sha256"] + ".zx")).read_bytes(), full.read_bytes())
             self.assertEqual((small / child["preview"]).read_bytes(),
                              (self.output / child["preview"]).read_bytes())
-            for key in ("portrait", "landscape", "logo"):
+            for key in child["cover"].keys() & {"portrait", "landscape", "logo"}:
                 relative = child["cover"][key]
                 self.assertEqual((small / relative).read_bytes(), (self.output / relative).read_bytes())
 

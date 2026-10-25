@@ -70,7 +70,7 @@ def build(ziran, lock_flags):
         # Build flags are source metadata, not part of the signed node/2
         # descriptor schema accepted by existing hosts.
         (resources / 'catalog.json').write_text(json.dumps(
-            {key: value for key, value in descriptor.items() if key != 'build_defines'}, indent=2) + '\n')
+            {key: value for key, value in descriptor.items() if key not in ('build_defines', 'prepare_assets')}, indent=2) + '\n')
         defines = descriptor.get('build_defines', [])
         if 'SHOVEY_RELEASE' in defines:
             subprocess.run(["python3", str(source / 'scripts/release_assets.py'), str(resources)], check=True)
@@ -93,6 +93,11 @@ def build(ziran, lock_flags):
         # their own locale file and cannot provide newly added game strings.
         generated = ROOT / 'build/game-generated' / name
         generated.mkdir(parents=True, exist_ok=True)
+        if descriptor.get('prepare_assets'):
+            prepare = Path(descriptor['prepare_assets'])
+            if prepare.is_absolute() or '..' in prepare.parts or prepare.suffix != '.py':
+                raise ValueError('Invalid game asset preparation script')
+            subprocess.run(['python3', str(source / prepare), str(resources), str(generated)], check=True)
         code = 'GameLocaleText :: (language: string, key: string) -> string {\n'
         for language, values in sorted(translations.items(), key=lambda item: item[0] == 'en'):
             if language != 'en':
@@ -106,7 +111,7 @@ def build(ziran, lock_flags):
         bundle = ROOT / "build/games" / (name + ".zx")
         bundle.parent.mkdir(parents=True, exist_ok=True)
         subprocess.run([
-            ziran, "bundle", "--root", str(source),
+            ziran, "bundle", "--root", str((source / descriptor["source"]).parent),
             # Game packages without a src folder (Shovey) keep sources beside their catalogs.
             *(["--module-path", str(source / "src")] if (source / "src").is_dir() else []),
             "--module-path", str(generated),

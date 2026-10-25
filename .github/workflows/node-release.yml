@@ -79,11 +79,12 @@ jobs:
           tag="node-arcade-$version"
           if gh release view "$tag" >/dev/null 2>&1; then
             mkdir -p build/prior-node-release
-            gh release download "$tag" --pattern arcade.zx --pattern arcade.games.tar --dir build/prior-node-release
+            gh release download "$tag" --pattern arcade.zx --pattern arcade.games.tar --pattern wurm.zx --dir build/prior-node-release
             cmp build/prior-node-release/arcade.zx build/node-apps/arcade.zx
             cmp build/prior-node-release/arcade.games.tar build/node-apps/arcade.games.tar
+            cmp build/prior-node-release/wurm.zx build/games/wurm.zx
           else
-            gh release create "$tag" build/node-apps/arcade.zx build/node-apps/arcade.games.tar \
+            gh release create "$tag" build/node-apps/arcade.zx build/node-apps/arcade.games.tar build/games/wurm.zx \
               --target "$GITHUB_SHA" --title "Arcade $version" \
               --notes 'Arcade downloads the selected game separately and preserves earned progress.'
           fi

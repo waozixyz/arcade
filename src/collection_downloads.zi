@@ -1,0 +1,149 @@
+// Downloads are separate from saves. The signed collection fixes each
+// digest; a transfer is made available only after those exact bytes verify.
+#import "kryon/file_download"
+#import "kryon/app_files"
+#import "kryon/hosted_app"
+#import "apps/host"
+#import "apps/catalog"
+#import "apps/tree"
+#import "apps/protocol"
+#import "std/text_buffer"
+#import "std/vec"
+#import "std/c_string"
+#import "std/file"
+#import "platform"
+
+CollectionPackage :: struct {
+    digest: [65]u8
+    size: s64
+    bytes: string
+    file: string
+    transfer: FileDownload
+    failed: bool
+    next: *CollectionPackage
+}
+collection_packages: *CollectionPackage;
+collection_package_result: string;
+collection_package_files: *AppFiles;
+package_c :: #system_library "c";
+PackageFree :: (memory: *void) #foreign package_c "free";
+CollectionDownloadsOpen :: (files: *AppFiles) { collection_package_files = files }
+
+CollectionReadPackage :: (path: string) -> string {
+    file := OpenRead(path)
+    if !file.valid { return "" }
+    size := FileSize(file)
+    unused CloseFile(file)
+    if size < 1 || size > APP_HOST_BYTE_LIMIT { return "" }
+    bytes, found := ReadEntireFile(path)
+    if !found { AppFileFree(bytes); return "" }
+    return bytes
+}
+
+CollectionPackageFor :: (entry: *AppEntry) -> *CollectionPackage {
+    package := collection_packages
+    while package != null {
+        if TextUntilNul(package.digest[:]) == TextUntilNul(entry.sha256[:]) { return package }
+        package = package.next
+    }
+    package = New(CollectionPackage)
+    if package == null { return null }
+    package.digest = entry.sha256
+    package.size = entry.bytes
+    name: Vec(u8)
+    BuilderPrint(*name, "downloads/%.zx", TextUntilNul(package.digest[:]))
+    relative := BuilderFinish(name)
+    package.file = AppFilePath(collection_package_files, relative, true)
+    package.bytes = CollectionReadPackage(package.file)
+    AppFileFree(relative)
+    if package.bytes != "" && !CollectionPackageValid(package) {
+        AppFileFree(package.bytes)
+        package.bytes = ""
+        package.failed = true
+    }
+    package.next = collection_packages
+    collection_packages = package
+    return package
+}
+
+CollectionPackageValid :: (package: *CollectionPackage) -> bool {
+    return package.bytes.count > 0 && package.bytes.count <= APP_HOST_BYTE_LIMIT &&
+    (package.size == 0 || package.bytes.count == package.size) &&
+    AppHostBytesMatch(package.bytes, TextUntilNul(package.digest[:]))
+}
+
+CollectionBundle :: (context: *void, parent: *AppNode, entry: *AppEntry) -> HostedAsset {
+    if TextUntilNul(parent.identity.id[:]) != "inbe.arcade" { return HostedAsset.{} }
+    package := CollectionPackageFor(entry)
+    if package == null { return HostedAsset.{} }
+    collection_package_result = package.bytes
+    return HostedAsset.{.data = collection_package_result, .found = collection_package_result != ""}
+}
+
+CollectionDownload :: (context: *void, parent: *AppNode, entry: *AppEntry, download: *AppDownload) -> bool {
+    if TextUntilNul(parent.identity.id[:]) != "inbe.arcade" { return false }
+    package := CollectionPackageFor(entry)
+    download.bytes = entry.bytes
+    if package == null { download.failed = true; return true }
+    if package.bytes != "" { return false }
+    download.downloading = package.transfer.status == .Downloading
+    download.failed = package.failed
+    download.progress = -1
+    if package.transfer.total_bytes > 0 {
+        download.progress = cast(s32)(package.transfer.bytes * 100 / package.transfer.total_bytes)
+    }
+    return true
+}
+
+CollectionFetch :: (context: *void, account: string, parent: *AppNode,
+    entry: *AppEntry, operation: s32, reply: *AppsReply) -> bool {
+    if account != "local" || TextUntilNul(parent.identity.id[:]) != "inbe.arcade" { return false }
+    package := CollectionPackageFor(entry)
+    if package == null { return false }
+    if operation != APPS_INSTALL { return false }
+    // Cached installs and removals use the host's ordinary saved state.
+    if package.bytes != "" { return false }
+    if package.transfer.status != .Downloading {
+        FileDownloadRelease(*package.transfer)
+        package.failed = false
+        base := EnvironmentText("ARCADE_PACKAGE_ORIGIN")
+        if base == "" { base = "https://api.waozi.xyz" }
+        url: Vec(u8)
+        BuilderPrint(*url, "%/api/v2/packages/inbe.arcade/%.zx", base, TextUntilNul(package.digest[:]))
+        address := BuilderFinish(url)
+        defer { AppFileFree(address) }
+        package.transfer.maximum_bytes = cast(u64)(ifx package.size > 0 then package.size else APP_HOST_BYTE_LIMIT)
+        if !FileDownloadStart(*package.transfer, address, package.file) { package.failed = true }
+    }
+    reply.status = ifx package.failed then APPS_REJECTED else APPS_APPLIED
+    return true
+}
+
+CollectionDownloadsPump :: () {
+    package := collection_packages
+    while package != null {
+        if package.transfer.status == .Downloading {
+            status := FileDownloadPoll(*package.transfer)
+            if status == .Ready {
+                package.bytes = CollectionReadPackage(package.file)
+                if !CollectionPackageValid(package) {
+                    AppFileFree(package.bytes)
+                    package.bytes = ""
+                    package.failed = true
+                }
+            } else if status == .Error { package.failed = true }
+        }
+        package = package.next
+    }
+}
+
+CollectionDownloadsClose :: () {
+    while collection_packages != null {
+        package := collection_packages
+        collection_packages = package.next
+        FileDownloadRelease(*package.transfer)
+        AppFileFree(package.bytes)
+        AppFileFree(package.file)
+        PackageFree(cast(*void)package)
+    }
+}

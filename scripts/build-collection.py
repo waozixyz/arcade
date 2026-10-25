@@ -70,6 +70,7 @@ def stage(root, controller, expected_controller_digest, output):
                 bundle=f"assets/arcade/games/{name}.zx", protocol="node/2",
                 expected_id=name, version=component["version"],
                 sha256=hashlib.sha256(bundle_bytes).hexdigest(),
+                bytes=len(bundle_bytes),
                 preview=f"assets/arcade/previews/{name}.png",
                 icon=f"assets/arcade/previews/{name}.png")
             # The package's declared cover: the library opens the app from it.
@@ -95,7 +96,7 @@ def stage(root, controller, expected_controller_digest, output):
     if total > MAX_PAYLOAD_BYTES:
         raise ValueError("Arcade collection exceeds the host's payload limit")
     catalog = dict(schema=1, id=arcade["id"], title=arcade["title"],
-                   harness="assets/apps/apps.zx", children=children)
+                   harness="assets/apps/apps.zx", presentation={"mode": "covers"}, children=children)
     # This stable directory contains disposable build output only. Clear it
     # after all inputs validate so removed registrations cannot linger.
     if output.exists():
@@ -196,15 +197,15 @@ def main():
             sha256=digest(ROOT / f"build/{name}.zx"), apps_sha256=args.apps_sha256,
             children=children, source_mode="project")
         (ROOT / f"build/{name}.json").write_text(json.dumps(metadata, indent=2) + "\n")
-    # Native downloads retain their offline collection. The node serves a
-    # small Arcade catalog, and signed lookups of its unchanged game bytes.
-    bundle("collection.zi", "collection:Main", output / "assets", ROOT / "build/arcade.zx")
+    # Arcade carries the catalog and artwork. Standalone players keep their
+    # offline games; Arcade downloads exactly the game the person selects.
     node_apps = ROOT / "build/node-apps"
     catalog_assets = node_apps / "arcade-catalog"
     game_downloads = node_apps / "arcade.games"
     stage_downloads(catalog, output, catalog_assets, game_downloads)
     archive_downloads(game_downloads, node_apps / "arcade.games.tar")
     bundle("collection.zi", "collection:Main", catalog_assets / "assets", node_apps / "arcade.zx")
+    shutil.copyfile(node_apps / "arcade.zx", ROOT / "build/arcade.zx")
     receipt = dict(id=catalog["id"], version=(ROOT / "VERSION").read_text().strip(),
                    sha256=digest(ROOT / "build/arcade.zx"),
                    apps_sha256=args.apps_sha256, children=catalog["children"],

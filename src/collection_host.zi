@@ -31,19 +31,18 @@
 #import "apps/tree"
 #import "apps/catalog"
 #import "apps/protocol"
+#import "apps/appearance"
 Rules :: #import "apps/protocol";
 Node :: #import "apps/node_types";
 Codec :: #import "apps/node_codec";
 #import "platform"
+#import, file "collection_downloads.zi";
 #import "sound"
 #import "entity_host"
 #import "entity/publications_read"
 #import "entity/entity_records"
 #import "entity/entity_dew"
 #import "kryon/widget_palette"
-#import "kryon/scroll_widget"
-#import "kryon/scroll_props"
-#import "kryon/tree"
 #import "shovey/shovey_theme"
 ProfileIcon :: #import "mingcute/mingcute_regular_user_4";
 DewIcon :: #import "mingcute/mingcute_filled_drop";
@@ -79,7 +78,6 @@ collection_shared_codec: Codec.WidgetAppSharedCodec;
 collection_item_codec: Codec.WidgetAppSharedItemCodec;
 collection_invitation_codec: Codec.WidgetAppInvitationCodec;
 collection_ready: bool;
-collection_scroll: s32;
 collection_leave_to_library: bool;
 // Whether games download new levels when they come out: asked once on the
 // covers and passed to the games as arcade.updates. -1 unread, 0 off, 1 on,
@@ -387,10 +385,12 @@ CollectionOpen :: (bundle: string, digest: string, harness_digest: string,
     collection_resource_root = Join(data, "resources")
     opened := AppFilesOpen(*collection_resources, collection_resource_root)
     if !opened { Report("Arcade: cannot open the private resources folder"); return false }
+    CollectionDownloadsOpen(*collection_resources)
     platform := AppPlatform.{.allows = CollectionAllows, .call = CollectionCall,
         .widgets = CollectionWidgets, .save = CollectionSave, .state = CollectionState,
         .effect = CollectionEffect,
-        .presentation = AppPresentation.{.icon = true, .hide_sizes = true}}
+        .bundle = CollectionBundle, .download = CollectionDownload, .fetch = CollectionFetch,
+        .presentation = AppPresentation.{.cover_grid = true, .hide_sizes = true}}
     collection_ready = AppHostStart(*collection_host, bundle, "arcade.local", "inbe.arcade",
         "arcade", digest, "local", platform, harness_digest, locale)
     if !collection_ready { Report("Arcade: the shared Apps host refused the collection") }
@@ -469,6 +469,7 @@ CollectionBack :: () -> bool {
 }
 
 CollectionCollect :: () {
+    CollectionDownloadsPump()
     if entity_ready { EntityPump() }
     PublicationsReadPump()
     AppHostCollect(*collection_host)
@@ -481,6 +482,7 @@ CollectionClose :: () -> bool {
     if !EntityClose() { return false }
     if collection_ready && !AppHostStop(*collection_host) { return false }
     collection_ready = false
+    CollectionDownloadsClose()
     CollectionCollect()
     VecFree(collection_frame_paths)
     while collection_images != null {
@@ -508,6 +510,13 @@ CollectionClose :: () -> bool {
 CollectionOpenGame :: (id: string) -> bool {
     root := AppTreeNode(*collection_host.tree, collection_host.tree.active)
     if root == null || !root.collection { Report("Arcade: no collection is open to start "); Report(id); Report("\n"); return false }
+    entry := AppCatalogAt(*root.catalog, AppCatalogFind(*root.catalog, id))
+    missing: AppDownload
+    if entry != null && CollectionDownload(null, root, entry, *missing) {
+        unused CopyCString(id, collection_host.platform.presentation.download_id[:])
+        collection_host.platform.presentation.download_request += 1
+        return true
+    }
     request: AppsRequest
     request.operation = APPS_OPEN
     if !CopyCString(id, request.id[:]) { return false }
@@ -598,7 +607,6 @@ CollectionFrame :: (session: Session, viewport: Rectangle, key: s32, modifiers: 
     if entity_visible { return EntityFrame(session, viewport, key, modifiers) }
     runtime := AppHostActiveRuntime(*collection_host)
     if runtime == null { Report("Arcade: no app is running\n"); return false }
-    library := runtime.node.collection && collection_host.platform.presentation.icon
     nested := runtime.node.parent.generation != 0 && !runtime.node.collection
     // An app opened from its cover fills the screen with its own navigation.
     // Other apps get a bar with Back and their title; the library and that
@@ -606,9 +614,9 @@ CollectionFrame :: (session: Session, viewport: Rectangle, key: s32, modifiers: 
     covered := runtime.node.entry.cover.portrait[0] != 0
     collection_toolbar_visible = !covered
     // The covers ask about new levels once; the question takes every key.
-    asking := runtime.node.collection && CollectionUpdates() == 2
+    asking := runtime.node.collection && !collection_host.platform.presentation.cover_grid && CollectionUpdates() == 2
     if asking { key = 0 }
-    top: s32 = ifx library || (!covered && !runtime.node.collection && (entity_ready || nested)) then 56 else 0
+    top: s32 = ifx !covered && !runtime.node.collection && (entity_ready || nested) then 56 else 0
     now := cast(float64)MonotonicMilliseconds() / 1000.0
     runtime.app.session = session
     runtime.app.bounds = Rectangle.{viewport.x, viewport.y + cast(float32)top, viewport.width, viewport.height - cast(float32)top}
@@ -634,26 +642,9 @@ CollectionFrame :: (session: Session, viewport: Rectangle, key: s32, modifiers: 
             .top = cast(s32)viewport.y + top,
             .scale = 1.0, .font = 16, .now = now}
     }
-    if library {
-        Text(session, TextProps.{.key = cast(u64)49000,
-                .text = TextUntilNul(runtime.node.catalog.title[:]), .font = 24,
-                .bounds = Rectangle.{viewport.x + 12.0, viewport.y + 12.0, viewport.width - 208.0, 36.0}})
-        area := Rectangle.{viewport.x + 12.0, viewport.y + 68.0,
-            viewport.width - 24.0, viewport.height - 80.0}
-        columns := cast(s32)((area.width + 12.0) / 152.0)
-        if columns < 1 { columns = 1 }
-        if columns > 6 { columns = 6 }
-        rows := (cast(s32)runtime.node.catalog.count + columns - 1) / columns
-        scroll := Scroll(session, ScrollProps.{.key = cast(u64)49001, .bounds = area,
-                .scroll_offset = collection_scroll, .content_height = rows * 100})
-        collection_scroll = scroll.scroll_offset
-        if !scroll.opened { return true }
-        runtime.app.bounds = scroll.content
-    }
     WidgetHostBegin(session, CollectionAssetAllowed, CollectionAssetPath)
     drawn := AppHostRun(*collection_host, APP_FRAME)
     WidgetHostEnd()
-    if library { End(session) }
     if !drawn {
         Report("collection frame failed\n")
         return false
@@ -664,7 +655,9 @@ CollectionFrame :: (session: Session, viewport: Rectangle, key: s32, modifiers: 
         return true
     }
     if asking {
+        unused WidgetPaletteUse(session, ifx entity_shovey then ShoveyPalette() else AppCoversPalette())
         CollectionUpdatesQuestion(session, viewport)
+        unused WidgetPaletteRestore(session)
         return true
     }
     if nested && !covered {
@@ -688,8 +681,8 @@ CollectionFrame :: (session: Session, viewport: Rectangle, key: s32, modifiers: 
 
 CollectionToolbar :: (session: Session, viewport: Rectangle) {
     if !entity_ready || !collection_toolbar_visible { return }
-    if entity_shovey { unused WidgetPaletteUse(session, ShoveyPalette()) }
-    defer { if entity_shovey { unused WidgetPaletteRestore(session) } }
+    unused WidgetPaletteUse(session, ifx entity_shovey then ShoveyPalette() else AppCoversPalette())
+    defer { unused WidgetPaletteRestore(session) }
     // The account's Dew beside the Profile: a drop and the number, 0 until an
     // account is connected; it opens the Profile too.
     dew := EntityDewBalanceText(collection_dew_text[:])

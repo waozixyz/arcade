@@ -104,7 +104,16 @@ navigation-ui-test: all
 		timeout 150s xvfb-run -a -n 400 -s '-screen 0 1280x1000x24' python3 tests/standalone_navigation_ui_test.py \
 		--binary '$(CURDIR)/build/arcade' --binary '$(CURDIR)/build/shovey' --inbe-source '$(INBE_SOURCE)'
 
-install: all
+.PHONY: install-arcade
+install-arcade: collection build/entity.zx build/arcade
+	mkdir -p '$(BIN_DIR)' '$(LIB_DIR)' '$(DATA_DIR)/applications'
+	install -m 0755 build/arcade '$(LIB_DIR)/arcade.new'
+	mv -f '$(LIB_DIR)/arcade.new' '$(LIB_DIR)/arcade'
+	install -m 0644 build/entity.zx build/arcade.zx build/arcade.json '$(LIB_DIR)/'
+	ln -sfn '$(LIB_DIR)/arcade' '$(BIN_DIR)/arcade'
+	install -m 0644 packaging/xyz.waozi.arcade.desktop '$(DATA_DIR)/applications/'
+
+install: all install-arcade
 	mkdir -p '$(BIN_DIR)' '$(LIB_DIR)/games' '$(DATA_DIR)/applications'
 	mkdir -p '$(LIB_DIR)/startup/shovey'
 	install -m 0644 build/startup/shovey/*.png '$(LIB_DIR)/startup/shovey/'
@@ -113,8 +122,6 @@ install: all
 	install -m 0755 build/shovey '$(LIB_DIR)/shovey.new'
 	mv -f '$(LIB_DIR)/shovey.new' '$(LIB_DIR)/shovey'
 	install -m 0644 build/entity.zx build/arcade.zx build/arcade.json build/shovey.zx build/shovey.json '$(LIB_DIR)/'
-	install -m 0644 build/games/*.zx '$(LIB_DIR)/games/'
-	install -m 0644 build/games/*-preview.png '$(LIB_DIR)/games/'
 	ln -sfn '$(LIB_DIR)/arcade' '$(BIN_DIR)/arcade'
 	ln -sfn '$(LIB_DIR)/shovey' '$(BIN_DIR)/shovey'
 	mkdir -p '$(DATA_DIR)/icons/hicolor/256x256/apps'

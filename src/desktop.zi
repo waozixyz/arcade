@@ -12,11 +12,13 @@
 #import "entity_host"
 #import "entity/model"
 #import "kryon/carousel"
+#import "apps/appearance"
+#import "kryon/widget_palette"
 
 sdl :: #system_library "SDL2";
 SetTitle :: (window: *void, title: *u8) #foreign sdl "SDL_SetWindowTitle";
 
-DrawStartup :: (session: Session, directory: string) -> bool {
+DrawStartup :: (session: Session, directory: string, standalone: bool = true) -> bool {
     if !PollDesktop() || WindowTakeCloseRequestHost() { return false }
     BeginDesktopFrame()
     viewport := DesktopViewport()
@@ -25,7 +27,15 @@ DrawStartup :: (session: Session, directory: string) -> bool {
     logo := Join(directory, "startup/shovey/logo.png")
     defer { EntityFree(art); EntityFree(logo) }
     if BeginFrame(session, cast(u64)1, viewport) != FrameStatus.FrameOk { return false }
-    unused CarouselArtwork(session, viewport, cast(u64)48000, art, logo, "Shovey")
+    if standalone {
+        unused CarouselArtwork(session, viewport, cast(u64)48000, art, logo, "Shovey")
+    } else {
+        unused WidgetPaletteUse(session, AppCoversPalette())
+        Box(session, BoxProps.{.key = cast(u64)48000, .bounds = viewport, .fill = Color.{17, 18, 35, 255}})
+        Text(session, TextProps.{.key = cast(u64)48001, .text = "Arcade", .font = 32,
+                .bounds = Rectangle.{20.0, 20.0, viewport.width - 40.0, 44.0}})
+        unused WidgetPaletteRestore(session)
+    }
     if EndFrame(session) != FrameStatus.FrameOk { return false }
     ok := EndDesktopFrame()
     TestDriverFrame(session)
@@ -127,7 +137,7 @@ main :: (argc: s32, argv: **u8) -> s32 {
         Report(": no private data directory\n")
         return 1
     }
-    if !OpenDesktopSized(480, 820) || !WindowInterceptCloseHost(true) {
+    if !OpenDesktopSized(ifx standalone then 480 else 1000, 820) || !WindowInterceptCloseHost(true) {
         CloseDesktop()
         return 1
     }
@@ -138,7 +148,7 @@ main :: (argc: s32, argv: **u8) -> s32 {
     session := SessionOpen()
     if !SessionValid(session) { return 1 }
     defer { SessionClose(session) }
-    if standalone && !DrawStartup(session, directory) { return 0 }
+    if !DrawStartup(session, directory, standalone) { return 0 }
     // Both open on their library's covers, or straight into a named game.
     opened := ifx standalone then CollectionOpenShovey(directory, data) else CollectionOpenFiles(directory, data)
     if opened && standalone && !DrawStartup(session, directory) { unused CollectionClose(); return 0 }

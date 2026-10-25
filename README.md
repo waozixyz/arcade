@@ -1,19 +1,21 @@
 # Arcade
 
 Games and entertainment, alongside Werkzeug for practical tools and Inner
-Breeze for personal growth. Desktop Arcade opens on a grid of its installed
-apps, using the shared Apps cards and their previews. Select an app to open
-its game or editor directly. Standalone Shovey opens on its own cover carousel;
+Breeze for personal growth. Arcade opens on a dark grid of large rounded
+title-screen covers from the shared Apps controller. Click a cover to open
+an installed game or download it first. There are no separate launch buttons.
+Standalone Shovey opens on its own cover carousel;
 swipe, use the arrows or scroll the wheel to choose, then press Play/Open.
 Chess is temporarily disabled in Arcade; its code and
 existing saved games remain available for a later return.
 Each edition has a separate save and earned unlocks. Unlocked puzzles show
 their whole board; locked puzzles keep their lock until earned.
 
-On the node, Arcade downloads only its catalog and covers first. Each game
+Arcade carries only its catalog and covers first. Each game
 downloads when opened, with its existing identity and saved progress. This
-catalog requires Inner Breeze host API 32. Native Arcade and standalone
-Shovey retain their complete offline collections.
+catalog requires Inner Breeze host API 33. Downloaded games work offline;
+standalone Shovey keeps its complete offline collection. Apfelwurm comes from
+its own package, with the same game identity and private editor records.
 
 Chess’s retained implementation can choose a side and one of four computer
 levels. A local game
@@ -37,8 +39,8 @@ review are not implemented.
 
 ## Shared Apps library
 
-Arcade embeds the shared `apps.zx` controller and exact game bundles in a
-verified collection. Each game package lists its apps in its own `apps.json`:
+Arcade embeds the shared `apps.zx` controller and artwork in a verified
+catalog. The catalog fixes the digest of every separately downloaded game. Each game package lists its apps in its own `apps.json`:
 the app's `catalog.json`, and for an app the library opens from a cover, the
 cover's portrait art, landscape art, logo, caption and action. `games.json`
 names the game packages, and Arcade's own `apps.json` its own apps. Arcade
@@ -157,16 +159,19 @@ The cover collection requires an Inbe host with API 28 and the reviewed
 carousel controller. Older hosts must keep their compatible Arcade release.
 Building or installing never publishes.
 
-`make collection` writes the complete native collection to `build/arcade.zx`
-and the node catalog to `build/node-apps/arcade.zx`. Its exact game payloads
+`make collection` writes the same catalog to `build/arcade.zx`
+and `build/node-apps/arcade.zx`. Its exact game payloads
 are in `build/node-apps/arcade.games/`, named by their SHA-256, and in
 `build/node-apps/arcade.games.tar` for the existing signed node publisher.
+`make install-arcade` updates only Arcade's desktop launcher and catalog;
+it does not install game payloads. Previously downloaded games and saves stay
+in the person's private data directory.
 
 ## Shovey
 
 [Shovey](https://github.com/waozixyz/shovey) has its own repository: Classic,
-Island and Editor, their artwork, puzzles and tests live there. Arcade installs
-Shovey by default and builds it from that package. Opening Classic
+Island and Editor, their artwork, puzzles and tests live there. Arcade builds
+Shovey from that package and offers it as a separate download. Opening Classic
 or Editor goes straight to its own screen; Levels lets you replay any unlocked
 puzzle. Shovey also runs as its own desktop app.
 

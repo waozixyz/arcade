@@ -9,12 +9,13 @@ Game :: struct {
     enabled: bool
 }
 
-GameCount :: 4
+GameCount :: 5
 
 GameAt :: (index: s32) -> Game {
     if index == 0 { return Game.{.id = "inbe.chess", .name = "chess", .title = "Chess", .bundle = "chess.zx", .preview = "chess-preview.png", .package = "self", .enabled = false} }
     if index == 1 { return Game.{.id = "arcade.shovey", .name = "shovey", .title = "Shovey", .bundle = "shovey.zx", .preview = "shovey-preview.png", .package = "shovey", .enabled = true} }
     if index == 2 { return Game.{.id = "arcade.shovey-island", .name = "shovey-island", .title = "Shovey Island", .bundle = "shovey-island.zx", .preview = "shovey-island-preview.png", .package = "shovey", .enabled = false} }
     if index == 3 { return Game.{.id = "arcade.shovey-editor", .name = "shovey-editor", .title = "Shovey Editor", .bundle = "shovey-editor.zx", .preview = "shovey-editor-preview.png", .package = "shovey", .enabled = true} }
+    if index == 4 { return Game.{.id = "xyz.waozi.wurm", .name = "wurm", .title = "Apfelwurm", .bundle = "wurm.zx", .preview = "wurm-preview.png", .package = "wurm", .enabled = true} }
     return Game.{}
 }

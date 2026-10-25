@@ -1,6 +1,9 @@
 """Exercise the real shared library and both unchanged games privately."""
 import argparse
 import contextlib
+from http.server import BaseHTTPRequestHandler, HTTPServer
+import threading
+import hashlib
 import json
 import os
 from pathlib import Path
@@ -37,6 +40,39 @@ def answer_level_updates(driver, timeout=20):
             return
         time.sleep(0.05)
 
+@contextlib.contextmanager
+def package_server(root):
+    metadata = json.loads((root / 'build/arcade.json').read_text())
+    by_digest = {entry['sha256']: entry for entry in metadata['children']}
+    state = {'requests': [], 'corrupt_wurm': False, 'offline': False}
+    class Handler(BaseHTTPRequestHandler):
+        def log_message(self, *args):
+            pass
+        def do_GET(self):
+            digest = self.path.removeprefix('/api/v2/packages/inbe.arcade/').removesuffix('.zx')
+            state['requests'].append(digest)
+            if state['offline'] or digest not in by_digest:
+                self.send_error(503)
+                return
+            entry = by_digest[digest]
+            data = (root / 'build/node-apps/arcade.games' / (digest + '.zx')).read_bytes()
+            if state['corrupt_wurm'] and entry['expected_id'] == 'wurm':
+                data = data[:-1] + bytes([data[-1] ^ 1])
+            self.send_response(200)
+            self.send_header('Content-Length', str(len(data)))
+            self.end_headers()
+            self.wfile.write(data)
+    server = HTTPServer(('127.0.0.1', 0), Handler)
+    thread = threading.Thread(target=server.serve_forever, daemon=True)
+    thread.start()
+    try:
+        yield 'http://127.0.0.1:' + str(server.server_port), state
+    finally:
+        server.shutdown()
+        thread.join(timeout=5)
+        server.server_close()
+
+
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--binary", type=Path, required=True)
@@ -61,7 +97,7 @@ def main():
             child = subprocess.Popen([str(args.binary.resolve()), *arguments], cwd=root,
                                      env=os.environ | driver.environment() |
                                      {"ARCADE_DATA": str(profile), "ENTITY_DATA": str(profile / "entity"),
-                                      "LANG": "en_US.UTF-8"},
+                                      "LANG": "en_US.UTF-8", "ARCADE_PACKAGE_ORIGIN": origin},
                                      stdout=log, stderr=subprocess.STDOUT)
             driver.attach(child, log_path)
             try:
@@ -96,11 +132,24 @@ def main():
         editor_card = driver.wait(label="Shovey Editor", role="button")
         assert classic_card['y'] == editor_card['y'], "Apps must share a grid row"
         assert classic_card['x'] != editor_card['x']
+        assert classic_card['width'] >= 200 and classic_card['height'] >= 350
+        assert not driver.find(label='Play', role='button')
+        assert not driver.find(label='Open', role='button')
+        driver.wait(label='Apfelwurm', role='button', visible=False)
+        covers = [node for node in driver.find(role='image', visible=True)
+                  if node['width'] >= 180 and node['height'] >= 200]
+        assert len(covers) >= 2, "Apps must use large title-screen artwork"
         capture(child, name)
         with Image.open(output / (name + ".png")) as image:
             assert len(image.convert("RGB").getcolors(1000000) or []) > 100, "App icons were not painted"
 
-    with tempfile.TemporaryDirectory(prefix="profile-", dir=output) as temporary:
+    def primary_download(label='Download'):
+        driver.wait(label=label, role='button')
+        actions = driver.find(label=label, role='button', visible=True)
+        action = max(actions, key=lambda node: node['width'])
+        driver.press(key=action['key'], role='button')
+
+    with package_server(root) as (origin, server), tempfile.TemporaryDirectory(prefix="profile-", dir=output) as temporary:
         profile = Path(temporary)
         # Disabling an entry must leave a person's older Chess save untouched.
         chess = profile / "games/inbe.chess/records/computer"
@@ -121,8 +170,22 @@ def main():
         with application(profile, "grid") as child:
             driver.wait(label="Shovey", role="button")
             answer_library_question(driver)
+            window = subprocess.check_output(['xdotool', 'search', '--onlyvisible', '--pid', str(child.pid)], text=True).splitlines()[0]
+            subprocess.run(['xdotool', 'windowsize', window, '480', '820'], check=True)
             grid(child, "apps-portrait")
+            assert server['requests'] == [], 'Covers must not predownload games'
+            driver.press(label='Profile', role='button')
+            driver.wait(label='Account', role='text')
+            capture(child, 'arcade-profile')
+            driver.press(label="Back", role="button")
+            driver.wait(label='Shovey', role='button')
+            assert not list((profile / 'resources/downloads').glob('*.zx'))
             driver.press(label="Shovey", role="button")
+            driver.wait(label='Cancel', role='button')
+            driver.press(label='Cancel', role='button')
+            assert server['requests'] == [], 'Cancel must download nothing'
+            driver.press(label="Shovey", role="button")
+            primary_download()
             driver.wait(label=f"Level 1 / {classic}")
             answer_level_updates(driver)
             driver.wait(label="How do you want to move?", role="text")
@@ -130,6 +193,20 @@ def main():
             driver.wait_gone(label="How do you want to move?", role="text")
             assert not driver.find(label="Play", role="button"), "Arcade must skip the second title screen"
             assert len(driver.find(label="Back", role="button", visible=True)) == 1
+            driver.press(label="Levels", role="button")
+            driver.wait(label="Continue", role="button")
+            back = driver.wait(label="Back", role="button", visible=True)
+            assert back['width'] >= 100 and back['height'] >= 48
+            scroll = driver.wait(role="scroll")
+            driver.pointer(*UiDriver.center(scroll), wheel=-200)
+            driver.wait_idle(frames=20)
+            assert driver.find(label="Back", role="button", visible=True)[0]['y'] == back['y']
+            driver.press(label="Back", role="button")
+            driver.wait(label="Restart", role="button")
+            driver.press(label="Levels", role="button")
+            driver.wait(label="Continue", role="button")
+            driver.key("escape")
+            driver.wait(label="Restart", role="button")
             capture(child, "classic-playing")
             for direction in ("left", "right", "up", "down"):
                 driver.key(direction)
@@ -138,7 +215,14 @@ def main():
             driver.press(label="Back", role="button")
             driver.wait(label="Shovey Editor", role="button")
             driver.press(label="Shovey Editor", role="button")
+            primary_download()
             # The editor opens on a blank board.
+            driver.wait(label="New level", role="text")
+            driver.press(label="Levels", role="button")
+            driver.wait(label="Story levels", role="text")
+            back = driver.wait(label="Back", role="button", visible=True)
+            assert back['width'] >= 100 and back['height'] >= 48
+            driver.press(label="Back", role="button")
             driver.wait(label="New level", role="text")
             capture(child, "editor-open")
             driver.key("escape")
@@ -146,14 +230,38 @@ def main():
             window = subprocess.check_output(["xdotool", "search", "--onlyvisible", "--pid", str(child.pid)], text=True).splitlines()[0]
             subprocess.run(["xdotool", "windowsize", window, "900", "540"], check=True)
             grid(child, "apps-landscape")
+            server['corrupt_wurm'] = True
+            driver.press(label='Apfelwurm', role='button')
+            primary_download()
+            driver.wait(label='Try again', role='button', timeout=60)
+            assert not driver.find(label='Pause', role='button'), 'Unverified bytes must never run'
+            server['corrupt_wurm'] = False
+            primary_download('Try again')
+            driver.wait(label='Play', role='button', timeout=60)
+            capture(child, 'wurm-title')
+            driver.press(label='Play', role='button')
+            driver.wait(label='Pause', role='button')
+            capture(child, 'wurm-playing')
+            driver.press(label='Pause', role='button')
+            driver.wait(label='Resume', role='button')
+            driver.press(label='Back to title', role='button')
+            driver.wait(label='Play', role='button')
+            driver.press(label='Back', role='button')
+            driver.wait(label='Shovey', role='button')
+            for entry in json.loads((root / 'build/arcade.json').read_text())['children']:
+                path = profile / 'resources/downloads' / (entry['sha256'] + '.zx')
+                assert hashlib.sha256(path.read_bytes()).hexdigest() == entry['sha256']
+            requested = list(server['requests'])
+            server['offline'] = True
         with application(profile, "restore", "--app", "arcade.shovey"):
             driver.wait(label=f"Level 1 / {classic}")
             assert progress(record.read_bytes()) == progress(saved), "Classic progress changed on restart"
+        assert server['requests'] == requested, 'A cached game must reopen offline without downloading'
         assert chess.read_bytes() == b"existing private Chess save"
         assert not (profile / "inbe.db").exists()
         refused = subprocess.run([str(args.binary.resolve()), "--app", "chess"], env=os.environ | {"ARCADE_DATA": str(profile)}, capture_output=True, timeout=10)
         assert refused.returncode == 1 and b"unknown game" in refused.stderr
-    print("Arcade: app grid and icons, direct play/editor, Back, rotation and retained saves passed")
+    print("Arcade: rounded covers, download consent/cancel, digest failure/retry, Shovey and Apfelwurm play, Back, rotation, offline reopen and retained saves passed")
 
 
 if __name__ == "__main__":

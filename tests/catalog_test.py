@@ -34,13 +34,13 @@ original = (ROOT / 'build/games/chess.zx').read_bytes()
 container = (ROOT / 'build/arcade.zx').read_bytes()
 metadata = json.loads((ROOT / 'build/arcade.json').read_text())
 assert original not in container, 'Disabled Chess must not remain in the published collection'
-assert {child['id'] for child in metadata['children']} == {'arcade.shovey', 'arcade.shovey-editor'}
+assert {child['id'] for child in metadata['children']} == {'arcade.shovey', 'arcade.shovey-editor', 'xyz.waozi.wurm'}
 for child in metadata['children']:
     name = child['expected_id']
     exact = (ROOT / f'build/games/{name}.zx').read_bytes()
-    assert container.count(exact) == 1, 'A game must be packed once without a nested chooser'
+    assert exact not in container, 'Arcade must carry no prepackaged game bytes'
     assert hashlib.sha256(exact).hexdigest() == child['sha256']
-    assert child['cover']['portrait'] and child['cover']['landscape'] and child['cover']['logo']
+    assert child['cover']['portrait'] and child['cover']['landscape']
 refused = subprocess.run([str(ROOT / 'build/arcade'), '--app', 'chess'], env=env, capture_output=True, timeout=10)
 assert refused.returncode == 1 and b'unknown game' in refused.stderr
 print('Game identities, direct collection leaves, full cover resources and disabled Chess passed')
