@@ -52,7 +52,7 @@ jobs:
           path: waozixyz/shovey
       - name: Install build dependencies
         working-directory: .
-        run: sh ziranlang/ziran/scripts/ci_packages.sh build-essential python3-pil
+        run: sh ziranlang/ziran/scripts/ci_packages.sh build-essential python3-pil python3-cryptography
       - name: Build the locked toolchain and fetch packages
         run: |
           make -j2 -C ../../ziranlang/ziran
@@ -68,6 +68,7 @@ jobs:
           make -C ../shovey levels landscape
           make collection
           python3 tests/collection_test.py
+          python3 tests/publisher_test.py
           echo "$EXPECTED_SHA256  build/node-apps/arcade.zx" | sha256sum --check --strict
       - name: Publish the checked catalog and game archive
         env:
