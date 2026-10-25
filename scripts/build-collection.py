@@ -73,6 +73,13 @@ def stage(root, controller, expected_controller_digest, output):
                 bytes=len(bundle_bytes),
                 preview=f"assets/arcade/previews/{name}.png",
                 icon=f"assets/arcade/previews/{name}.png")
+            if app.get('requires'):
+                shared = json.loads((root / 'build/games' / (name + '-resources.json')).read_text())
+                if shared['dependencies'] != app['requires']:
+                    raise ValueError('Game resource dependencies differ from its manifest')
+                child['dependencies'] = shared['dependencies']
+                if shared['resources']:
+                    child['resources'] = shared['resources']
             # The package's declared cover: the library opens the app from it.
             cover = app["cover"]
             if cover:

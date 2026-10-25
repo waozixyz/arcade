@@ -1,5 +1,16 @@
 # Arcade changelog
 
+## 0.7.76
+
+- Install Shovey Editor as an add-on and reuse Shovey’s art and sounds.
+- Review every required download and its total size before installing.
+- Download each game from the server before playing, including Apfelwurm.
+- Use clean title-screen covers without repeated game names underneath.
+- Recognize Shovey Editor by its matching Editor title logo.
+- Play Apfelwurm’s 200-level journey with its own controls and stage selection.
+- Shovey includes approved Classic levels 1–175.
+- All objects stop at the abyss and leave it open.
+- Existing Shovey saves and completed levels are retained.
 ## 0.7.75
 
 - See each game’s download size under its cover until it is installed.

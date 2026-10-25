@@ -511,8 +511,8 @@ CollectionOpenGame :: (id: string) -> bool {
     root := AppTreeNode(*collection_host.tree, collection_host.tree.active)
     if root == null || !root.collection { Report("Arcade: no collection is open to start "); Report(id); Report("\n"); return false }
     entry := AppCatalogAt(*root.catalog, AppCatalogFind(*root.catalog, id))
-    missing: AppDownload
-    if entry != null && CollectionDownload(null, root, entry, *missing) {
+    plan: AppInstallPlan
+    if entry != null && AppHostInstallPlan(*collection_host, root, entry, *plan) && plan.count > 0 {
         unused CopyCString(id, collection_host.platform.presentation.download_id[:])
         collection_host.platform.presentation.download_request += 1
         return true

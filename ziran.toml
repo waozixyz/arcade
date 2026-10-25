@@ -36,7 +36,7 @@ git = "https://github.com/waozixyz/apps.git"
 # Use the shared controller reviewed with the supported collection host.
 ref = "master"
 
-# Shovey's editions and editor are games Arcade installs by default.
+# Shovey's editions and editor are available as separate downloads.
 [dependencies.shovey]
 git = "https://github.com/waozixyz/shovey.git"
 ref = "master"

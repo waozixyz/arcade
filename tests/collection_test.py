@@ -74,6 +74,30 @@ class CollectionTests(unittest.TestCase):
                              (ROOT / f"build/games/{name}-preview.png").read_bytes())
         self.assertEqual((self.output / catalog["harness"]).read_bytes(), self.controller.read_bytes())
 
+    def test_editor_download_reuses_verified_shovey_assets(self):
+        catalog = self.stage()
+        children = {child['id']: child for child in catalog['children']}
+        editor = children['arcade.shovey-editor']
+        original = children['arcade.shovey']
+        self.assertEqual(editor['dependencies'], [original['id']])
+        self.assertTrue(editor['resources'])
+        self.assertLess(editor['bytes'], original['bytes'])
+        for link in editor['resources']:
+            self.assertEqual(link['dependency'], original['id'])
+            self.assertTrue(link['path'].startswith('assets/shovey-editor/'))
+            self.assertTrue(link['source'].startswith('assets/shovey/'))
+
+    def test_changed_dependency_metadata_preserves_previous_stage(self):
+        self.stage()
+        previous = (self.output / 'assets/apps/catalog.json').read_bytes()
+        path = self.root / 'build/games/shovey-editor-resources.json'
+        shared = json.loads(path.read_text())
+        shared['dependencies'] = []
+        path.write_text(json.dumps(shared))
+        with self.assertRaisesRegex(ValueError, 'dependencies differ'):
+            self.stage()
+        self.assertEqual((self.output / 'assets/apps/catalog.json').read_bytes(), previous)
+
     def test_changed_controller_preserves_previous_stage(self):
         self.stage()
         previous = (self.output / "assets/apps/catalog.json").read_bytes()

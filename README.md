@@ -13,9 +13,14 @@ their whole board; locked puzzles keep their lock until earned.
 
 Arcade carries only its catalog and covers first. Each game
 downloads when opened, with its existing identity and saved progress. This
-catalog requires Inner Breeze host API 33. Downloaded games work offline;
+catalog requires Inner Breeze host API 34. Downloaded games work offline;
 standalone Shovey keeps its complete offline collection. Apfelwurm comes from
 its own package, with the same game identity and private editor records.
+
+Shovey Editor is an add-on to Shovey. Its install dialog lists Shovey when it
+is needed and shows the total download size. Once Shovey is installed, only
+the editor’s additions download. The editor reuses the original game’s art
+and sounds, and both remain available offline.
 
 Chess’s retained implementation can choose a side and one of four computer
 levels. A local game

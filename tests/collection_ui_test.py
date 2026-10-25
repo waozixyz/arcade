@@ -44,7 +44,7 @@ def answer_level_updates(driver, timeout=20):
 def package_server(root):
     metadata = json.loads((root / 'build/arcade.json').read_text())
     by_digest = {entry['sha256']: entry for entry in metadata['children']}
-    state = {'requests': [], 'corrupt_wurm': False, 'offline': False}
+    state = {'requests': [], 'corrupt_wurm': False, 'corrupt_shovey': False, 'offline': False}
     class Handler(BaseHTTPRequestHandler):
         def log_message(self, *args):
             pass
@@ -56,7 +56,7 @@ def package_server(root):
                 return
             entry = by_digest[digest]
             data = (root / 'build/node-apps/arcade.games' / (digest + '.zx')).read_bytes()
-            if state['corrupt_wurm'] and entry['expected_id'] == 'wurm':
+            if (state['corrupt_wurm'] and entry['expected_id'] == 'wurm') or (state['corrupt_shovey'] and entry['expected_id'] == 'shovey'):
                 data = data[:-1] + bytes([data[-1] ^ 1])
             self.send_response(200)
             self.send_header('Content-Length', str(len(data)))
@@ -81,6 +81,11 @@ def main():
     assert int(os.environ["DISPLAY"].split(":")[-1].split(".")[0]) >= 400
     assert os.environ["YUE_DESKTOP_RECOVERY"] == "0"
     root = Path(__file__).resolve().parents[1]
+    entries = json.loads((root / 'build/arcade.json').read_text())['children']
+    by_name = {entry['expected_id']: entry for entry in entries}
+    def size_text(size):
+        return f"{(size * 10 + 500000) // 1000000 / 10:.1f} MB"
+    sizes = {name: size_text(entry['bytes']) for name, entry in by_name.items()}
     output = root / "build/collection-ui-test"
     # The Classic heading counts its levels, which Shovey's level file lists.
     shovey = Path(subprocess.check_output([str(root / "scripts/ziran.sh"), "pkg", "path", "shovey"], text=True).strip())
@@ -135,6 +140,8 @@ def main():
         assert classic_card['width'] >= 200 and classic_card['height'] >= 350
         assert not driver.find(label='Play', role='button')
         assert not driver.find(label='Open', role='button')
+        for label in ('Shovey', 'Shovey Editor', 'Apfelwurm'):
+            assert not driver.find(label=label, role='text'), 'Title artwork must not repeat its name underneath'
         driver.wait(label='Apfelwurm', role='button', visible=False)
         covers = [node for node in driver.find(role='image', visible=True)
                   if node['width'] >= 180 and node['height'] >= 200]
@@ -151,6 +158,31 @@ def main():
 
     with package_server(root) as (origin, server), tempfile.TemporaryDirectory(prefix="profile-", dir=output) as temporary:
         profile = Path(temporary)
+        dependency_profile = profile / 'editor-first'
+        with application(dependency_profile, 'editor-dependencies') as child:
+            answer_library_question(driver)
+            driver.press(label='Shovey Editor', role='button')
+            driver.wait(label='Shovey (required) · ' + sizes['shovey'], role='text')
+            driver.wait(label='Shovey Editor · ' + sizes['shovey-editor'], role='text')
+            total = size_text(by_name['shovey']['bytes'] + by_name['shovey-editor']['bytes'])
+            driver.wait(label='Download size: ' + total, role='text')
+            capture(child, 'editor-download-plan')
+            driver.press(label='Cancel', role='button')
+            assert server['requests'] == [], 'Dependency consent must precede every download'
+            driver.press(label='Shovey Editor', role='button')
+            server['corrupt_shovey'] = True
+            primary_download()
+            driver.wait(label='Try again', role='button', timeout=60)
+            assert not driver.find(label='New level', role='text'), 'An editor must not open with a corrupt dependency'
+            server['corrupt_shovey'] = False
+            primary_download('Try again')
+            driver.wait(label='New level', role='text', timeout=60)
+            capture(child, 'editor-shared-assets')
+            assert server['requests'].count(by_name['shovey']['sha256']) == 2
+            assert server['requests'].count(by_name['shovey-editor']['sha256']) == 1
+            assert len(server['requests']) == 3, 'Retry must reuse the already downloaded editor'
+            assert by_name['shovey-editor']['bytes'] < by_name['shovey']['bytes'], 'The editor must carry only its additions'
+        server['requests'].clear()
         # Disabling an entry must leave a person's older Chess save untouched.
         chess = profile / "games/inbe.chess/records/computer"
         chess.parent.mkdir(parents=True)
@@ -174,9 +206,8 @@ def main():
             subprocess.run(['xdotool', 'windowsize', window, '480', '820'], check=True)
             grid(child, "apps-portrait")
             assert server['requests'] == [], 'Covers must not predownload games'
-            entries = json.loads((root / 'build/arcade.json').read_text())['children']
-            sizes = {entry['expected_id']: f"{(entry['bytes'] * 10 + 500000) // 1000000 / 10:.1f} MB" for entry in entries}
-            for text in sizes.values():
+            cover_sizes = dict(sizes, **{'shovey-editor': size_text(by_name['shovey']['bytes'] + by_name['shovey-editor']['bytes'])})
+            for text in cover_sizes.values():
                 driver.wait(label=text, role='text', visible=False)
             driver.press(label='Profile', role='button')
             driver.wait(label='Account', role='text')
@@ -220,7 +251,9 @@ def main():
             driver.wait(label="Shovey Editor", role="button")
             assert not driver.find(label=sizes["shovey"], role="text"), "Installed games must omit their download size"
             driver.press(label="Shovey Editor", role="button")
+            driver.wait(label='Download size: ' + sizes['shovey-editor'], role='text')
             primary_download()
+            assert server['requests'].count(by_name['shovey']['sha256']) == 1, 'Installed dependencies must not download again'
             # The editor opens on a blank board.
             driver.wait(label="New level", role="text")
             driver.press(label="Levels", role="button")
@@ -245,6 +278,11 @@ def main():
             driver.wait(label='Play', role='button', timeout=60)
             capture(child, 'wurm-title')
             driver.press(label='Play', role='button')
+            driver.wait(label='How do you want to move?', role='text')
+            driver.press(label='Swipe', role='button')
+            driver.wait(label='Your journey', role='text')
+            driver.press(label='Meadow', role='button')
+            driver.press(label='1', role='button')
             driver.wait(label='Pause', role='button')
             capture(child, 'wurm-playing')
             driver.press(label='Pause', role='button')

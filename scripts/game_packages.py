@@ -8,7 +8,7 @@ import json
 from pathlib import Path
 import subprocess
 
-APP_KEYS = {'manifest', 'cover', 'enabled'}
+APP_KEYS = {'manifest', 'cover', 'enabled', 'requires'}
 COVER_KEYS = {'portrait', 'landscape', 'logo', 'caption', 'action'}
 
 
@@ -41,9 +41,14 @@ def declared_packages(root, ziran=None, lock_flags=()):
             if not set(app) <= APP_KEYS or not set(app.get('cover', {})) <= COVER_KEYS:
                 raise ValueError(f'{name}: unknown apps.json field')
             manifest = source / relative_path(app['manifest'])
+            requires = app.get('requires', [])
+            if not isinstance(requires, list) or len(requires) > 8 or \
+                    any(not isinstance(item, str) or not item for item in requires) or \
+                    len(set(requires)) != len(requires):
+                raise ValueError(f'{name}: invalid app dependencies')
             apps.append(dict(package=name, source=source, manifest=manifest,
                              descriptor=json.loads(manifest.read_text()),
-                             cover=app.get('cover'), enabled=app.get('enabled', True)))
+                             cover=app.get('cover'), requires=requires, enabled=app.get('enabled', True)))
         packages.append(dict(name=name, source=source, id=declaration['id'],
                              title=declaration['title'], apps=apps))
     return packages

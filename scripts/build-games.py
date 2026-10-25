@@ -1,11 +1,13 @@
 #!/usr/bin/env python3
 """Build the apps Arcade and its game packages declare, without copying source."""
 import argparse
+import hashlib
 import json
 import shutil
 import subprocess
 from pathlib import Path
 from game_packages import declared_apps
+from game_resources import dependency_order, share_resources
 
 ROOT = Path(__file__).resolve().parents[1]
 
@@ -46,7 +48,8 @@ def build(ziran, lock_flags):
     daochi_client = dependency("daochi_client", entity)
     crypto = dependency("crypto", daochi_client)
     entries = []
-    for app in declared_apps(ROOT, ziran, lock_flags):
+    apps = dependency_order(declared_apps(ROOT, ziran, lock_flags))
+    for app in apps:
         source, manifest, descriptor = app["source"], app["manifest"], app["descriptor"]
         if descriptor["kind"] != "game" or "arcade" not in descriptor["harnesses"]:
             raise ValueError("Only games registered for Arcade belong in its catalog")
@@ -98,6 +101,17 @@ def build(ziran, lock_flags):
             if prepare.is_absolute() or '..' in prepare.parts or prepare.suffix != '.py':
                 raise ValueError('Invalid game asset preparation script')
             subprocess.run(['python3', str(source / prepare), str(resources), str(generated)], check=True)
+        shared = share_resources(app, apps, resources, ROOT / 'build/game-assets')
+        metadata = ROOT / 'build/games' / (name + '-resources.json')
+        metadata.parent.mkdir(parents=True, exist_ok=True)
+        metadata.write_text(json.dumps(shared, indent=2) + '\n')
+        if shared['dependencies']:
+            # A base-art update must also invalidate cached editor images.
+            originals = {item['descriptor']['id']: item['descriptor']['name'] for item in apps}
+            required = shared | {'sha256': {identifier: hashlib.sha256(
+                (ROOT / 'build/games' / (originals[identifier] + '.zx')).read_bytes()).hexdigest()
+                for identifier in shared['dependencies']}}
+            (resources / 'requirements.json').write_text(json.dumps(required, sort_keys=True) + '\n')
         code = 'GameLocaleText :: (language: string, key: string) -> string {\n'
         for language, values in sorted(translations.items(), key=lambda item: item[0] == 'en'):
             if language != 'en':
