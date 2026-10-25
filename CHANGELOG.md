@@ -2,6 +2,7 @@
 
 ## 0.7.69
 
+- Arcade downloads each selected game separately, keeping its initial download smaller.
 - Shovey keeps movement and unfinished puzzles on each device.
 - Completed puzzles share unlocks without moving a player already in a level.
 

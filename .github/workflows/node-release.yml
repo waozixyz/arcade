@@ -1,0 +1,88 @@
+name: Arcade node release
+
+on:
+  workflow_dispatch:
+    inputs:
+      sha256:
+        description: SHA-256 of the locally verified node catalog
+        required: true
+        type: string
+
+permissions:
+  contents: write
+
+concurrency:
+  group: arcade-node-release
+  cancel-in-progress: false
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    defaults:
+      run:
+        working-directory: waozixyz/arcade
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with:
+          path: waozixyz/arcade
+      - name: Read the fixed dependency revisions
+        id: dependencies
+        env:
+          EXPECTED_SHA256: ${{ inputs.sha256 }}
+        run: |
+          python3 - <<'PY'
+          import json, os, re
+          if not re.fullmatch('[0-9a-f]{64}', os.environ['EXPECTED_SHA256']):
+              raise SystemExit('Give the exact verified catalog SHA-256')
+          lock = json.load(open('ziran.lock'))
+          game = next(p['commit'] for p in lock['packages'] if p['url'] == 'https://github.com/waozixyz/shovey.git')
+          with open(os.environ['GITHUB_OUTPUT'], 'a') as output:
+              output.write('toolchain=' + lock['toolchain']['commit'] + '\nshovey=' + game + '\n')
+          PY
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with:
+          repository: ziranlang/ziran
+          ref: ${{ steps.dependencies.outputs.toolchain }}
+          path: ziranlang/ziran
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with:
+          repository: waozixyz/shovey
+          ref: ${{ steps.dependencies.outputs.shovey }}
+          path: waozixyz/shovey
+      - name: Install build dependencies
+        working-directory: .
+        run: sh ziranlang/ziran/scripts/ci_packages.sh build-essential python3-pil
+      - name: Build the locked toolchain and fetch packages
+        run: |
+          make -j2 -C ../../ziranlang/ziran
+          echo "$GITHUB_WORKSPACE/ziranlang/ziran/build/bin" >> "$GITHUB_PATH"
+          # These are the exact revisions read from the release lock above.
+          # Generate the game in its own checkout, never in the package cache.
+          printf '[overrides]\nshovey = "../shovey"\nziran = "../../ziranlang/ziran"\n' > ziran.local.toml
+          ../../ziranlang/ziran/build/bin/ziran fetch
+      - name: Build and verify the node catalog
+        env:
+          EXPECTED_SHA256: ${{ inputs.sha256 }}
+        run: |
+          make -C ../shovey levels landscape
+          make collection
+          python3 tests/collection_test.py
+          echo "$EXPECTED_SHA256  build/node-apps/arcade.zx" | sha256sum --check --strict
+      - name: Publish the checked catalog and game archive
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -eu
+          version=$(cat VERSION)
+          tag="node-arcade-$version"
+          if gh release view "$tag" >/dev/null 2>&1; then
+            mkdir -p build/prior-node-release
+            gh release download "$tag" --pattern arcade.zx --pattern arcade.games.tar --dir build/prior-node-release
+            cmp build/prior-node-release/arcade.zx build/node-apps/arcade.zx
+            cmp build/prior-node-release/arcade.games.tar build/node-apps/arcade.games.tar
+          else
+            gh release create "$tag" build/node-apps/arcade.zx build/node-apps/arcade.games.tar \
+              --target "$GITHUB_SHA" --title "Arcade $version" \
+              --notes 'Arcade downloads the selected game separately and preserves earned progress.'
+          fi

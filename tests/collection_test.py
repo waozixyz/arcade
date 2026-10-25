@@ -8,6 +8,7 @@ import shutil
 import tempfile
 import unittest
 import sys
+import tarfile
 
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT / "scripts"))
@@ -79,6 +80,63 @@ class CollectionTests(unittest.TestCase):
         with self.assertRaisesRegex(ValueError, "trusted SHA-256"):
             self.stage()
         self.assertEqual((self.output / "assets/apps/catalog.json").read_bytes(), previous)
+
+    def test_arcade_downloads_preserve_catalog_and_standalone_payloads(self):
+        catalog = self.stage()
+        small = self.root / "small"
+        games = self.root / "arcade.games"
+        builder.stage_downloads(catalog, self.output, small, games)
+        self.assertEqual((small / "assets/apps/catalog.json").read_bytes(),
+                         (self.output / "assets/apps/catalog.json").read_bytes())
+        self.assertEqual((small / catalog["harness"]).read_bytes(), self.controller.read_bytes())
+        for child in catalog["children"]:
+            full = self.output / child["bundle"]
+            self.assertTrue(full.is_file(), "Standalone players retain the game")
+            self.assertFalse((small / child["bundle"]).exists())
+            self.assertEqual((games / (child["sha256"] + ".zx")).read_bytes(), full.read_bytes())
+            self.assertEqual((small / child["preview"]).read_bytes(),
+                             (self.output / child["preview"]).read_bytes())
+            for key in ("portrait", "landscape", "logo"):
+                relative = child["cover"][key]
+                self.assertEqual((small / relative).read_bytes(), (self.output / relative).read_bytes())
+
+    def test_changed_download_preserves_previous_outputs(self):
+        catalog = self.stage()
+        small = self.root / "small"
+        games = self.root / "arcade.games"
+        builder.stage_downloads(catalog, self.output, small, games)
+        (self.output / catalog["children"][0]["bundle"]).write_bytes(b"changed game")
+        with self.assertRaisesRegex(ValueError, "declared digest"):
+            builder.stage_downloads(catalog, self.output, small, games)
+        self.assertTrue((small / "assets/apps/catalog.json").exists())
+        self.assertTrue((games / (catalog["children"][0]["sha256"] + ".zx")).exists())
+
+    def test_download_archive_contains_exact_hash_named_games(self):
+        catalog = self.stage()
+        small = self.root / "small"
+        games = self.root / "arcade.games"
+        builder.stage_downloads(catalog, self.output, small, games)
+        archive = self.root / "arcade.games.tar"
+        builder.archive_downloads(games, archive)
+        with tarfile.open(archive) as content:
+            self.assertEqual(set(content.getnames()), {child["sha256"] + ".zx" for child in catalog["children"]})
+            for member in content:
+                self.assertTrue(member.isfile())
+                self.assertEqual(member.mtime, 0)
+                self.assertEqual(content.extractfile(member).read(), (games / member.name).read_bytes())
+
+    def test_removed_download_does_not_leave_stale_payload(self):
+        catalog = self.stage()
+        small = self.root / "small"
+        games = self.root / "arcade.games"
+        builder.stage_downloads(catalog, self.output, small, games)
+        catalog["children"] = []
+        # Build a fresh full stage as a real removed registration does.
+        (self.root / "games.json").write_text(json.dumps({"packages": []}))
+        catalog = self.stage()
+        builder.stage_downloads(catalog, self.output, small, games)
+        self.assertEqual(list(games.iterdir()), [])
+        self.assertFalse((small / "assets/arcade/games/shovey.zx").exists())
 
     def test_invalid_controller_digest_rejected(self):
         with self.assertRaisesRegex(ValueError, "exact trusted"):

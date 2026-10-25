@@ -9,6 +9,7 @@ from pathlib import Path
 import re
 import shutil
 import subprocess
+import tarfile
 from game_packages import declared_packages
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -112,6 +113,40 @@ def stage(root, controller, expected_controller_digest, output):
     return catalog, packages[1:]
 
 
+def stage_downloads(catalog, source, output, games):
+    """Keep Arcade's catalog and art together; serve each game separately.
+
+    The full staging directory is also used by standalone players, which
+    keep their bundled games. Validate every game before replacing outputs.
+    """
+    payloads = {}
+    for child in catalog["children"]:
+        data = (source / child["bundle"]).read_bytes()
+        if hashlib.sha256(data).hexdigest() != child["sha256"]:
+            raise ValueError("Game differs from the collection's declared digest")
+        payloads[child["sha256"]] = data
+    for directory in (output, games):
+        if directory.exists():
+            shutil.rmtree(directory)
+    shutil.copytree(source, output)
+    games.mkdir(parents=True)
+    for child in catalog["children"]:
+        (output / child["bundle"]).unlink()
+    for digest, data in payloads.items():
+        (games / (digest + ".zx")).write_bytes(data)
+
+
+def archive_downloads(games, archive):
+    """The release asset contains only the immutable game payloads."""
+    with tarfile.open(archive, "w") as output:
+        for path in sorted(games.glob("*.zx")):
+            entry = tarfile.TarInfo(path.name)
+            entry.size = path.stat().st_size
+            entry.mode = 0o644
+            with path.open("rb") as data:
+                output.addfile(entry, data)
+
+
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--ziran", default=str(ROOT / "scripts/ziran.sh"))
@@ -160,15 +195,24 @@ def main():
             sha256=digest(ROOT / f"build/{name}.zx"), apps_sha256=args.apps_sha256,
             children=children, source_mode="project")
         (ROOT / f"build/{name}.json").write_text(json.dumps(metadata, indent=2) + "\n")
-    # Arcade exposes every declared leaf directly; there is no nested chooser.
+    # Native downloads retain their offline collection. The node serves a
+    # small Arcade catalog, and signed lookups of its unchanged game bytes.
     bundle("collection.zi", "collection:Main", output / "assets", ROOT / "build/arcade.zx")
+    node_apps = ROOT / "build/node-apps"
+    catalog_assets = node_apps / "arcade-catalog"
+    game_downloads = node_apps / "arcade.games"
+    stage_downloads(catalog, output, catalog_assets, game_downloads)
+    archive_downloads(game_downloads, node_apps / "arcade.games.tar")
+    bundle("collection.zi", "collection:Main", catalog_assets / "assets", node_apps / "arcade.zx")
     receipt = dict(id=catalog["id"], version=(ROOT / "VERSION").read_text().strip(),
                    sha256=digest(ROOT / "build/arcade.zx"),
                    apps_sha256=args.apps_sha256, children=catalog["children"],
                    source_mode="project")
     (output / "receipt.json").write_text(json.dumps(receipt, indent=2) + "\n")
     (ROOT / "build/arcade.json").write_text(json.dumps(receipt, indent=2) + "\n")
-    print("Arcade collection built with unchanged game bundles and verified Apps controller")
+    node_receipt = receipt | {"sha256": digest(node_apps / "arcade.zx")}
+    (node_apps / "arcade.json").write_text(json.dumps(node_receipt, indent=2) + "\n")
+    print("Arcade catalog built with separate unchanged game downloads; standalone players keep their games")
 
 
 if __name__ == "__main__":

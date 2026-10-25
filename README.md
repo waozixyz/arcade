@@ -10,6 +10,11 @@ existing saved games remain available for a later return.
 Each edition has a separate save and earned unlocks. Unlocked puzzles show
 their whole board; locked puzzles keep their lock until earned.
 
+On the node, Arcade downloads only its catalog and covers first. Each game
+downloads when opened, with its existing identity and saved progress. This
+catalog requires Inner Breeze host API 32. Native Arcade and standalone
+Shovey retain their complete offline collections.
+
 Chess’s retained implementation can choose a side and one of four computer
 levels. A local game
 survives returning to the library and restarting the app. Ask for a hint, take
@@ -151,6 +156,11 @@ current dependency graph also includes local, unpublished Self source.
 The cover collection requires an Inbe host with API 28 and the reviewed
 carousel controller. Older hosts must keep their compatible Arcade release.
 Building or installing never publishes.
+
+`make collection` writes the complete native collection to `build/arcade.zx`
+and the node catalog to `build/node-apps/arcade.zx`. Its exact game payloads
+are in `build/node-apps/arcade.games/`, named by their SHA-256, and in
+`build/node-apps/arcade.games.tar` for the existing signed node publisher.
 
 ## Shovey
 

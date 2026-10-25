@@ -4,6 +4,7 @@ import importlib.util
 import json
 from pathlib import Path
 import subprocess
+import shutil
 import tempfile
 
 from cryptography.hazmat.primitives import serialization
@@ -69,4 +70,34 @@ with tempfile.TemporaryDirectory(prefix='arcade-publisher-') as directory:
     else:
         raise AssertionError('Publisher accepted a renamed signed game identity')
 
-print('Arcade ledger: existing signature, node receiver, idempotence, rollback and stable identity passed')
+    # Arcade's catalog and exact separately downloaded games use the same
+    # signed release and existing node importer.
+    node_bundles = work / 'node-apps'
+    shutil.copytree(ROOT / 'build/node-apps', node_bundles)
+    ledger.write_text(json.dumps(json.loads((ROOT / 'apps/versions.json').read_text())))
+    arcade = publisher.stage_node_app(store, 'arcade', private, 'test-key', pins,
+                                     ledger_path=ledger, bundle_directory=node_bundles)
+    lookups = publisher.game_lookups(store / 'inbe.arcade', arcade)
+    expected = {path.stem for path in (node_bundles / 'arcade.games').glob('*.zx')}
+    assert {value['artifacts'][0]['sha256'] for value in lookups} == expected
+    for lookup in lookups:
+        key.public_key().verify(bytes.fromhex(lookup['signature']), publisher.signing_message(lookup))
+    entries = {str(path.relative_to(store)): path.read_bytes()
+               for path in (store / 'inbe.arcade').rglob('*')
+               if path.is_file() and path.name not in ('.publish.lock', 'history-v2.json')}
+    publisher.import_node_app(entries, remote, json.loads(pins.read_text()), 'inbe.arcade')
+    for digest in expected:
+        assert (remote / 'inbe.arcade' / (digest + '.zx')).read_bytes() == \
+            (node_bundles / 'arcade.games' / (digest + '.zx')).read_bytes()
+    changed = next((node_bundles / 'arcade.games').glob('*.zx'))
+    changed.write_bytes(b'ZX\0\0changed bytes')
+    try:
+        publisher.stage_node_app(store, 'arcade', private, 'test-key', pins,
+                                 ledger_path=ledger, bundle_directory=node_bundles)
+    except ValueError:
+        pass
+    else:
+        raise AssertionError('Publisher accepted game bytes that differ from their digest')
+    assert json.loads((store / 'inbe.arcade/latest-v2.json').read_bytes()) == arcade
+
+print('Arcade ledger: signatures, separate game downloads, node receiver, immutable bytes, rollback and stable identity passed')
