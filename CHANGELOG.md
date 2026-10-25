@@ -1,5 +1,10 @@
 # Arcade changelog
 
+## 0.7.69
+
+- Shovey keeps movement and unfinished puzzles on each device.
+- Completed puzzles share unlocks without moving a player already in a level.
+
 ## 0.7.68
 
 - Shovey includes approved Classic levels 1–175.
