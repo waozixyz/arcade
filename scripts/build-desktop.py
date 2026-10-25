@@ -13,11 +13,11 @@ ZIRAN = str(ROOT / 'scripts/ziran.sh')
 
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument('--output', type=Path, default=ROOT / 'build/arcade')
+    parser.add_argument('--output', type=Path)
     parser.add_argument('--standalone-shovey', action='store_true')
     parser.add_argument('--generated', type=Path, help='Private generated-source output for an isolated build')
     args = parser.parse_args()
-    output = args.output.resolve()
+    output = (args.output or ROOT / 'build' / ('shovey' if args.standalone_shovey else 'arcade')).resolve()
     lock = [] if (ROOT / 'ziran.local.toml').exists() else ['--locked']
     toolchain = Path(subprocess.check_output([ZIRAN, 'pkg', 'path', 'ziran', *lock],
                                              cwd=ROOT, text=True).strip())
