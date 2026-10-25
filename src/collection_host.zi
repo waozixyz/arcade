@@ -119,7 +119,8 @@ CollectionAllows :: (context: *void, node: *AppNode, name: string) -> bool {
     name == "AppInvitationHost" || name == "RefreshAppSharedHost" || name == "SendAppSharedHost" ||
     name == "SmoothFramesHost" || name == "AppLocaleHost" || name == "AppSoundHost" ||
     name == "tile_map.sampling" || name == "arcade.controls" || name == "arcade.sound" || name == "arcade.navigation" ||
-    name == PUBLICATIONS_READ_SERVICE || name == ENTITY_RECORDS_SERVICE || name == ENTITY_DEW_SERVICE
+    name == PUBLICATIONS_READ_SERVICE || name == ENTITY_RECORDS_SERVICE || name == ENTITY_DEW_SERVICE ||
+    name == "entity.profile"
 }
 
 CollectionCall :: (context: *void, node: *AppNode, module: *u8, function: *u8,
