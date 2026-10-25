@@ -106,8 +106,9 @@ def main():
                 time.sleep(.05)
         raise AssertionError(f'No move was saved to {record}')
 
-    # Classic's progress is the account's shared record, as on Linux.
-    classic = profile / 'entity/records/local/game-progress/fd65a3d7ac3d5ceb2d4d96cc5224a740.json'
+    # Movement and unfinished boards stay in the game's device-only record.
+    classic = profile / 'games/arcade.shovey/records/local.campaign'
+    account_progress = profile / 'entity/records/local/game-progress/fd65a3d7ac3d5ceb2d4d96cc5224a740.json'
     with application('play'):
         answer_cover_question(driver)
         driver.press(label='Play', role='button')
@@ -128,6 +129,7 @@ def main():
         driver.press(label='Unmute', role='button')
         driver.wait(label='Mute', role='button')
         assert move_until_saved(classic) != fresh
+        assert not account_progress.exists(), 'Movement wrote an account progress record'
         driver.key('escape')
         driver.wait(label='Play', role='button')
     with application('restart'):
@@ -135,6 +137,7 @@ def main():
         driver.press(label='Play', role='button')
         wait_level_one(driver, classic_levels)
         assert classic.read_bytes() != fresh, 'The move was lost across a restart'
+        assert not account_progress.exists(), 'Restart published an unfinished board'
     print('Windows Shovey under Wine: title, Classic, sound, saved move, Back and restart passed')
 
 

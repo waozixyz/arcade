@@ -97,11 +97,13 @@ def main():
     def campaign_progress(data):
         # Animals keep wandering while the window rotates. Campaign unlocks,
         # completion marks, player state and board identity must stay intact.
-        record = json.loads(data)
-        state = record['state']
-        assert record['game'] == 'shovey.classic' and state[:2] == 'M1'
-        assert state[10:12] in ('P1', 'P2', 'P3')
-        return (record['unlocked'], record['completed'], state[10:42]), state[2:10]
+        text = data.decode()
+        assert text[:2] in ('C1', 'C2', 'C3', 'C4', 'C5')
+        header, marks = (6, 1000) if text[:2] == 'C5' else (4, 175)
+        state = text[header + marks:]
+        assert state[:2] in ('P1', 'P2', 'P3')
+        assert set(text[header:header + marks]) <= {'0', '1'}
+        return (int(text[2:header], 16), text[header:header + marks], state[:32]), text[-8:]
 
     def swipe_beside_board_until_saved(record):
         """A swipe on the game screen moves Shovey even where the board is not."""
@@ -206,7 +208,8 @@ def main():
 
     with tempfile.TemporaryDirectory(prefix='profile-', dir=output) as temporary:
         profile = Path(temporary)
-        classic = profile / 'entity/records/local/game-progress/fd65a3d7ac3d5ceb2d4d96cc5224a740.json'
+        classic = profile / 'games/arcade.shovey/records/local.campaign'
+        account_progress = profile / 'entity/records/local/game-progress/fd65a3d7ac3d5ceb2d4d96cc5224a740.json'
         with application(profile, 'play') as child:
             assert not driver.find(label='Arcade', role='text')
             # The covers ask once whether games download new levels.
@@ -297,6 +300,7 @@ def main():
             assert all(abs(board[field] - swipe_boards[960, 600][field]) <= 1 for field in ('x', 'y', 'width', 'height'))
             swipe_in_visible_direction()
             classic_saved = campaign_progress(classic.read_bytes())
+            assert not account_progress.exists(), 'Movement wrote an account progress record'
             assert len(driver.find(label='Back', role='button', visible=True)) == 1, 'Shovey needs one clear Back action'
             driver.press(label='Back', role='button')
             driver.wait(label='Play', role='button')
@@ -345,6 +349,7 @@ def main():
             driver.press(label='Play', role='button')
             wait_level_one(driver, classic_levels)
             assert campaign_progress(classic.read_bytes()) == classic_saved
+            assert not account_progress.exists(), 'Restart published an unfinished board'
     print('Standalone Shovey: portrait/landscape boards, swipe directions, the floating movement pad, rotation saves, covers and independent saves passed')
 
 
