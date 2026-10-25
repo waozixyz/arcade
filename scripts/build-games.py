@@ -10,6 +10,25 @@ from game_packages import declared_apps
 ROOT = Path(__file__).resolve().parents[1]
 
 
+def leave_out(rules_path, resources, release):
+    """Removes what the game's bundle.json says its bundle leaves out (top-level
+    glob patterns of its assets), so the collection and the games a host opens
+    fit its memory budget; the manifest keeps only what remains."""
+    rules = json.loads(rules_path.read_text()) if rules_path.exists() else {}
+    patterns = rules.get("leave_out", []) + (rules.get("release_leave_out", []) if release else [])
+    for pattern in patterns:
+        for path in resources.glob(pattern):
+            if path.is_dir():
+                shutil.rmtree(path)
+            else:
+                path.unlink()
+    art_path = resources / "art.json"
+    if patterns and art_path.exists():
+        art = json.loads(art_path.read_text())
+        art["files"] = [item for item in art["files"] if (resources / item["path"]).is_file()]
+        art_path.write_text(json.dumps(art, indent=2) + "\n")
+
+
 def build(ziran, lock_flags):
     def package(name):
         return Path(subprocess.check_output(
@@ -47,6 +66,7 @@ def build(ziran, lock_flags):
         defines = descriptor.get('build_defines', [])
         if 'SHOVEY_RELEASE' in defines:
             subprocess.run(["python3", str(source / 'scripts/release_assets.py'), str(resources)], check=True)
+        leave_out(manifest.with_name("bundle.json"), resources, 'SHOVEY_RELEASE' in defines)
         locales = resources / "locales"
         locales.mkdir(exist_ok=True)
         translations = {}
