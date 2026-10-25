@@ -174,6 +174,10 @@ def main():
             subprocess.run(['xdotool', 'windowsize', window, '480', '820'], check=True)
             grid(child, "apps-portrait")
             assert server['requests'] == [], 'Covers must not predownload games'
+            entries = json.loads((root / 'build/arcade.json').read_text())['children']
+            sizes = {entry['expected_id']: f"{(entry['bytes'] * 10 + 500000) // 1000000 / 10:.1f} MB" for entry in entries}
+            for text in sizes.values():
+                driver.wait(label=text, role='text', visible=False)
             driver.press(label='Profile', role='button')
             driver.wait(label='Account', role='text')
             capture(child, 'arcade-profile')
@@ -214,6 +218,7 @@ def main():
             saved = wait(lambda: record.read_bytes() if record.exists() else None, "Classic did not save")
             driver.press(label="Back", role="button")
             driver.wait(label="Shovey Editor", role="button")
+            assert not driver.find(label=sizes["shovey"], role="text"), "Installed games must omit their download size"
             driver.press(label="Shovey Editor", role="button")
             primary_download()
             # The editor opens on a blank board.

@@ -2,6 +2,7 @@
 
 ## 0.7.75
 
+- See each game’s download size under its cover until it is installed.
 - Read secondary profile labels clearly in the dark theme.
 - Browse a dark Arcade library with large rounded title covers; click a cover to play or download its game.
 - Download games individually, including Apfelwurm, and keep downloaded games available offline.
