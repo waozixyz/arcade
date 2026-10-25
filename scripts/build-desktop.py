@@ -15,12 +15,13 @@ def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('--output', type=Path, default=ROOT / 'build/arcade')
     parser.add_argument('--standalone-shovey', action='store_true')
+    parser.add_argument('--generated', type=Path, help='Private generated-source output for an isolated build')
     args = parser.parse_args()
     output = args.output.resolve()
     lock = [] if (ROOT / 'ziran.local.toml').exists() else ['--locked']
     toolchain = Path(subprocess.check_output([ZIRAN, 'pkg', 'path', 'ziran', *lock],
                                              cwd=ROOT, text=True).strip())
-    generated = ROOT / ('build/shovey-native' if args.standalone_shovey else 'build/arcade-native') / 'c'
+    generated = args.generated.resolve() if args.generated else ROOT / ('build/shovey-native' if args.standalone_shovey else 'build/arcade-native') / 'c'
     # Only this build purpose owns generated C. Never replace an installed
     # binary in place: link separately, then atomically replace the path.
     if generated.exists():
@@ -53,7 +54,7 @@ def main():
                     '-I' + str(package('monocypher') / 'src'), str(package('monocypher') / 'src/monocypher.c'),
                     # Entity's device keys sign with Monocypher's standard Ed25519.
                     str(package('monocypher') / 'src/optional/monocypher-ed25519.c'), str(oqs / 'lib/liboqs.a'),
-                    '-Wl,--gc-sections', *libraries, '-lX11', '-l:libcurl.so.4', '-lm', '-lpthread', '-o', str(temporary)], check=True)
+                    '-Wl,--gc-sections', *libraries, '-lX11', '-l:libcurl.so.4', '-lz', '-lm', '-lpthread', '-o', str(temporary)], check=True)
     temporary.replace(output)
     if args.standalone_shovey:
         from PIL import Image

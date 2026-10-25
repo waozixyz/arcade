@@ -19,6 +19,9 @@
 #import "kryon/box_props"
 #import "kryon/text_widget"
 #import "kryon/text_props"
+#import "kryon/modal_props"
+#import "kryon/modal_frame_widget"
+#import "kryon/tree"
 
 entity_bundle: string;
 entity_ready: bool;
@@ -83,17 +86,21 @@ EntityBack :: () -> bool {
 EntityFrame :: (session: Session, viewport: Rectangle, key: s32, modifiers: s32) -> bool {
     if entity_shovey { unused WidgetPaletteUse(session, ShoveyPalette()) }
     defer { if entity_shovey { unused WidgetPaletteRestore(session) } }
-    Box(session, BoxProps.{.key = cast(u64)49000, .bounds = viewport,
-            .fill = StyleTokenColorOr("canvas", Color.{239, 246, 244, 255})})
-    bounds := Rectangle.{viewport.x, viewport.y + 56.0, viewport.width, viewport.height - 56.0}
+    Box(session, BoxProps.{.key = cast(u64)49010, .bounds = viewport,
+        .fill = StyleTokenColorOr("canvas", Color.{239, 246, 244, 255})})
+    width := viewport.width - 32.0
+    height := viewport.height - 32.0
+    if width > 560.0 { width = 560.0 }
+    if height > 720.0 { height = 720.0 }
+    modal := ModalFrame(session, ModalFrameProps.{.key = cast(u64)49000, .id = 49000,
+        .title = "Profile", .width = cast(s32)width, .height = cast(s32)height, .scale = 1.0,
+        .has_right_action = true, .right_label = "Back"})
+    if modal.dismissed || modal.right_clicked { unused EntityBack() }
+    if !modal.opened { return true }
     input := TextFieldInputFor(key, modifiers, TypedTextTake(session, entity_typed[:]))
-    if !EntityHostFrame(session, bounds, key, modifiers, input, entity_shovey) { return false }
-    Text(session, TextProps.{.key = cast(u64)49002, .text = "Profile", .font = 20,
-            .bounds = Rectangle.{viewport.x + 100.0, viewport.y + 12.0, viewport.width - 220.0, 36.0}})
-    if Button(session, ButtonProps.{.key = cast(u64)49001, .id = 49001, .label = "Back",
-            .bounds = Rectangle.{viewport.x + 8.0, viewport.y + 6.0, 76.0, 44.0}}) != 0 {
-        unused EntityBack()
-    }
+    ok := EntityHostFrame(session, modal.layout.content, key, modifiers, input, entity_shovey)
+    unused End(session)
+    if !ok { return false }
     return true
 }
 
