@@ -18,6 +18,18 @@ assert os.environ['YUE_DESKTOP_RECOVERY'] == '0'
 sys.path.insert(0, str(args.breeze / 'tests'))
 from ui_driver import UiDriver
 
+LEVEL_UPDATES = 'Download new levels when they come out?'
+
+def answer_cover_question(driver):
+    """Standalone Arcade and Shovey ask once on their covers whether games
+    download new levels; tests keep the levels they ship with. The question
+    shows in the covers' first frame."""
+    driver.wait(label='Play', role='button', timeout=60)
+    if driver.find(label=LEVEL_UPDATES, role='text'):
+        driver.press(label='Not now', role='button')
+        driver.wait_gone(label=LEVEL_UPDATES, role='text')
+
+
 root = Path(__file__).resolve().parents[1]
 output = root / 'build/shared-progress-ui-test'
 output.mkdir(parents=True, exist_ok=True)
@@ -42,6 +54,7 @@ with tempfile.TemporaryDirectory(prefix='shovey-account-progress-') as directory
                                      stdout=log, stderr=subprocess.STDOUT)
             driver.attach(child, output / (attempt + '.log'))
             try:
+                answer_cover_question(driver)
                 driver.press(label='Play', role='button')
                 end = time.monotonic() + 30
                 while True:

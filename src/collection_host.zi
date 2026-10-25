@@ -77,6 +77,10 @@ collection_item_codec: Codec.WidgetAppSharedItemCodec;
 collection_invitation_codec: Codec.WidgetAppInvitationCodec;
 collection_ready: bool;
 collection_leave_to_library: bool;
+// Whether games download new levels when they come out: asked once on the
+// covers and passed to the games as arcade.updates. -1 unread, 0 off, 1 on,
+// 2 not answered yet.
+collection_updates: s32 = -1;
 
 CollectionTouchFirst :: () -> bool {
     #if #defined(PLATFORM_DESKTOP) {
@@ -119,6 +123,7 @@ CollectionAllows :: (context: *void, node: *AppNode, name: string) -> bool {
     name == "AppInvitationHost" || name == "RefreshAppSharedHost" || name == "SendAppSharedHost" ||
     name == "SmoothFramesHost" || name == "AppLocaleHost" || name == "AppSoundHost" ||
     name == "tile_map.sampling" || name == "arcade.controls" || name == "arcade.sound" || name == "arcade.navigation" ||
+    name == "arcade.updates" ||
     name == PUBLICATIONS_READ_SERVICE || name == ENTITY_RECORDS_SERVICE || name == ENTITY_DEW_SERVICE ||
     name == "entity.profile"
 }
@@ -204,6 +209,16 @@ CollectionCall :: (context: *void, node: *AppNode, module: *u8, function: *u8,
             if value == "" || !AppFileWrite(*saved.files, "sound", value) { return 0 }
             SoundSetMuted(value == "muted")
             result.* = AppHostText(value)
+            return 1
+        }
+        if service == "arcade.updates" {
+            if request == "get" {
+                updates := CollectionUpdates()
+                result.* = AppHostText(ifx updates == 1 then "on" else ifx updates == 0 then "off" else "unset")
+                return 1
+            }
+            if (request != "set-on" && request != "set-off") || !CollectionUpdatesSet(request == "set-on") { return 0 }
+            result.* = AppHostText(request[4:])
             return 1
         }
         if service != "arcade.controls" { return 0 }
@@ -516,6 +531,62 @@ CollectionOpenGame :: (id: string) -> bool {
 collection_typed: [1024]u8;
 collection_pasted: [16384]u8;
 
+// The answer kept with the other game settings. Shovey Classic asked in its
+// first level before, and its answer counts until the covers ask.
+CollectionUpdates :: () -> s32 {
+    if collection_updates >= 0 { return collection_updates }
+    collection_updates = 2
+    ids: [2]string = .["arcade.shovey-player", "arcade.shovey"]
+    for id: ids {
+        saved := CollectionRecordsFor(id)
+        if saved == null { continue }
+        AppFileFree(saved.text)
+        saved.text = AppFileRead(*saved.files, "level-updates")
+        if saved.text == "on" || saved.text == "off" {
+            collection_updates = ifx saved.text == "on" then 1 else 0
+            break
+        }
+    }
+    return collection_updates
+}
+
+CollectionUpdatesSet :: (on: bool) -> bool {
+    saved := CollectionRecordsFor("arcade.shovey-player")
+    if saved == null || !AppFileWrite(*saved.files, "level-updates", ifx on then "on" else "off") { return false }
+    collection_updates = ifx on then 1 else 0
+    return true
+}
+
+// Asked once over the covers, before a game opens; nothing behind it takes
+// input until it is answered.
+CollectionUpdatesQuestion :: (session: Session, viewport: Rectangle) {
+    question := "Download new levels when they come out?"
+    Box(session, BoxProps.{.key = cast(u64)49300, .bounds = viewport, .fill = Color.{0, 0, 0, 160}})
+    unused Button(session, ButtonProps.{.key = cast(u64)49301, .id = 49301, .label = question,
+            .bounds = viewport, .invisible = true})
+    width := ifx viewport.width - 24.0 < 480.0 then viewport.width - 24.0 else 480.0
+    height: float32 = 200.0
+    x := viewport.x + (viewport.width - width) / 2.0
+    y := viewport.y + (viewport.height - height) / 2.0
+    Box(session, BoxProps.{.key = cast(u64)49302, .bounds = Rectangle.{x, y, width, height},
+            .fill = Color.{59, 64, 63, 255}, .border = Color.{93, 98, 97, 255}, .radius = 18.0})
+    Text(session, TextProps.{.key = cast(u64)49303, .text = question, .font = 20, .wrap = TextWrap.TextWrapAuto,
+            .bounds = Rectangle.{x + 16.0, y + 16.0, width - 32.0, 60.0}})
+    Text(session, TextProps.{.key = cast(u64)49304, .text = "You can change this anytime in a game's Help.", .font = 14,
+            .wrap = TextWrap.TextWrapAuto, .bounds = Rectangle.{x + 16.0, y + 80.0, width - 32.0, 44.0}})
+    button_width := (width - 48.0 - 12.0) / 2.0
+    if Button(session, ButtonProps.{.key = cast(u64)49305, .id = 49305, .label = "Not now",
+            .bounds = Rectangle.{x + 24.0, y + 136.0, button_width, 44.0},
+            .tone = ButtonTone.ButtonToneNeutral, .emphasis = ButtonEmphasis.ButtonEmphasisSoft}) != 0 {
+        unused CollectionUpdatesSet(false)
+    }
+    if Button(session, ButtonProps.{.key = cast(u64)49306, .id = 49306, .label = "Download",
+            .bounds = Rectangle.{x + 36.0 + button_width, y + 136.0, button_width, 44.0},
+            .tone = ButtonTone.ButtonToneAccent}) != 0 {
+        unused CollectionUpdatesSet(true)
+    }
+}
+
 CollectionFrame :: (session: Session, viewport: Rectangle, key: s32, modifiers: s32) -> bool {
     collection_toolbar_visible = true
     defer { CollectionToolbar(session, viewport) }
@@ -528,6 +599,9 @@ CollectionFrame :: (session: Session, viewport: Rectangle, key: s32, modifiers: 
     // bar keep Profile at the top right.
     covered := runtime.node.entry.cover.portrait[0] != 0
     collection_toolbar_visible = !covered
+    // The covers ask about new levels once; the question takes every key.
+    asking := runtime.node.collection && CollectionUpdates() == 2
+    if asking { key = 0 }
     top: s32 = ifx !covered && !runtime.node.collection && (entity_ready || nested) then 56 else 0
     now := cast(float64)MonotonicMilliseconds() / 1000.0
     runtime.app.session = session
@@ -564,6 +638,10 @@ CollectionFrame :: (session: Session, viewport: Rectangle, key: s32, modifiers: 
     if collection_leave_to_library {
         collection_leave_to_library = false
         unused AppHostBack(*collection_host)
+        return true
+    }
+    if asking {
+        CollectionUpdatesQuestion(session, viewport)
         return true
     }
     if nested && !covered {

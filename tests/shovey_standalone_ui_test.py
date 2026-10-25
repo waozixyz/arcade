@@ -15,6 +15,16 @@ import time
 
 LEVEL_UPDATES = 'Download new levels when they come out?'
 
+def answer_cover_question(driver):
+    """Standalone Arcade and Shovey ask once on their covers whether games
+    download new levels; tests keep the levels they ship with. The question
+    shows in the covers' first frame."""
+    driver.wait(label='Play', role='button', timeout=60)
+    if driver.find(label=LEVEL_UPDATES, role='text'):
+        driver.press(label='Not now', role='button')
+        driver.wait_gone(label=LEVEL_UPDATES, role='text')
+
+
 
 def answer_level_updates(driver, timeout=20):
     """An installed Shovey first asks once whether to download new levels;
@@ -199,6 +209,10 @@ def main():
         classic = profile / 'entity/records/local/game-progress/fd65a3d7ac3d5ceb2d4d96cc5224a740.json'
         with application(profile, 'play') as child:
             assert not driver.find(label='Arcade', role='text')
+            # The covers ask once whether games download new levels.
+            driver.wait(label=LEVEL_UPDATES, role='text')
+            answer_cover_question(driver)
+            assert (profile / 'games/arcade.shovey-player/records/level-updates').read_text() == 'off'
             driver.press(label='Play', role='button')
             wait_level_one(driver, classic_levels)
             # The first level asks how to move: swipe and tap, or the pad.
@@ -237,6 +251,7 @@ def main():
             assert not driver.find(label='Continue', role='button', visible=True)
             driver.press(label='Back', role='button')
             driver.wait(label='Play', role='button')
+            answer_cover_question(driver)
             driver.press(label='Play', role='button')
             wait_level_one(driver, classic_levels)
             move_until_saved(classic)
@@ -304,6 +319,7 @@ def main():
                 board = driver.find(key=200000, visible=True)[0]
                 aspect = 5 / 3 if width > height else 3 / 5
                 assert abs(board['width'] / board['height'] - aspect) < .01, ('editor paint orientation', width, height, board)
+            answer_cover_question(driver)
             driver.press(label='Play', role='button')
             driver.wait(label='Testing', role='text')
             for width, height in ((390, 844), (844, 390), (480, 820)):
@@ -325,6 +341,7 @@ def main():
             driver.key('escape')
             driver.wait(label='Open', role='button')
             driver.press(label='Previous', role='button')
+            answer_cover_question(driver)
             driver.press(label='Play', role='button')
             wait_level_one(driver, classic_levels)
             assert campaign_progress(classic.read_bytes()) == classic_saved

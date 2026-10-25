@@ -16,6 +16,18 @@ args = parser.parse_args()
 sys.path.insert(0, str(args.breeze.resolve() / 'tests'))
 import android_library_device as transport
 
+LEVEL_UPDATES = 'Download new levels when they come out?'
+
+def answer_cover_question(driver):
+    """Standalone Arcade and Shovey ask once on their covers whether games
+    download new levels; tests keep the levels they ship with. The question
+    shows in the covers' first frame."""
+    driver.wait(label='Play', role='button', timeout=60)
+    if driver.find(label=LEVEL_UPDATES, role='text'):
+        driver.press(label='Not now', role='button')
+        driver.wait_gone(label=LEVEL_UPDATES, role='text')
+
+
 root = Path(__file__).resolve().parents[1]
 transport.OUTPUT = root / 'backup/shared-progress-moto'
 transport.PACKAGE = 'xyz.waozi.shovey.verification'
@@ -82,6 +94,8 @@ try:
     for attempt in ('first', 'restart'):
         phone.start()
         driver = transport.AndroidDriver(phone)
+        driver.wait(label='Play', role='button', timeout=60)
+        answer_cover_question(driver)
         driver.press(label='Play', role='button', timeout=60)
         deadline = time.monotonic() + 60
         while not driver.find(contains='Level 40 / ', role='text'):

@@ -12,6 +12,16 @@ import time
 
 LEVEL_UPDATES = 'Download new levels when they come out?'
 
+def answer_cover_question(driver):
+    """Standalone Arcade and Shovey ask once on their covers whether games
+    download new levels; tests keep the levels they ship with. The question
+    shows in the covers' first frame."""
+    driver.wait(label='Play', role='button', timeout=60)
+    if driver.find(label=LEVEL_UPDATES, role='text'):
+        driver.press(label='Not now', role='button')
+        driver.wait_gone(label=LEVEL_UPDATES, role='text')
+
+
 
 def answer_level_updates(driver, timeout=20):
     """An installed Shovey first asks once whether to download new levels;
@@ -60,6 +70,7 @@ def main():
                                           'LANG': 'en_US.UTF-8'}, stdout=log, stderr=subprocess.STDOUT)
                 driver.attach(child, log_path)
                 try:
+                    answer_cover_question(driver)
                     driver.press(label='Play', role='button')
                     # The first level asks how to move before its bar takes input.
                     answer_level_updates(driver)
