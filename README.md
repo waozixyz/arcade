@@ -81,6 +81,16 @@ bundle, so Inbe supplies its existing profile and account. Inbe retains its
 existing game sync and friend games. Arcade and Inbe keep separate
 saved games; this version does not migrate or synchronize games between them.
 
+## Website
+
+`site/` is Arcade's website at https://arcade.waozi.xyz: the game covers on
+Arcade's dark library, each opening that game's browser edition, in English,
+German and Spanish. Every push to master publishes it through
+`.github/workflows/site.yml`. `scripts/cloudflare-site.py` creates the Pages
+project when it is missing and connects the domain; the workflow uses the
+repository's `CLOUDFLARE_API_TOKEN` and `CLOUDFLARE_ACCOUNT_ID` secrets.
+Preview it locally with `python3 -m http.server -d site`.
+
 ## Build and run
 
 Dependencies are Git repositories pinned in `ziran.lock`. The toolchain
