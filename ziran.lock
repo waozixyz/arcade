@@ -27,14 +27,6 @@
       "url": "https://github.com/ziranlang/qrcode.git"
     },
     {
-      "commit": "3bbd805f73823151f36d999566d93230e99a2e68",
-      "dependencies": {"daochi_client": "p9972fcdd2d5ba999", "kryon": "p39132f61dd28d78f", "monocypher": "p809b4d31a48625a3", "qrcode": "p0dfa70137405b096"},
-      "id": "p1672c45c54533fed",
-      "name": "Entity",
-      "ref": "master",
-      "url": "https://github.com/waozixyz/entity.git"
-    },
-    {
       "commit": "1cb9df183089a77c8a16448a556186f30b261a98",
       "dependencies": {"kryon": "p39132f61dd28d78f"},
       "id": "p1b13dda539ed2a39",
@@ -128,6 +120,14 @@
       "url": "https://github.com/ziranlang/daochi-client.git"
     },
     {
+      "commit": "ead42286d2fe16cd46768e4d3d6a5fad26d1c831",
+      "dependencies": {"daochi_client": "p9972fcdd2d5ba999", "kryon": "p39132f61dd28d78f", "monocypher": "p809b4d31a48625a3", "qrcode": "p0dfa70137405b096"},
+      "id": "p9ea7a59dcc9f75a2",
+      "name": "Entity",
+      "ref": "master",
+      "url": "https://github.com/waozixyz/entity.git"
+    },
+    {
       "commit": "357a71d1ee2c7c9526c2af18793ea8628c505034",
       "dependencies": {"daochi_client": "p9972fcdd2d5ba999", "kryon": "p39132f61dd28d78f", "monocypher": "p809b4d31a48625a3", "qrcode": "p0dfa70137405b096"},
       "id": "pa4da0de6c3c44e61",
@@ -153,7 +153,7 @@
     },
     {
       "commit": "bfffe6598e7cce8d7e76e62576f95c30d148c5ac",
-      "dependencies": {"apps": "p00b93f1ddcd2802f", "entity": "p1672c45c54533fed", "kryon": "p39132f61dd28d78f", "mingcute": "pe1027b9d16704793"},
+      "dependencies": {"apps": "p00b93f1ddcd2802f", "entity": "p9ea7a59dcc9f75a2", "kryon": "p39132f61dd28d78f", "mingcute": "pe1027b9d16704793"},
       "id": "pd33638e873fbf1e9",
       "name": "Shovey",
       "ref": "master",
@@ -177,7 +177,7 @@
     }
   ],
   "root": {
-    "dependencies": {"apps": "p00b93f1ddcd2802f", "entity": "p1672c45c54533fed", "inbe": "p48228a6b7e2920d3", "kryon": "p39132f61dd28d78f", "mingcute": "pe1027b9d16704793", "shovey": "pd33638e873fbf1e9", "wurm": "pf6815253050d1b51"},
+    "dependencies": {"apps": "p00b93f1ddcd2802f", "entity": "p9ea7a59dcc9f75a2", "inbe": "p48228a6b7e2920d3", "kryon": "p39132f61dd28d78f", "mingcute": "pe1027b9d16704793", "shovey": "pd33638e873fbf1e9", "wurm": "pf6815253050d1b51"},
     "name": "Arcade"
   },
   "toolchain": {

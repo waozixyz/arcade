@@ -43,6 +43,9 @@ EntityShoveyTokens :: () {
 
 EntityOpen :: (bytes: string, data: string, shovey: bool = false) -> bool {
     entity_shovey = shovey
+    #if #defined(GOOGLE_PLAY) {
+        EntityHostAllowFunding(false)
+    }
     if shovey { EntityShoveyTokens() }
     root := Join(data, "entity")
     defer { EntityFree(root) }

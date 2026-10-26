@@ -49,6 +49,7 @@ def main():
                LIBOQS_DIR=str(package('liboqs')), MONOCYPHER_DIR=str(package('monocypher')))
     command = ['sh', str(ROOT / 'droid/gradlew'), '-p', str(ROOT / 'droid'), '--no-daemon', '--max-workers=2',
                '-Papp.product=shovey', '-Papp.abis=' + args.abis,
+               '-Papp.googlePlay=' + ('true' if args.bundle else 'false'),
                '-Pkryon.dir=' + str(package('kryon')), '-Pziran.dir=' + str(package('ziran')),
                '-Praylib.dir=' + str(package('raylib') / 'src'),
                '-Papp.versionName=' + metadata['version'], '-Papp.versionCode=' + str(release['sequence']),

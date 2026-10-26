@@ -47,7 +47,8 @@ android {
                     '-DZIRAN_DIR=' + ziranDir,
                     '-DRAYLIB_DIR=' + raylibDir,
                     '-DAPP_CODEGEN=' + appCodegen,
-                    '-DSHOVEY_STANDALONE=' + (standaloneShovey ? 'ON' : 'OFF')
+                    '-DSHOVEY_STANDALONE=' + (standaloneShovey ? 'ON' : 'OFF'),
+                    '-DGOOGLE_PLAY=' + (project.findProperty('app.googlePlay') == 'true' ? 'ON' : 'OFF')
             }
         }
     }
