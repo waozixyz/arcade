@@ -230,6 +230,9 @@ def main():
             resize_owned_window(child, 480, 820)
             driver.press(label='Swipe and tap')
             driver.wait_gone(label='How do you want to move?', role='text')
+            driver.wait(label='Got it', role='button')
+            driver.press(label='Got it', role='button')
+            driver.wait_gone(label='Got it', role='button')
             assert (profile / 'games/arcade.shovey-player/records/controls').read_text() == 'off'
             assert not driver.find(label='Continue', role='button'), 'Classic must open straight on a level'
             assert driver.find(label='Shovey', role='image', visible=True), 'Shovey must be drawn as a picture'

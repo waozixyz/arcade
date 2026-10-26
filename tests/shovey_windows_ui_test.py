@@ -117,6 +117,9 @@ def main():
         answer_level_updates(driver)
         driver.press(label='Swipe and tap')
         driver.wait_gone(label='How do you want to move?', role='text')
+        driver.wait(label='Got it', role='button')
+        driver.press(label='Got it', role='button')
+        driver.wait_gone(label='Got it', role='button')
         # Entering play may save the untouched campaign; a fresh profile may
         # have no record until the first move.
         deadline = time.monotonic() + 10
