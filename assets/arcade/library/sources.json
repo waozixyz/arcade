@@ -1,0 +1,35 @@
+{
+  "shovey-editor-landscape": {
+    "source_sha256": "7b1eae4209ede14807806a4cbce1e2bf7a14d342e75c89042958a524cf60d67e"
+  },
+  "shovey-editor-logo": {
+    "source_sha256": "5417341ed432c49d4ce1df45e5e6bf7e07e11a81face45cb93d7cc9fa976f7a5"
+  },
+  "shovey-editor-portrait": {
+    "source_sha256": "bf0bbeb15249f3d73c1b410e9737f7fd207310dcb5f28b7c3ce45401b77c8f9e"
+  },
+  "shovey-editor-preview": {
+    "source_sha256": "1846b823110fffe82a3dbb319960ce768eefc16699d507d48b8608151eaff430"
+  },
+  "shovey-landscape": {
+    "source_sha256": "40c01eb8300e4c5db52b2d75373e17cdaf7f68140c33c0a225613fc174660747"
+  },
+  "shovey-logo": {
+    "source_sha256": "e47781aa3328f68077589f95d813e9c2e6fff10ebd62a9d003773bb2c2f7a092"
+  },
+  "shovey-portrait": {
+    "source_sha256": "ddcbf989eab5971157d8cdc73494ed03660bb4c7a7679543248f45be260777e3"
+  },
+  "shovey-preview": {
+    "source_sha256": "b1f2e5662cb96f2f5062cb0e5a8cd8ede153173ebc32ad17e26b404f3baf5924"
+  },
+  "wurm-landscape": {
+    "source_sha256": "472773b7c106325e12777a81a29209496e22e0853782ca76955b6587824b1b30"
+  },
+  "wurm-portrait": {
+    "source_sha256": "e8962c969f554567d598eb0b54db5836f7f1ed7462619463040c6cc2887a5a47"
+  },
+  "wurm-preview": {
+    "source_sha256": "472773b7c106325e12777a81a29209496e22e0853782ca76955b6587824b1b30"
+  }
+}

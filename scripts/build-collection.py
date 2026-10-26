@@ -21,6 +21,18 @@ def digest(path):
     return hashlib.sha256(path.read_bytes()).hexdigest()
 
 
+def library_art(root, name, key, source):
+    """Arcade's committed small copy of a game's art (scripts/library-art.py).
+    The library shows art, the games download separately: never pack the
+    packages' full-size images, and never pack a copy of outdated art."""
+    library = Path(root) / "assets/arcade/library"
+    sources = json.loads((library / "sources.json").read_text())
+    copy = f"{name}-{key}"
+    if sources.get(copy, {}).get("source_sha256") != hashlib.sha256(source).hexdigest():
+        raise ValueError(f"{copy} art changed; run scripts/library-art.py")
+    return (library / f"{copy}.png").read_bytes()
+
+
 def stage(root, controller, expected_controller_digest, output):
     """Validate before replacing a previously staged collection. Returns the
     catalog and each game package with the IDs of its packed apps."""
@@ -64,6 +76,7 @@ def stage(root, controller, expected_controller_digest, output):
             bundle_bytes, preview_bytes = bundle.read_bytes(), preview.read_bytes()
             if not bundle_bytes or not preview_bytes:
                 raise ValueError("Game bundles and previews must be built first")
+            preview_bytes = library_art(root, name, "preview", preview_bytes)
             total += len(bundle_bytes) + len(preview_bytes)
             child = dict(
                 id=identifier, title=game["title"],
@@ -90,7 +103,7 @@ def stage(root, controller, expected_controller_digest, output):
                     relative = Path(cover[key])
                     if relative.is_absolute() or ".." in relative.parts or relative.suffix != ".png":
                         raise ValueError("Invalid cover asset path")
-                    contents = (app["source"] / relative).read_bytes()
+                    contents = library_art(root, name, key, (app["source"] / relative).read_bytes())
                     destination = Path("arcade/covers") / f"{name}-{key}.png"
                     packed_cover[key] = "assets/" + destination.as_posix()
                     copies.append((contents, destination))

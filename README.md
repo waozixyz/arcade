@@ -11,7 +11,7 @@ existing saved games remain available for a later return.
 Each edition has a separate save and earned unlocks. Unlocked puzzles show
 their whole board; locked puzzles keep their lock until earned.
 
-Arcade carries only its catalog and covers first. Each game
+Arcade carries only its catalog and covers first, as small copies of each game's art in `assets/arcade/library/` (`python3 scripts/library-art.py` refreshes them when a game's art changes; the build stops until it does). Each game
 downloads when opened, with its existing identity and saved progress. This
 catalog requires Inner Breeze host API 34. Downloaded games work offline;
 standalone Shovey keeps its complete offline collection. Apfelwurm comes from

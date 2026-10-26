@@ -38,6 +38,7 @@ class CollectionTests(unittest.TestCase):
         shutil.copytree(ROOT / "build/games", self.root / "build/games")
         (self.root / "assets/arcade").mkdir(parents=True)
         shutil.copyfile(ROOT / "assets/arcade/sidebar.shape", self.root / "assets/arcade/sidebar.shape")
+        shutil.copytree(ROOT / "assets/arcade/library", self.root / "assets/arcade/library")
         # Only a native VM identity gate can trust a controller. This fixture
         # tests packing and its exact-content requirement, not that handshake.
         self.controller = self.root / "controller.zx"
@@ -70,9 +71,22 @@ class CollectionTests(unittest.TestCase):
             self.assertEqual(builder.digest(packed), child["sha256"])
             self.assertEqual(child["version"], ledger[name]["version"])
             self.assertEqual(child["protocol"], "node/2")
+            # The library packs its own small copy of each game's art.
             self.assertEqual((self.output / child["preview"]).read_bytes(),
-                             (ROOT / f"build/games/{name}-preview.png").read_bytes())
+                             (ROOT / f"assets/arcade/library/{name}-preview.png").read_bytes())
+            for key, path in child["cover"].items():
+                if key in ("portrait", "landscape", "logo"):
+                    self.assertEqual((self.output / path).read_bytes(),
+                                     (ROOT / f"assets/arcade/library/{name}-{key}.png").read_bytes())
         self.assertEqual((self.output / catalog["harness"]).read_bytes(), self.controller.read_bytes())
+
+    def test_changed_game_art_needs_fresh_library_copies(self):
+        sources = self.root / "assets/arcade/library/sources.json"
+        value = json.loads(sources.read_text())
+        value["wurm-portrait"]["source_sha256"] = "0" * 64
+        sources.write_text(json.dumps(value))
+        with self.assertRaisesRegex(ValueError, "wurm-portrait art changed"):
+            self.stage()
 
     def test_editor_download_reuses_verified_shovey_assets(self):
         catalog = self.stage()
