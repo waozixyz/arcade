@@ -390,7 +390,8 @@ CollectionOpen :: (bundle: string, digest: string, harness_digest: string,
         .widgets = CollectionWidgets, .save = CollectionSave, .state = CollectionState,
         .effect = CollectionEffect,
         .bundle = CollectionBundle, .download = CollectionDownload, .fetch = CollectionFetch,
-        .presentation = AppPresentation.{.cover_grid = true}}
+        // Covers show only the art; the download dialog names the size.
+        .presentation = AppPresentation.{.cover_grid = true, .hide_sizes = true}}
     collection_ready = AppHostStart(*collection_host, bundle, "arcade.local", "inbe.arcade",
         "arcade", digest, "local", platform, harness_digest, locale)
     if !collection_ready { Report("Arcade: the shared Apps host refused the collection") }
