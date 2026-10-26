@@ -15,6 +15,9 @@ sys.path.insert(0, str(ROOT / "scripts"))
 spec = importlib.util.spec_from_file_location("build_collection", ROOT / "scripts/build-collection.py")
 builder = importlib.util.module_from_spec(spec)
 spec.loader.exec_module(builder)
+art_spec = importlib.util.spec_from_file_location("library_art", ROOT / "scripts/library-art.py")
+artist = importlib.util.module_from_spec(art_spec)
+art_spec.loader.exec_module(artist)
 
 
 class CollectionTests(unittest.TestCase):
@@ -87,6 +90,22 @@ class CollectionTests(unittest.TestCase):
         sources.write_text(json.dumps(value))
         with self.assertRaisesRegex(ValueError, "wurm-portrait art changed"):
             self.stage()
+
+    def test_title_screens_keep_original_resolution_colours_and_transparency(self):
+        catalog, packages = builder.stage(self.root, self.controller, self.controller_digest, self.output)
+        children = {child['id']: child for child in catalog['children']}
+        for package in packages:
+            for app in package['apps']:
+                if not app['enabled'] or not app['cover']:
+                    continue
+                child = children[app['descriptor']['id']]
+                for key in ('portrait', 'landscape', 'logo'):
+                    if key not in app['cover']:
+                        continue
+                    original = (app['source'] / app['cover'][key]).read_bytes()
+                    with self.subTest(app=child['id'], image=key):
+                        self.assertEqual(artist.small_copy(original, key), original)
+                        self.assertEqual((self.output / child['cover'][key]).read_bytes(), original)
 
     def test_editor_download_reuses_verified_shovey_assets(self):
         catalog = self.stage()

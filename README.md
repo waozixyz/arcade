@@ -11,7 +11,7 @@ existing saved games remain available for a later return.
 Each edition has a separate save and earned unlocks. Unlocked puzzles show
 their whole board; locked puzzles keep their lock until earned.
 
-The published Arcade carries only its catalog, well under one megabyte. Its host supplies the shared Apps controller (Inner Breeze its own, standalone Arcade the `apps.zx` installed beside it), and the covers and previews download once as one separate art bundle: small copies of each game's art in `assets/arcade/library/` (`python3 scripts/library-art.py` refreshes them when a game's art changes; the build stops until it does). Inner Breeze needs host interface 35 for it. Each game
+The published Arcade carries only its catalog, well under one megabyte. Its host supplies the shared Apps controller (Inner Breeze its own, standalone Arcade the `apps.zx` installed beside it), and the covers and previews download once as one separate art bundle. Title screens and logos keep their original resolution and full colours; only library previews use small copies. The art lives in `assets/arcade/library/` (`python3 scripts/library-art.py` refreshes it when a game's art changes; the build stops until it does). Inner Breeze needs host interface 35 for it. Each game
 downloads when opened, with its existing identity and saved progress. This
 catalog requires Inner Breeze host API 34. Downloaded games work offline;
 standalone Shovey keeps its complete offline collection. Apfelwurm comes from

@@ -22,9 +22,8 @@ def digest(path):
 
 
 def library_art(root, name, key, source):
-    """Arcade's committed small copy of a game's art (scripts/library-art.py).
-    The library shows art, the games download separately: never pack the
-    packages' full-size images, and never pack a copy of outdated art."""
+    """Arcade's committed library art (scripts/library-art.py): original title
+    screens and logos, small previews. Never pack a copy of outdated art."""
     library = Path(root) / "assets/arcade/library"
     sources = json.loads((library / "sources.json").read_text())
     copy = f"{name}-{key}"
