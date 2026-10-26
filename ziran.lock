@@ -86,9 +86,9 @@
       "url": "https://github.com/open-quantum-safe/liboqs.git"
     },
     {
-      "commit": "481ec2a6cdee05680bd809d3436134ef670db6ce",
+      "commit": "d5c325f0c721544807fd03be2bf947036a6a25b2",
       "dependencies": {"apps": "p00b93f1ddcd2802f", "kryon": "pa7d5e0ee3b284d04", "mingcute": "pe1027b9d16704793"},
-      "id": "p4b52e2fb4081447c",
+      "id": "p558b28f576b472dc",
       "name": "Apfelwurm",
       "ref": "master",
       "url": "https://github.com/waozixyz/wurm.git"
@@ -177,7 +177,7 @@
     }
   ],
   "root": {
-    "dependencies": {"apps": "p00b93f1ddcd2802f", "entity": "p2b0009b9bbaa09de", "inbe": "p48228a6b7e2920d3", "kryon": "pa7d5e0ee3b284d04", "mingcute": "pe1027b9d16704793", "shovey": "p84d02bbf02a6c436", "wurm": "p4b52e2fb4081447c"},
+    "dependencies": {"apps": "p00b93f1ddcd2802f", "entity": "p2b0009b9bbaa09de", "inbe": "p48228a6b7e2920d3", "kryon": "pa7d5e0ee3b284d04", "mingcute": "pe1027b9d16704793", "shovey": "p84d02bbf02a6c436", "wurm": "p558b28f576b472dc"},
     "name": "Arcade"
   },
   "toolchain": {
