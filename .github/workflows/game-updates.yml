@@ -29,6 +29,8 @@ jobs:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
         with:
           path: waozixyz/arcade
+      - name: Check release following
+        run: python3 tests/game_updates_test.py
       - name: Pin the latest game releases
         id: pin
         env:

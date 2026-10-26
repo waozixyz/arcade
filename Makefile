@@ -54,6 +54,7 @@ run: all
 	./build/arcade
 
 test: all
+	python3 tests/game_updates_test.py
 	$(ZIRAN) fmt --check src/*.zi apps/chess/*.zi tests/chess_engine_behavior.zi tests/chess_app_behavior.zi
 	python3 tests/chess_locale_test.py
 	INBE_SOURCE='$(INBE_SOURCE)' python3 tests/catalog_test.py

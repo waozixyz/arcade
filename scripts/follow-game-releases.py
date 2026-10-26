@@ -68,7 +68,6 @@ def pin():
     if write_lock(lock) != lock_path.read_text():
         raise SystemExit('ziran.lock is not in the layout ziran lock writes')
     names = json.loads((ROOT / 'games.json').read_text())['packages']
-    ledger = json.loads((ROOT / 'apps/versions.json').read_text())['node_apps']
     updates = []
     for name in names:
         old_id = lock['root']['dependencies'][name]
@@ -78,9 +77,8 @@ def pin():
         commit = gh('api', f'repos/{repo}/commits/{tag}', '--jq', '.sha')
         if commit == entry['commit']:
             continue
-        # A later tag of the version Arcade already ships is not a new release.
-        if name in ledger and ledger[name]['version'] == tag.removeprefix('v'):
-            continue
+        # Release metadata can be recorded before the game is published.
+        # The pinned source must still advance to that release's commit.
         # Never move back: the release must contain the pinned commit.
         status = gh('api', f'repos/{repo}/compare/{entry["commit"]}...{commit}', '--jq', '.status')
         if status != 'ahead':

@@ -152,9 +152,9 @@
       "url": "https://github.com/ziranlang/crypto.git"
     },
     {
-      "commit": "bfffe6598e7cce8d7e76e62576f95c30d148c5ac",
+      "commit": "b1ca51a849b2b6396ab2847ce9e907a4ffaa7889",
       "dependencies": {"apps": "p00b93f1ddcd2802f", "entity": "p9ea7a59dcc9f75a2", "kryon": "p39132f61dd28d78f", "mingcute": "pe1027b9d16704793"},
-      "id": "pd33638e873fbf1e9",
+      "id": "pd4aa77ba375e70fe",
       "name": "Shovey",
       "ref": "master",
       "url": "https://github.com/waozixyz/shovey.git"
@@ -168,16 +168,16 @@
       "url": "https://github.com/kryonlabs/mingcute.git"
     },
     {
-      "commit": "280d44a28219120f93b2d46a0186926fdb2963d4",
+      "commit": "76e95cd951ddc82d9a507f5e43f6b72fc597bc96",
       "dependencies": {"apps": "p00b93f1ddcd2802f", "kryon": "p39132f61dd28d78f", "mingcute": "pe1027b9d16704793"},
-      "id": "pf6815253050d1b51",
+      "id": "pceb767df382e3cc7",
       "name": "Apfelwurm",
       "ref": "master",
       "url": "https://github.com/waozixyz/wurm.git"
     }
   ],
   "root": {
-    "dependencies": {"apps": "p00b93f1ddcd2802f", "entity": "p9ea7a59dcc9f75a2", "inbe": "p48228a6b7e2920d3", "kryon": "p39132f61dd28d78f", "mingcute": "pe1027b9d16704793", "shovey": "pd33638e873fbf1e9", "wurm": "pf6815253050d1b51"},
+    "dependencies": {"apps": "p00b93f1ddcd2802f", "entity": "p9ea7a59dcc9f75a2", "inbe": "p48228a6b7e2920d3", "kryon": "p39132f61dd28d78f", "mingcute": "pe1027b9d16704793", "shovey": "pd4aa77ba375e70fe", "wurm": "pceb767df382e3cc7"},
     "name": "Arcade"
   },
   "toolchain": {
