@@ -44,6 +44,9 @@ Codec :: #import "apps/node_codec";
 #import "entity/entity_records"
 #import "entity/entity_dew"
 #import "kryon/widget_palette"
+#import "kryon/image_raster"
+#import "kryon/loading_indicator"
+#import, file "collection_loading.zi";
 #import "shovey/shovey_theme"
 ProfileIcon :: #import "mingcute/mingcute_regular_user_4";
 DewIcon :: #import "mingcute/mingcute_filled_drop";
@@ -79,6 +82,8 @@ collection_shared_codec: Codec.WidgetAppSharedCodec;
 collection_item_codec: Codec.WidgetAppSharedItemCodec;
 collection_invitation_codec: Codec.WidgetAppInvitationCodec;
 collection_ready: bool;
+collection_loading: CollectionLoading;
+collection_pictures_missing: bool;
 collection_leave_to_library: bool;
 // Whether games download new levels when they come out: asked once on the
 // covers and passed to the games as arcade.updates. -1 unread, 0 off, 1 on,
@@ -284,7 +289,7 @@ CollectionAssetPath :: (path: string) -> string {
     if path == "" { return "" }
     if collection_widget_node == null { return "" }
     asset := AppHostAsset(collection_widget_node, path)
-    if !asset.found { return "" }
+    if !asset.found { collection_pictures_missing = true; return "" }
     relative := Join(TextUntilNul(collection_widget_node.entry.sha256[:]), path)
     defer { AppFileFree(relative) }
     cached := collection_images
@@ -502,6 +507,7 @@ CollectionClose :: () -> bool {
     if !EntityClose() { return false }
     if collection_ready && !AppHostStop(*collection_host) { return false }
     collection_ready = false
+    collection_loading = .{}
     CollectionDownloadsClose()
     CollectionCollect()
     VecFree(collection_frame_paths)
@@ -643,6 +649,10 @@ CollectionFrame :: (session: Session, viewport: Rectangle, key: s32, modifiers: 
     if entity_visible { return EntityFrame(session, viewport, key, modifiers) }
     runtime := AppHostActiveRuntime(*collection_host)
     if runtime == null { Report("Arcade: no app is running\n"); return false }
+    opening := !runtime.node.collection && (!collection_loading.shown ||
+        collection_loading.slot != collection_host.tree.active.slot ||
+        collection_loading.generation != collection_host.tree.active.generation)
+    if opening { key = 0 }
     nested := runtime.node.parent.generation != 0 && !runtime.node.collection
     // An app opened from its cover fills the screen with its own navigation.
     // Other apps get a bar with Back and their title; the library and that
@@ -679,6 +689,7 @@ CollectionFrame :: (session: Session, viewport: Rectangle, key: s32, modifiers: 
             .scale = 1.0, .font = 16, .now = now}
     }
     WidgetHostBegin(session, CollectionAssetAllowed, CollectionAssetPath)
+    collection_pictures_missing = false
     drawn := AppHostRun(*collection_host, APP_FRAME)
     WidgetHostEnd()
     if !drawn {
@@ -689,6 +700,27 @@ CollectionFrame :: (session: Session, viewport: Rectangle, key: s32, modifiers: 
         collection_leave_to_library = false
         unused AppHostBack(*collection_host)
         return true
+    }
+    if opening {
+        pictures_ready := !collection_pictures_missing
+        // Query every path, including those first requested by this frame's
+        // TileMap. Android decodes them asynchronously on its render thread.
+        for path: collection_frame_paths {
+            if AssetWidth(path) < 0 { pictures_ready = false }
+        }
+        if CollectionNeedsCover(*collection_loading, collection_host.tree.active.slot,
+            collection_host.tree.active.generation, pictures_ready) {
+            collection_toolbar_visible = false
+            Box(session, BoxProps.{.key = cast(u64)49400, .bounds = viewport,
+                    .fill = ColorFromPacked(ifx entity_shovey then ShoveyPalette().background else AppCoversPalette().background)})
+            unused Button(session, ButtonProps.{.key = cast(u64)49401, .id = 49401,
+                    .bounds = viewport, .invisible = true})
+            LoadingIndicator(session, LoadingIndicatorProps.{.key = cast(u64)49402,
+                    .bounds = viewport, .now = now, .scale = 1.5})
+            return true
+        }
+    } else if runtime.node.collection {
+        collection_loading = .{}
     }
     if asking {
         unused WidgetPaletteUse(session, ifx entity_shovey then ShoveyPalette() else AppCoversPalette())

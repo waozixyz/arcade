@@ -63,6 +63,7 @@ test: all
 	sh tests/chess_engine_zi_test.sh '$(ZIRAN)'
 	sh tests/chess_app_test.sh '$(ZIRAN)'
 	python3 tests/sound_test.py
+	sh tests/collection_loading_test.sh
 
 chess-engine-test:
 	sh tests/chess_engine_zi_test.sh '$(ZIRAN)'

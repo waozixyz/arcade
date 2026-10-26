@@ -19,6 +19,9 @@ ARCADE_BACK_KEY :: 4
 arcade_state: s32;
 
 ArcadeStart :: () -> bool {
+    // Later animation pictures load asynchronously too. Keep the last
+    // complete frame visible while a new sprite is being decoded.
+    RaylibCompletePictureFrames(true)
     // Android before 10 cannot name its system font; the APK carries the
     // same font as the Windows build, so text never falls back to raylib's
     // bitmap font.

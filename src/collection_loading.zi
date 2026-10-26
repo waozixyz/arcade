@@ -1,0 +1,21 @@
+// A newly opened game stays covered until two complete picture frames have
+// composed. Images can be requested after the first apparently ready frame.
+CollectionLoading :: struct {
+    generation: s64
+    slot: s64
+    ready_frame: bool
+    shown: bool
+}
+
+CollectionNeedsCover :: (state: *CollectionLoading, slot: s64, generation: s64,
+    pictures_ready: bool) -> bool {
+    if state.slot != slot || state.generation != generation {
+        state.* = CollectionLoading.{.slot = slot, .generation = generation}
+        return true
+    }
+    if state.shown { return false }
+    if !pictures_ready { state.ready_frame = false; return true }
+    if !state.ready_frame { state.ready_frame = true; return true }
+    state.shown = true
+    return false
+}

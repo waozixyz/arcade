@@ -1,5 +1,10 @@
 # Arcade changelog
 
+## 0.7.80
+
+- Keep games covered until their first board is ready and keep complete pictures visible while animation sprites load.
+- Shovey’s secret chest reopens for unclaimed Dew and shows an empty chest after a confirmed claim.
+
 ## 0.7.79
 
 - On phones the library shows small covers, two or three in a row.

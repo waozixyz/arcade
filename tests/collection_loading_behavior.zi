@@ -1,0 +1,21 @@
+#import, file "../src/collection_loading.zi";
+
+#program_export
+Check :: () -> s32 {
+    state: CollectionLoading
+    if !CollectionNeedsCover(*state, 1, 1, true) { return 1 }
+    if !CollectionNeedsCover(*state, 1, 1, true) { return 2 }
+    // A later request invalidates the apparently ready frame.
+    if !CollectionNeedsCover(*state, 1, 1, false) { return 3 }
+    if !CollectionNeedsCover(*state, 1, 1, false) { return 4 }
+    if !CollectionNeedsCover(*state, 1, 1, true) { return 5 }
+    if CollectionNeedsCover(*state, 1, 1, true) { return 6 }
+    // Gameplay never returns to its opening cover for an animation sprite.
+    if CollectionNeedsCover(*state, 1, 1, false) { return 7 }
+    // A new game or a reopened slot gets its own loading stage.
+    if !CollectionNeedsCover(*state, 2, 1, true) { return 8 }
+    if !CollectionNeedsCover(*state, 2, 1, true) { return 9 }
+    if CollectionNeedsCover(*state, 2, 1, true) { return 10 }
+    if !CollectionNeedsCover(*state, 2, 2, true) { return 11 }
+    return 42
+}
