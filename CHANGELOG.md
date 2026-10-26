@@ -1,5 +1,9 @@
 # Arcade changelog
 
+## 0.7.84
+
+- Complete automatic reward recovery for older Shovey saves.
+
 ## 0.7.83
 
 - Preserve earned Shovey reward eligibility when upgrading older synced saves.

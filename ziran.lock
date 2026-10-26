@@ -27,9 +27,9 @@
       "url": "https://github.com/ziranlang/qrcode.git"
     },
     {
-      "commit": "e2a22c968e2b565b5a0d8cdbc0e52868753f4427",
+      "commit": "3bbd805f73823151f36d999566d93230e99a2e68",
       "dependencies": {"daochi_client": "p9972fcdd2d5ba999", "kryon": "p39132f61dd28d78f", "monocypher": "p809b4d31a48625a3", "qrcode": "p0dfa70137405b096"},
-      "id": "p17dc5eac2afef9e7",
+      "id": "p1672c45c54533fed",
       "name": "Entity",
       "ref": "master",
       "url": "https://github.com/waozixyz/entity.git"
@@ -153,7 +153,7 @@
     },
     {
       "commit": "bfffe6598e7cce8d7e76e62576f95c30d148c5ac",
-      "dependencies": {"apps": "p00b93f1ddcd2802f", "entity": "p17dc5eac2afef9e7", "kryon": "p39132f61dd28d78f", "mingcute": "pe1027b9d16704793"},
+      "dependencies": {"apps": "p00b93f1ddcd2802f", "entity": "p1672c45c54533fed", "kryon": "p39132f61dd28d78f", "mingcute": "pe1027b9d16704793"},
       "id": "pd33638e873fbf1e9",
       "name": "Shovey",
       "ref": "master",
@@ -177,7 +177,7 @@
     }
   ],
   "root": {
-    "dependencies": {"apps": "p00b93f1ddcd2802f", "entity": "p17dc5eac2afef9e7", "inbe": "p48228a6b7e2920d3", "kryon": "p39132f61dd28d78f", "mingcute": "pe1027b9d16704793", "shovey": "pd33638e873fbf1e9", "wurm": "pf6815253050d1b51"},
+    "dependencies": {"apps": "p00b93f1ddcd2802f", "entity": "p1672c45c54533fed", "inbe": "p48228a6b7e2920d3", "kryon": "p39132f61dd28d78f", "mingcute": "pe1027b9d16704793", "shovey": "pd33638e873fbf1e9", "wurm": "pf6815253050d1b51"},
     "name": "Arcade"
   },
   "toolchain": {
