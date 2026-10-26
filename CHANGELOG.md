@@ -1,5 +1,9 @@
 # Arcade changelog
 
+## 0.7.83
+
+- Preserve earned Shovey reward eligibility when upgrading older synced saves.
+
 ## 0.7.82
 
 - Apfelwurm 0.1.6: Try again after game over starts the furthest unlocked level with three lives and a fresh score.
