@@ -1,5 +1,11 @@
 # Arcade changelog
 
+## 0.7.85
+
+- Shovey keeps opened and claimed chests synchronized, with a blue diamond only for an unclaimed reward.
+- Shovey uses corrected boards after an update instead of an older cached campaign.
+- Apfelwurm shows level previews only after they are unlocked.
+
 ## 0.7.84
 
 - Complete automatic reward recovery for older Shovey saves.
