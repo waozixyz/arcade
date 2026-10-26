@@ -21,6 +21,7 @@
 #import "kryon/button_widget"
 #import "kryon/button_props"
 #import "kryon/hosted_values"
+#import "kryon/hosted_app"
 #import "kryon/widget_host"
 #import "kryon/app_files"
 #import "kryon/app_protocol"
@@ -383,7 +384,11 @@ CollectionEffect :: (context: *void, account: string, locator: *AppLocator,
 collection_controller: string;
 
 CollectionController :: (context: *void) -> HostedAsset {
-    return HostedAsset.{.found = collection_controller.count > 0, .data = collection_controller}
+    unused context
+    controller: HostedAsset
+    controller.data = collection_controller
+    controller.found = collection_controller.count > 0
+    return controller
 }
 
 CollectionOpen :: (bundle: string, digest: string, harness_digest: string,
