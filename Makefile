@@ -59,6 +59,7 @@ test: all
 	INBE_SOURCE='$(INBE_SOURCE)' python3 tests/catalog_test.py
 	python3 tests/publisher_test.py
 	python3 tests/apps_controller_test.py
+	python3 tests/startup_art_test.py
 	./build/arcade --list
 	sh tests/chess_engine_zi_test.sh '$(ZIRAN)'
 	sh tests/chess_app_test.sh '$(ZIRAN)'

@@ -18,6 +18,8 @@
 sdl :: #system_library "SDL2";
 SetTitle :: (window: *void, title: *u8) #foreign sdl "SDL_SetWindowTitle";
 
+// First show small RGB/RGBA previews. The collection replaces them with its
+// original artwork when ready, using the same layout and coloured logo.
 DrawStartup :: (session: Session, directory: string, standalone: bool = true) -> bool {
     if !PollDesktop() || WindowTakeCloseRequestHost() { return false }
     BeginDesktopFrame()

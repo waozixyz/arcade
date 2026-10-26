@@ -11,6 +11,18 @@ ROOT = Path(__file__).resolve().parents[1]
 ZIRAN = str(ROOT / 'scripts/ziran.sh')
 
 
+def stage_startup_art(source, output):
+    """Draw small full-colour images before the collection's originals load."""
+    from PIL import Image
+    startup = output / 'startup/shovey'
+    startup.mkdir(parents=True, exist_ok=True)
+    for name, edge in [('title-portrait.png', 640), ('title-landscape.png', 640), ('logo.png', 512)]:
+        with Image.open(source / 'assets/shovey' / name) as original:
+            image = original.convert('RGBA' if 'A' in original.getbands() else 'RGB')
+            image.thumbnail((edge, edge), Image.Resampling.LANCZOS)
+            image.save(startup / name, optimize=True)
+
+
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('--output', type=Path)
@@ -59,10 +71,7 @@ def main():
     if args.standalone_shovey:
         from PIL import Image
         source = Path(subprocess.check_output([ZIRAN, 'pkg', 'path', 'shovey', *lock], cwd=ROOT, text=True).strip())
-        startup = output.parent / 'startup/shovey'
-        startup.mkdir(parents=True, exist_ok=True)
-        for name in ('title-portrait.png', 'title-landscape.png', 'logo.png'):
-            shutil.copyfile(source / 'assets/shovey' / name, startup / name)
+        stage_startup_art(source, output.parent)
         Image.open(source / 'assets/branding/shovey-icon.png').resize((256, 256), Image.Resampling.LANCZOS).save(output.parent / 'shovey-icon.png')
     print(('Shovey' if args.standalone_shovey else 'Arcade') + ' native build passed')
 

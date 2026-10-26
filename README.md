@@ -6,6 +6,8 @@ title-screen covers from the shared Apps controller. Click a cover to open
 an installed game or download it first. There are no separate launch buttons.
 Standalone Shovey opens on its own cover carousel;
 swipe, use the arrows or scroll the wheel to choose, then press Play/Open.
+Its desktop startup first draws a small full-colour title preview, then uses
+the original artwork when the collection is ready.
 Chess is temporarily disabled in Arcade; its code and
 existing saved games remain available for a later return.
 Each edition has a separate save and earned unlocks. Unlocked puzzles show
