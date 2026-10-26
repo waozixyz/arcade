@@ -1,5 +1,9 @@
 # Arcade changelog
 
+## 0.7.79
+
+- On phones the library shows small covers, two or three in a row.
+
 ## 0.7.78
 
 - Download Arcade itself in under one megabyte: it lists the games, and their covers and each game arrive separately when you need them.

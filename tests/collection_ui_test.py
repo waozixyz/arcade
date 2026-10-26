@@ -131,7 +131,7 @@ def main():
         assert int(subprocess.check_output(["xdotool", "getwindowpid", window], text=True, timeout=10)) == child.pid
         subprocess.run(["import", "-window", window, str(output / (name + ".png"))], check=True, timeout=10)
 
-    def grid(child, name):
+    def grid(child, name, phone=False):
         driver.wait_idle(frames=20)
         driver.wait(label="Arcade", role="text")
         assert not driver.find(label="Chess"), "Chess is temporarily disabled"
@@ -141,14 +141,21 @@ def main():
         editor_card = driver.wait(label="Shovey Editor", role="button")
         assert classic_card['y'] == editor_card['y'], "Apps must share a grid row"
         assert classic_card['x'] != editor_card['x']
-        assert classic_card['width'] >= 200 and classic_card['height'] >= 350
+        if phone:
+            # Phones show small covers, two or three a row.
+            wurm_card = driver.wait(label='Apfelwurm', role='button')
+            assert wurm_card['y'] == classic_card['y'], 'A phone row holds all three covers'
+            assert 100 <= classic_card['width'] < 200, 'Phone covers must be small cards'
+        else:
+            assert classic_card['width'] >= 200 and classic_card['height'] >= 350
         assert not driver.find(label='Play', role='button')
         assert not driver.find(label='Open', role='button')
         for label in ('Shovey', 'Shovey Editor', 'Apfelwurm'):
             assert not driver.find(label=label, role='text'), 'Title artwork must not repeat its name underneath'
         driver.wait(label='Apfelwurm', role='button', visible=False)
+        smallest = (100, 140) if phone else (180, 200)
         covers = [node for node in driver.find(role='image', visible=True)
-                  if node['width'] >= 180 and node['height'] >= 200]
+                  if node['width'] >= smallest[0] and node['height'] >= smallest[1]]
         assert len(covers) >= 2, "Apps must use large title-screen artwork"
         capture(child, name)
         with Image.open(output / (name + ".png")) as image:
@@ -208,7 +215,7 @@ def main():
             answer_library_question(driver)
             window = subprocess.check_output(['xdotool', 'search', '--onlyvisible', '--pid', str(child.pid)], text=True).splitlines()[0]
             subprocess.run(['xdotool', 'windowsize', window, '480', '820'], check=True)
-            grid(child, "apps-portrait")
+            grid(child, "apps-portrait", phone=True)
             assert not games & set(server['requests']), "Covers must not predownload games"
             # Covers show only the art; the download dialog names the size.
             cover_sizes = dict(sizes, **{'shovey-editor': size_text(by_name['shovey']['bytes'] + by_name['shovey-editor']['bytes'])})
