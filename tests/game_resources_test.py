@@ -18,7 +18,7 @@ class GameResourcesTest(unittest.TestCase):
             (root / 'games.json').write_text(json.dumps({'packages': []}))
             (root / 'catalog.json').write_text(json.dumps({'id': 'editor', 'name': 'editor'}))
             app = {'manifest': 'catalog.json', 'requires': ['game'], 'shared_code': True,
-                   'library_entries': ['engine:Step']}
+                   'library_entries': ['engine:Step'], 'shared_records': ['local.campaign']}
 
             def declare(value):
                 (root / 'apps.json').write_text(json.dumps(
@@ -28,9 +28,13 @@ class GameResourcesTest(unittest.TestCase):
             parsed = declare(app)
             self.assertTrue(parsed['shared_code'])
             self.assertEqual(parsed['library_entries'], ['engine:Step'])
+            self.assertEqual(parsed['shared_records'], ['local.campaign'])
             for invalid in [app | {'requires': []}, app | {'shared_code': 1},
                             app | {'library_entries': ['engine:../Step']},
-                            app | {'library_entries': ['engine:Step', 'engine:Step']}]:
+                            app | {'library_entries': ['engine:Step', 'engine:Step']},
+                            app | {'shared_records': ['../campaign']},
+                            app | {'shared_records': ['local.campaign', 'local.campaign']},
+                            app | {'shared_records': ['..']}, app | {'shared_records': 'campaign'}]:
                 with self.subTest(invalid=invalid), self.assertRaises(ValueError):
                     declare(invalid)
 

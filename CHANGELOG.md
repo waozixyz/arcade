@@ -1,5 +1,10 @@
 # Arcade changelog
 
+## 0.7.81
+
+- Update Shovey to the approved campaign and solve puzzles using wooden crates as water bridges.
+- Shovey Editor recognizes device unlocks, returns to the title, accepts right-click movement and shows a clearer object palette.
+
 ## 0.7.80
 
 - Keep games covered until their first board is ready and keep complete pictures visible while animation sprites load.

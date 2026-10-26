@@ -50,6 +50,9 @@ Unknown languages fall back to the game's English text.
 
 Arcade and Inbe still provide separate local/account storage. Sharing one
 game implementation does not silently merge or migrate their saved games.
+Host API 36 adds read-only records explicitly exported to verified direct
+dependencies. Shovey exports its local campaign so Editor can display device
+unlocks alongside account progress without uploading device-only progress.
 
 ## Updates and publication gate
 

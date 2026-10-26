@@ -9,7 +9,7 @@ import re
 from pathlib import Path
 import subprocess
 
-APP_KEYS = {'manifest', 'cover', 'enabled', 'requires', 'shared_code', 'library_entries'}
+APP_KEYS = {'manifest', 'cover', 'enabled', 'requires', 'shared_code', 'library_entries', 'shared_records'}
 COVER_KEYS = {'portrait', 'landscape', 'logo', 'caption', 'action'}
 
 
@@ -50,6 +50,11 @@ def declared_packages(root, ziran=None, lock_flags=()):
             shared_code = app.get('shared_code', False)
             if type(shared_code) is not bool or (shared_code and not requires):
                 raise ValueError(f'{name}: shared code needs declared dependencies')
+            shared_records = app.get('shared_records', [])
+            if not isinstance(shared_records, list) or len(shared_records) > 8 or any(
+                    not isinstance(item, str) or not re.fullmatch(r'[A-Za-z0-9_.-]{1,63}', item) or
+                    item in ('.', '..') for item in shared_records) or len(set(shared_records)) != len(shared_records):
+                raise ValueError(f'{name}: invalid shared records')
             library_entries = app.get('library_entries', [])
             if not isinstance(library_entries, list) or len(library_entries) > 64 or \
                     any(not isinstance(item, str) or len(item) > 253 or
@@ -59,6 +64,7 @@ def declared_packages(root, ziran=None, lock_flags=()):
             apps.append(dict(package=name, source=source, manifest=manifest,
                              descriptor=json.loads(manifest.read_text()),
                              cover=app.get('cover'), requires=requires, shared_code=shared_code,
+                             shared_records=shared_records,
                              library_entries=library_entries, enabled=app.get('enabled', True)))
         packages.append(dict(name=name, source=source, id=declaration['id'],
                              title=declaration['title'], apps=apps))

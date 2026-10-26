@@ -89,6 +89,8 @@ def stage(root, controller, expected_controller_digest, output):
             # A thin add-on links its required games' verified code as libraries.
             if app.get('shared_code'):
                 child['shared_code'] = True
+            if app.get('shared_records'):
+                child['shared_records'] = app['shared_records']
             if app.get('requires'):
                 shared = json.loads((root / 'build/games' / (name + '-resources.json')).read_text())
                 if shared['dependencies'] != app['requires']:
