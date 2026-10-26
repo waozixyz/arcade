@@ -10,8 +10,8 @@ SoundMuted :: () -> bool { return sound_muted }
 
 SoundSetMuted :: (muted: bool) { sound_muted = muted }
 
-#if #defined(ANDROID_BUILD) {
-    // Android has no SDL audio; games stay silent there and run on.
+#if #defined(ANDROID_BUILD) || #defined(PLATFORM_WEB) {
+    // Android and the browser have no SDL audio; games stay silent there and run on.
     SoundPlay :: (bytes: string) -> bool {
         unused bytes
         return false

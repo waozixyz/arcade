@@ -83,13 +83,19 @@ saved games; this version does not migrate or synchronize games between them.
 
 ## Website
 
-`site/` is Arcade's website at https://arcade.waozi.xyz: the game covers on
-Arcade's dark library, each opening that game's browser edition, in English,
-German and Spanish. Every push to master publishes it through
-`.github/workflows/site.yml`. `scripts/cloudflare-site.py` creates the Pages
-project when it is missing and connects the domain; the workflow uses the
-repository's `CLOUDFLARE_API_TOKEN` and `CLOUDFLARE_ACCOUNT_ID` secrets.
-Preview it locally with `python3 -m http.server -d site`.
+https://arcade.waozi.xyz runs Arcade in the browser: the latest published
+`arcade.zx`, the same collection Inner Breeze downloads, with Arcade's own host
+(`src/web/runtime.zi`) compiled to WebAssembly by Entity's web build. Games
+download from the node when someone opens them; saves stay in the browser.
+`.github/workflows/site.yml` rebuilds and publishes it after every push to
+master and every Arcade release, after `tests/web_site_test.mjs` opens the
+library in a private browser. `scripts/cloudflare-site.py` creates the Pages
+project and connects the domain with the repository's `CLOUDFLARE_API_TOKEN`
+and `CLOUDFLARE_ACCOUNT_ID` secrets.
+
+Build it locally from this checkout's collection with `make collection`,
+`python3 scripts/build-entity.py` and `python3 scripts/build-web.py`, then serve
+`build/web-site`.
 
 ## Build and run
 

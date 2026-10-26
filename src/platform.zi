@@ -48,6 +48,11 @@ DataDirectory :: () -> string {
         BuilderPrint(*result, "%", private)
         return BuilderFinish(result)
     }
+    // The browser keeps saves and downloaded games in the page's persistent
+    // storage, which Kryon mounts at /kryon-apps.
+    #if #defined(PLATFORM_WEB) {
+        return Join("/kryon-apps", "arcade")
+    }
     exact := EnvironmentText("ARCADE_DATA")
     if exact != "" { return exact }
     #if #defined(_WIN32) {

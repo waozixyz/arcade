@@ -1,0 +1,99 @@
+// Arcade in the browser: the same arcade.zx Inner Breeze downloads, with its
+// shared Apps library, the account Profile and each game downloaded from the
+// node when someone opens it. Saves stay in the page's persistent storage.
+using Canvas :: #import "kryon/Canvas";
+#import "kryon/bundle_storage_web"
+#import "kryon/app_files"
+#import "kryon/session"
+#import "kryon/geometry"
+#import "kryon/tree"
+#import "kryon/tree_input"
+#import "kryon/Frame"
+#import "kryon/ScrollDevice"
+#import "kryon/key_input"
+#import "kryon/TestDriver"
+#import "kryon/page_core"
+#import "std/file"
+#import "std/web"
+#import "std/byte_text_linux"
+#import "platform"
+#import "collection_host"
+#import "entity_host"
+
+arcade_receipt: [4096]u8;
+
+// The page passes the collection's build receipt (its digest and trusted
+// Apps controller) as Module.arcadeReceipt, beside the preloaded /app.zx.
+ArcadeReceipt :: () -> string {
+    handle := WebAsObject(WebGet(WebGetObject(WebGlobal, WebName("Module")), WebName("arcadeReceipt")))
+    if handle == 0 { return "" }
+    length := WebCopyString(handle, arcade_receipt[:])
+    if length <= 0 || length >= cast(s32)arcade_receipt.count { return "" }
+    return TextFromBytes(arcade_receipt[:length])
+}
+
+ArcadeFrame :: (session: Session) -> bool {
+    BeginCanvasFrame()
+    viewport := CanvasViewport()
+    modifiers := CanvasModifiers()
+    KeyboardModifiersSend(session, modifiers)
+    key := CanvasPressedKey()
+    if key == 256 && CollectionBack() { key = 0 }
+    KeyboardSend(session, key)
+    point := CanvasTypedCodepoint()
+    while point != 0 { unused TypedCodepointSend(session, point); point = CanvasTypedCodepoint() }
+    pointer := PollPointer()
+    TreePointerUpdate(session, pointer)
+    TreeSecondaryPointerUpdate(session, PollSecondaryPointer())
+    wheel := CanvasWheelMove()
+    PointerWheelSend(session, pointer.x, pointer.y, wheel)
+    BeginScrollFrame(session, Vector2.{pointer.x, pointer.y}, pointer.pressed,
+        pointer.down, pointer.released, wheel, PageNow() / 1000.0)
+    if BeginFrame(session, cast(u64)1, viewport) != FrameStatus.FrameOk { return false }
+    if !CollectionFrame(session, viewport, key, modifiers) {
+        TreeCancel(session)
+        return false
+    }
+    if EndFrame(session) != FrameStatus.FrameOk { return false }
+    TestDriverFrame(session)
+    CanvasCursor(session)
+    ok := EndCanvasFrame()
+    CollectionCollect()
+    return ok
+}
+
+#program_export
+main :: () -> s32 {
+    if !OpenCanvas() { return 1 }
+    defer CloseCanvas()
+    if !BundleStorageOpen() { return 1 }
+    while !BundleStorageReady() && !BundleStorageFailed() { WebSleep(10) }
+    if !BundleStorageReady() { return 1 }
+    data := DataDirectory()
+    // The page preloads Arcade's published collection; the Profile is embedded.
+    bytes, found := ReadEntireFile("/app.zx")
+    profile, profile_found := ReadEntireFile("/entity.zx")
+    defer { AppFileFree(bytes) }
+    receipt := ArcadeReceipt()
+    if !found || !profile_found || receipt == "" || !CollectionOpenBytes(bytes, receipt, data) { return 1 }
+    if !EntityOpen(profile, data) { unused CollectionClose(); return 1 }
+    session := SessionOpen()
+    if !SessionValid(session) { unused CollectionClose(); return 1 }
+    defer { SessionClose(session) }
+    WebSet(WebGetObject(WebGlobal, WebName("Module")), WebName("profileReady"), WebBool(true))
+    saved := PageNow()
+    ok := true
+    while ok && PollCanvas() {
+        scope := WebScope()
+        ok = ArcadeFrame(session)
+        // Saves reach the browser's storage about once a second.
+        if PageNow() - saved >= 1000.0 {
+            unused BundleStorageSync(false)
+            saved = PageNow()
+        }
+        WebEnd(scope)
+    }
+    unused CollectionClose()
+    unused BundleStorageSync(false)
+    return ifx ok then 0 else 1
+}

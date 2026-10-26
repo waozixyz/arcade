@@ -1,155 +1,74 @@
 <!doctype html>
 <html lang="en">
 <head>
-<meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<title>Arcade · Waozi</title>
-<meta name="description" content="All my games in one place. Play Shovey and Apfelwurm free in your browser.">
-<meta name="theme-color" content="#181622">
-<link rel="canonical" href="https://arcade.waozi.xyz/">
-<link rel="icon" href="/icon.svg" type="image/svg+xml">
-<link rel="apple-touch-icon" href="/apple-touch-icon.png">
-<link rel="manifest" href="/manifest.webmanifest">
-<meta property="og:type" content="website">
-<meta property="og:url" content="https://arcade.waozi.xyz/">
-<meta property="og:title" content="Arcade · Waozi">
-<meta property="og:description" content="All my games in one place. Play Shovey and Apfelwurm free in your browser.">
-<meta property="og:image" content="https://arcade.waozi.xyz/og.jpg">
-<meta name="twitter:card" content="summary_large_image">
-<style>
-:root { --bg: #181622; --ink: #f6f3ff; --muted: #b9b3cc; --tile: #262236; --line: #ffffff1f; --accent: #ffd166; color-scheme: dark; }
-* { box-sizing: border-box; }
-html { -webkit-text-size-adjust: 100%; }
-body { margin: 0; min-height: 100dvh; display: flex; flex-direction: column; background: var(--bg); color: var(--ink); font: 400 16px/1.5 system-ui, -apple-system, "Segoe UI", Roboto, sans-serif; }
-a { color: inherit; }
-.top { display: flex; align-items: center; justify-content: space-between; gap: 16px; width: min(1120px, 100% - 32px); margin: 0 auto; padding: 20px 0; }
-.brand { display: flex; align-items: center; gap: 12px; font-size: 20px; font-weight: 700; letter-spacing: -.02em; text-decoration: none; }
-.brand svg { width: 44px; height: 44px; padding: 9px; border-radius: 14px; background: var(--tile); fill: none; stroke: currentColor; stroke-width: 1.6; stroke-linecap: round; stroke-linejoin: round; }
-.languages { display: flex; padding: 3px; border: 1px solid var(--line); border-radius: 999px; }
-.languages button { min-width: 44px; min-height: 36px; padding: 0 10px; border: 0; border-radius: 999px; background: transparent; color: var(--muted); font-family: inherit; font-size: 13px; font-weight: 600; line-height: 1; cursor: pointer; }
-.languages button[aria-pressed="true"] { background: var(--ink); color: var(--bg); }
-main { flex: 1; width: min(1120px, 100% - 32px); margin: 0 auto; padding: 24px 0 48px; }
-h1 { margin: 0; font-size: clamp(32px, 5.5vw, 56px); line-height: 1.1; letter-spacing: -.035em; text-align: center; text-wrap: balance; }
-.carousel { position: relative; margin-top: 40px; }
-.track { display: flex; gap: 28px; padding: 8px 4px 24px; margin-inline: -4px; overflow-x: auto; overscroll-behavior-x: contain; scroll-snap-type: x mandatory; scrollbar-width: none; }
-.track::-webkit-scrollbar { display: none; }
-/* Centered while every cover fits; scrolls from the first cover otherwise. */
-.track > :first-child { margin-left: auto; }
-.track > :last-child { margin-right: auto; }
-.game { flex: 0 0 min(300px, 78vw); scroll-snap-align: center; text-decoration: none; }
-.cover { position: relative; display: block; overflow: hidden; aspect-ratio: 2 / 3; border-radius: 22px; background: var(--tile); box-shadow: 0 24px 48px -24px #000c; }
-.cover img { display: block; width: 100%; height: 100%; object-fit: cover; }
-.play { position: absolute; left: 50%; bottom: 18px; display: inline-flex; align-items: center; gap: 8px; padding: 10px 22px; border-radius: 999px; background: #ffffffee; color: #181622; font-weight: 700; transform: translateX(-50%); white-space: nowrap; }
-.play svg { width: 14px; height: 14px; fill: currentColor; }
-.name { display: block; margin-top: 14px; font-size: 18px; font-weight: 650; text-align: center; }
-.game:focus-visible { outline: none; }
-.game:focus-visible .cover { outline: 3px solid var(--accent); outline-offset: 3px; }
-.arrow { position: absolute; z-index: 1; top: calc(8px + min(300px, 78vw) * .75); display: grid; place-items: center; width: 48px; height: 48px; padding: 0; border: 0; border-radius: 999px; background: #ffffffee; color: #181622; box-shadow: 0 8px 24px -8px #000c; cursor: pointer; transform: translateY(-50%); transition: opacity .2s ease; }
-.arrow svg { width: 24px; height: 24px; fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
-.arrow.previous { left: 4px; }
-.arrow.next { right: 4px; }
-.arrow:disabled { opacity: 0; pointer-events: none; }
-.arrow:focus-visible { outline: 3px solid var(--accent); outline-offset: 2px; }
-footer { display: flex; flex-wrap: wrap; justify-content: center; gap: 8px 24px; width: min(1120px, 100% - 32px); margin: 0 auto; padding: 24px 0 32px; border-top: 1px solid var(--line); color: var(--muted); font-size: 14px; }
-footer a { text-decoration: none; }
-footer a:hover { color: var(--ink); }
-@media (prefers-reduced-motion: no-preference) {
-  .cover img { transition: transform .4s ease; }
-  .game:hover .cover img { transform: scale(1.04); }
-}
-@media (max-width: 520px) {
-  .carousel { margin-top: 28px; }
-  .track { gap: 16px; }
-}
-</style>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+  <title>Arcade</title>
+  <meta name="description" content="Arcade: all of Waozi's games in one place. Pick a cover, download the game and play, free in your browser.">
+  <meta name="theme-color" content="#111223">
+  <link rel="canonical" href="https://arcade.waozi.xyz/">
+  <link rel="icon" href="icon.svg" type="image/svg+xml">
+  <link rel="apple-touch-icon" href="apple-touch-icon.png">
+  <link rel="manifest" href="manifest.webmanifest">
+  <meta property="og:type" content="website">
+  <meta property="og:url" content="https://arcade.waozi.xyz/">
+  <meta property="og:title" content="Arcade">
+  <meta property="og:description" content="All of Waozi's games in one place, free in your browser.">
+  <meta property="og:image" content="https://arcade.waozi.xyz/og.jpg">
+  <meta name="twitter:card" content="summary_large_image">
+  <style>
+    html, body { margin: 0; width: 100%; height: 100%; overflow: hidden; overscroll-behavior: none; background: #111223; color: #f4f2ff; }
+    canvas { display: block; width: 100%; height: 100%; outline: none; touch-action: none; }
+    #loading { position: fixed; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 20px; background: #111223; font: 600 16px/1.4 system-ui, sans-serif; transition: opacity .3s ease; }
+    #loading.done { opacity: 0; pointer-events: none; }
+    #loading svg { width: 64px; height: 64px; fill: none; stroke: currentColor; stroke-width: 1.6; stroke-linecap: round; stroke-linejoin: round; }
+    #loading .track { width: min(280px, 70vw); height: 6px; border-radius: 3px; background: #ffffff26; overflow: hidden; }
+    #loading .bar { width: 0; height: 100%; background: #ffd166; transition: width .2s ease; }
+    #loading .failed { display: none; color: #ffb4a8; text-align: center; padding: 0 24px; }
+    #loading.error .failed { display: block; }
+    #loading.error .track { display: none; }
+  </style>
 </head>
 <body>
-<header class="top">
-  <a class="brand" href="/" aria-label="Arcade">
-    <!-- MingCute game_2 gamepad, Apache-2.0: https://github.com/Richard9394/MingCute -->
+  <canvas id="canvas" tabindex="0"></canvas>
+  <div id="loading" role="status" aria-live="polite">
+    <!-- MingCute game_2 gamepad, Apache-2.0 -->
     <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M15 9v3M13.5 10.5h3M7 5c1 0 3 1 5 1s4-1 5-1c3 0 7 14 3 14-3 0-4.5-4-8-4s-5 4-8 4C0 19 4 5 7 5Zm3 5.5a1.5 1.5 0 1 1-3 0 1.5 1.5 0 0 1 3 0Z"/></svg>
-    <span>Arcade</span>
-  </a>
-  <div class="languages" role="group" aria-label="Language" data-text-label="language">
-    <button type="button" data-language="de" lang="de">DE</button>
-    <button type="button" data-language="en" lang="en">EN</button>
-    <button type="button" data-language="es" lang="es">ES</button>
+    <div class="track"><div class="bar"></div></div>
+    <p class="failed">Arcade could not start. Reload the page to try again.</p>
   </div>
-</header>
-<main>
-  <h1 data-text="tagline">All my games in one place.</h1>
-  <div class="carousel">
-    <button type="button" class="arrow previous" data-previous aria-label="Previous" data-text-label="previous"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m15 18-6-6 6-6"/></svg></button>
-    <div class="track" data-track>
-      <a class="game" href="https://shovey.waozi.xyz/">
-        <span class="cover"><img src="/shovey.webp" width="720" height="1080" alt=""><span class="play"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M7 4v16l13-8Z"/></svg><span data-text="play">Play</span></span></span>
-        <span class="name">Shovey</span>
-      </a>
-      <a class="game" href="https://wurm.waozi.xyz/">
-        <span class="cover"><img src="/apfelwurm.webp" width="720" height="1080" alt=""><span class="play"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M7 4v16l13-8Z"/></svg><span data-text="play">Play</span></span></span>
-        <span class="name">Apfelwurm</span>
-      </a>
-    </div>
-    <button type="button" class="arrow next" data-next aria-label="Next" data-text-label="next"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m9 18 6-6-6-6"/></svg></button>
-  </div>
-</main>
-<footer>
-  <span data-text="free">Free in your browser. No account.</span>
-  <a href="https://github.com/waozixyz/arcade" data-text="source">Source code</a>
-  <a href="https://waozi.xyz/studio/">Waozi</a>
-</footer>
-<script>
-(() => {
-  'use strict';
-  // English is in the page; German and Spanish replace it.
-  const text = {
-    de: { tagline: 'Alle meine Spiele an einem Ort.', play: 'Spielen', free: 'Kostenlos im Browser. Kein Konto.', source: 'Quellcode', previous: 'Zurück', next: 'Weiter', language: 'Sprache' },
-    es: { tagline: 'Todos mis juegos en un solo lugar.', play: 'Jugar', free: 'Gratis en tu navegador. Sin cuenta.', source: 'Código fuente', previous: 'Anterior', next: 'Siguiente', language: 'Idioma' },
-    en: {}
-  };
-  const english = {};
-  document.querySelectorAll('[data-text]').forEach(node => { english[node.dataset.text] = node.textContent; });
-  document.querySelectorAll('[data-text-label]').forEach(node => { english[node.dataset.textLabel] = node.getAttribute('aria-label'); });
-  const valid = value => Object.hasOwn(text, value || '');
-  let stored = null;
-  try { stored = localStorage.getItem('arcade.language'); } catch { /* Storage may be blocked. */ }
-  const detected = ((navigator.language || 'en').slice(0, 2)).toLowerCase();
-  let language = valid(stored) ? stored : valid(detected) ? detected : 'en';
-  function apply() {
-    document.documentElement.lang = language;
-    const words = key => text[language][key] || english[key];
-    document.querySelectorAll('[data-text]').forEach(node => { node.textContent = words(node.dataset.text); });
-    document.querySelectorAll('[data-text-label]').forEach(node => {
-      node.setAttribute('aria-label', words(node.dataset.textLabel));
-      if (node.hasAttribute('title')) node.title = words(node.dataset.textLabel);
-    });
-    document.querySelectorAll('[data-language]').forEach(button => button.setAttribute('aria-pressed', String(button.dataset.language === language)));
-  }
-  document.querySelectorAll('[data-language]').forEach(button => button.addEventListener('click', () => {
-    language = button.dataset.language;
-    try { localStorage.setItem('arcade.language', language); } catch { /* This visit still switches. */ }
-    apply();
-  }));
-  apply();
-
-  // The arrows move one cover and hide at each end, so both hide while every cover fits.
-  const track = document.querySelector('[data-track]');
-  const previous = document.querySelector('[data-previous]');
-  const next = document.querySelector('[data-next]');
-  const smooth = matchMedia('(prefers-reduced-motion: reduce)');
-  const step = () => track.firstElementChild.getBoundingClientRect().width + parseFloat(getComputedStyle(track).columnGap || 0);
-  const move = direction => track.scrollBy({ left: direction * step(), behavior: smooth.matches ? 'auto' : 'smooth' });
-  function update() {
-    const end = track.scrollWidth - track.clientWidth;
-    previous.disabled = track.scrollLeft <= 1;
-    next.disabled = track.scrollLeft >= end - 1;
-  }
-  previous.addEventListener('click', () => move(-1));
-  next.addEventListener('click', () => move(1));
-  track.addEventListener('scroll', update, { passive: true });
-  new ResizeObserver(update).observe(track);
-  update();
-})();
-</script>
+  <script>
+    (function () {
+      var loading = document.getElementById('loading');
+      var bar = loading.querySelector('.bar');
+      function failed() { loading.classList.add('error'); }
+      // Arcade's Profile reports ready once the library is about to draw.
+      function watch() {
+        if (window.Module && Module.profileReady) { loading.classList.add('done'); return; }
+        requestAnimationFrame(watch);
+      }
+      window.Module = {
+        canvas: document.getElementById('canvas'),
+        setStatus: function (text) {
+          var match = /\((\d+(?:\.\d+)?)\/(\d+)\)/.exec(text || '');
+          if (match) bar.style.width = Math.min(100, 100 * match[1] / match[2]) + '%';
+        },
+        onAbort: failed,
+        onExit: function (code) { if (code !== 0) failed(); }
+      };
+      // The build receipt names the collection's digest and its trusted Apps library.
+      fetch('arcade.json', { cache: 'no-cache' }).then(function (response) {
+        if (!response.ok) throw new Error(response.status);
+        return response.text();
+      }).then(function (receipt) {
+        Module.arcadeReceipt = receipt;
+        var script = document.createElement('script');
+        script.src = 'runtime.js';
+        script.onerror = failed;
+        document.body.appendChild(script);
+        watch();
+      }).catch(failed);
+    })();
+  </script>
 </body>
 </html>
