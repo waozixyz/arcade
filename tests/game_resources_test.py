@@ -8,9 +8,32 @@ import unittest
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT / 'scripts'))
 from game_resources import dependency_order, share_resources
+from game_packages import declared_apps
 
 
 class GameResourcesTest(unittest.TestCase):
+    def test_shared_code_requires_explicit_dependencies_and_valid_library_entries(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            (root / 'games.json').write_text(json.dumps({'packages': []}))
+            (root / 'catalog.json').write_text(json.dumps({'id': 'editor', 'name': 'editor'}))
+            app = {'manifest': 'catalog.json', 'requires': ['game'], 'shared_code': True,
+                   'library_entries': ['engine:Step']}
+
+            def declare(value):
+                (root / 'apps.json').write_text(json.dumps(
+                    {'id': 'fixture', 'title': 'Fixture', 'apps': [value]}))
+                return declared_apps(root)[0]
+
+            parsed = declare(app)
+            self.assertTrue(parsed['shared_code'])
+            self.assertEqual(parsed['library_entries'], ['engine:Step'])
+            for invalid in [app | {'requires': []}, app | {'shared_code': 1},
+                            app | {'library_entries': ['engine:../Step']},
+                            app | {'library_entries': ['engine:Step', 'engine:Step']}]:
+                with self.subTest(invalid=invalid), self.assertRaises(ValueError):
+                    declare(invalid)
+
     def test_dependency_order_rejects_missing_disabled_and_cyclic_games(self):
         base = dict(enabled=True, descriptor=dict(id='game'), requires=[])
         editor = dict(enabled=True, descriptor=dict(id='editor'), requires=['game'])

@@ -49,6 +49,7 @@ def build(ziran, lock_flags):
     crypto = dependency("crypto", daochi_client)
     entries = []
     apps = dependency_order(declared_apps(ROOT, ziran, lock_flags))
+    by_id = {app['descriptor']['id']: app for app in apps}
     for app in apps:
         source, manifest, descriptor = app["source"], app["manifest"], app["descriptor"]
         if descriptor["kind"] != "game" or "arcade" not in descriptor["harnesses"]:
@@ -140,6 +141,10 @@ def build(ziran, lock_flags):
             "--module-path", "daochi_client=" + str(daochi_client),
             "--module-path", "crypto=" + str(crypto / "src"),
             *[flag for name in defines for flag in ('--define', name)],
+            *[flag for entry in app['library_entries'] for flag in ('--retain', entry)],
+            *[flag for dependency_id in app['requires'] if app['shared_code']
+              for flag in ('--library', str(ROOT / 'build/games' /
+                  (by_id[dependency_id]['descriptor']['name'] + '.zx')))],
             "--define", "KRYON_HOSTED_UI", "--asset-dir", "assets=" + str(staged / "assets"),
             "--entry", descriptor["entry"], "-o", str(bundle),
             str(source / descriptor["source"])], cwd=ROOT, check=True)

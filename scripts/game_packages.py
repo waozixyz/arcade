@@ -5,10 +5,11 @@ for an app the library opens from a full-screen cover, that cover's art,
 caption and action. games.json names the game packages Arcade includes.
 """
 import json
+import re
 from pathlib import Path
 import subprocess
 
-APP_KEYS = {'manifest', 'cover', 'enabled', 'requires'}
+APP_KEYS = {'manifest', 'cover', 'enabled', 'requires', 'shared_code', 'library_entries'}
 COVER_KEYS = {'portrait', 'landscape', 'logo', 'caption', 'action'}
 
 
@@ -46,9 +47,19 @@ def declared_packages(root, ziran=None, lock_flags=()):
                     any(not isinstance(item, str) or not item for item in requires) or \
                     len(set(requires)) != len(requires):
                 raise ValueError(f'{name}: invalid app dependencies')
+            shared_code = app.get('shared_code', False)
+            if type(shared_code) is not bool or (shared_code and not requires):
+                raise ValueError(f'{name}: shared code needs declared dependencies')
+            library_entries = app.get('library_entries', [])
+            if not isinstance(library_entries, list) or len(library_entries) > 64 or \
+                    any(not isinstance(item, str) or len(item) > 253 or
+                        not re.fullmatch(r'[A-Za-z_][A-Za-z0-9_]*:[A-Za-z_][A-Za-z0-9_]*', item)
+                        for item in library_entries) or len(set(library_entries)) != len(library_entries):
+                raise ValueError(f'{name}: invalid portable library entries')
             apps.append(dict(package=name, source=source, manifest=manifest,
                              descriptor=json.loads(manifest.read_text()),
-                             cover=app.get('cover'), requires=requires, enabled=app.get('enabled', True)))
+                             cover=app.get('cover'), requires=requires, shared_code=shared_code,
+                             library_entries=library_entries, enabled=app.get('enabled', True)))
         packages.append(dict(name=name, source=source, id=declaration['id'],
                              title=declaration['title'], apps=apps))
     return packages
