@@ -2,22 +2,23 @@ name: Website
 
 # https://arcade.waozi.xyz runs Arcade in the browser: the latest published
 # arcade.zx, the same one Inner Breeze downloads, with Arcade's own host
-# compiled to WebAssembly. Every push to master and every Arcade release
-# rebuilds and publishes it.
+# compiled to WebAssembly. Every push to master and every Arcade release,
+# manual or automatic, rebuilds and publishes it.
 on:
   push:
     branches: [master]
   workflow_run:
-    workflows: [Arcade node release]
+    workflows: [Arcade node release, Game updates]
     types: [completed]
   workflow_dispatch:
 
 permissions:
   contents: read
 
+# A running build finishes; only the newest waiting one follows it.
 concurrency:
   group: arcade-site
-  cancel-in-progress: true
+  cancel-in-progress: false
 
 jobs:
   build:
