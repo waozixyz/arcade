@@ -51,12 +51,14 @@ def package_server(root):
         def do_GET(self):
             digest = self.path.removeprefix('/api/v2/packages/inbe.arcade/').removesuffix('.zx')
             state['requests'].append(digest)
-            if state['offline'] or digest not in by_digest:
+            # Every published file: the games and the library art.
+            published = root / 'build/node-apps/arcade.games' / (digest + '.zx')
+            if state['offline'] or not published.is_file():
                 self.send_error(503)
                 return
-            entry = by_digest[digest]
-            data = (root / 'build/node-apps/arcade.games' / (digest + '.zx')).read_bytes()
-            if (state['corrupt_wurm'] and entry['expected_id'] == 'wurm') or (state['corrupt_shovey'] and entry['expected_id'] == 'shovey'):
+            entry = by_digest.get(digest, {})
+            data = published.read_bytes()
+            if (state['corrupt_wurm'] and entry.get('expected_id') == 'wurm') or (state['corrupt_shovey'] and entry.get('expected_id') == 'shovey'):
                 data = data[:-1] + bytes([data[-1] ^ 1])
             self.send_response(200)
             self.send_header('Content-Length', str(len(data)))
@@ -83,6 +85,8 @@ def main():
     root = Path(__file__).resolve().parents[1]
     entries = json.loads((root / 'build/arcade.json').read_text())['children']
     by_name = {entry['expected_id']: entry for entry in entries}
+    # The library art downloads with Arcade; games only after consent.
+    games = {entry['sha256'] for entry in entries}
     def size_text(size):
         return f"{(size * 10 + 500000) // 1000000 / 10:.1f} MB"
     sizes = {name: size_text(entry['bytes']) for name, entry in by_name.items()}
@@ -168,7 +172,7 @@ def main():
             driver.wait(label='Download size: ' + total, role='text')
             capture(child, 'editor-download-plan')
             driver.press(label='Cancel', role='button')
-            assert server['requests'] == [], 'Dependency consent must precede every download'
+            assert not games & set(server['requests']), 'Dependency consent must precede every download'
             driver.press(label='Shovey Editor', role='button')
             server['corrupt_shovey'] = True
             primary_download()
@@ -180,7 +184,7 @@ def main():
             capture(child, 'editor-shared-assets')
             assert server['requests'].count(by_name['shovey']['sha256']) == 2
             assert server['requests'].count(by_name['shovey-editor']['sha256']) == 1
-            assert len(server['requests']) == 3, 'Retry must reuse the already downloaded editor'
+            assert len([digest for digest in server['requests'] if digest in games]) == 3, 'Retry must reuse the already downloaded editor'
             assert by_name['shovey-editor']['bytes'] < by_name['shovey']['bytes'], 'The editor must carry only its additions'
         server['requests'].clear()
         # Disabling an entry must leave a person's older Chess save untouched.
@@ -205,20 +209,21 @@ def main():
             window = subprocess.check_output(['xdotool', 'search', '--onlyvisible', '--pid', str(child.pid)], text=True).splitlines()[0]
             subprocess.run(['xdotool', 'windowsize', window, '480', '820'], check=True)
             grid(child, "apps-portrait")
-            assert server['requests'] == [], 'Covers must not predownload games'
+            assert not games & set(server['requests']), "Covers must not predownload games"
+            # Covers show only the art; the download dialog names the size.
             cover_sizes = dict(sizes, **{'shovey-editor': size_text(by_name['shovey']['bytes'] + by_name['shovey-editor']['bytes'])})
             for text in cover_sizes.values():
-                driver.wait(label=text, role='text', visible=False)
+                assert not driver.find(label=text, role='text'), "Covers must not show download sizes"
             driver.press(label='Profile', role='button')
             driver.wait(label='Account', role='text')
             capture(child, 'arcade-profile')
             driver.press(label="Back", role="button")
             driver.wait(label='Shovey', role='button')
-            assert not list((profile / 'resources/downloads').glob('*.zx'))
+            assert not [path for path in (profile / 'resources/downloads').glob('*.zx') if path.stem in games]
             driver.press(label="Shovey", role="button")
             driver.wait(label='Cancel', role='button')
             driver.press(label='Cancel', role='button')
-            assert server['requests'] == [], 'Cancel must download nothing'
+            assert not games & set(server['requests']), 'Cancel must download nothing'
             driver.press(label="Shovey", role="button")
             primary_download()
             driver.wait(label=f"Level 1 / {classic}")
@@ -275,15 +280,16 @@ def main():
             assert not driver.find(label='Pause', role='button'), 'Unverified bytes must never run'
             server['corrupt_wurm'] = False
             primary_download('Try again')
-            driver.wait(label='Play', role='button', timeout=60)
-            capture(child, 'wurm-title')
-            driver.press(label='Play', role='button')
+            # The cover is its title: Apfelwurm asks once how to move, then plays.
+            driver.wait(label='How do you want to move?', role='text', timeout=60)
+            driver.press(label='Swipe', role='button')
             driver.wait(label='Pause', role='button')
             capture(child, 'wurm-playing')
             driver.press(label='Pause', role='button')
             driver.wait(label='Resume', role='button')
             driver.press(label='Back to title', role='button')
             driver.wait(label='Play', role='button')
+            capture(child, 'wurm-title')
             driver.press(label='Back', role='button')
             driver.wait(label='Shovey', role='button')
             for entry in json.loads((root / 'build/arcade.json').read_text())['children']:

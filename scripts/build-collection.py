@@ -253,13 +253,15 @@ def main():
     art_assets = node_apps / "arcade-art"
     stage_downloads(catalog, output, catalog_assets, game_downloads, art_assets)
     bundle("art.zi", "art:Main", art_assets / "assets", node_apps / "arcade-art.zx")
-    add_art(catalog_assets, game_downloads, node_apps / "arcade-art.zx")
+    art = add_art(catalog_assets, game_downloads, node_apps / "arcade-art.zx")
     archive_downloads(game_downloads, node_apps / "arcade.games.tar")
     bundle("collection.zi", "collection:Main", catalog_assets / "assets", node_apps / "arcade.zx")
     shutil.copyfile(node_apps / "arcade.zx", ROOT / "build/arcade.zx")
+    # The desktop host supplies its controller from beside the collection.
+    shutil.copyfile(args.apps_bundle, ROOT / "build/apps.zx")
     receipt = dict(id=catalog["id"], version=(ROOT / "VERSION").read_text().strip(),
                    sha256=digest(ROOT / "build/arcade.zx"),
-                   apps_sha256=args.apps_sha256, children=catalog["children"],
+                   apps_sha256=args.apps_sha256, children=catalog["children"], art=art,
                    source_mode="project")
     (output / "receipt.json").write_text(json.dumps(receipt, indent=2) + "\n")
     (ROOT / "build/arcade.json").write_text(json.dumps(receipt, indent=2) + "\n")
