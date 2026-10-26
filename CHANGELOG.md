@@ -1,5 +1,10 @@
 # Arcade changelog
 
+## 0.7.77
+
+- Apfelwurm 0.1.4: Press Play and go straight into the game: no stage or level select. Play every level in order through all five landscapes, earning lives as your score grows; a game over starts again from level 1.
+- Apfelwurm 0.1.4: Continue your run from the start of the level you reached; existing stage progress continues from your first uncleared level.
+
 ## 0.7.76
 
 - Install Shovey Editor as an add-on and reuse Shovey’s art and sounds.

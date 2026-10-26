@@ -144,9 +144,9 @@
       "url": "https://github.com/kryonlabs/plot.git"
     },
     {
-      "commit": "a6aebdbb5af7491b9303e70aed85b32c70a127a2",
+      "commit": "481ec2a6cdee05680bd809d3436134ef670db6ce",
       "dependencies": {"apps": "p00c3077d466cc4cc", "kryon": "p668d6e1e4a4cf2bb", "mingcute": "pe1027b9d16704793"},
-      "id": "pb047b340fde29f6b",
+      "id": "p4b52e2fb4081447c",
       "name": "Apfelwurm",
       "ref": "master",
       "url": "https://github.com/waozixyz/wurm.git"
@@ -177,7 +177,7 @@
     }
   ],
   "root": {
-    "dependencies": {"apps": "p00c3077d466cc4cc", "entity": "p2b0009b9bbaa09de", "inbe": "p48228a6b7e2920d3", "kryon": "p668d6e1e4a4cf2bb", "mingcute": "pe1027b9d16704793", "shovey": "ped09a2b79138be62", "wurm": "pb047b340fde29f6b"},
+    "dependencies": {"apps": "p00c3077d466cc4cc", "entity": "p2b0009b9bbaa09de", "inbe": "p48228a6b7e2920d3", "kryon": "p668d6e1e4a4cf2bb", "mingcute": "pe1027b9d16704793", "shovey": "ped09a2b79138be62", "wurm": "p4b52e2fb4081447c"},
     "name": "Arcade"
   },
   "toolchain": {
