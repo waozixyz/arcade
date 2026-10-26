@@ -110,6 +110,7 @@ install-arcade: collection build/entity.zx build/arcade
 	install -m 0755 build/arcade '$(LIB_DIR)/arcade.new'
 	mv -f '$(LIB_DIR)/arcade.new' '$(LIB_DIR)/arcade'
 	install -m 0644 build/entity.zx build/arcade.zx build/arcade.json '$(LIB_DIR)/'
+	install -m 0644 '$(APPS_BUNDLE)' '$(LIB_DIR)/apps.zx'
 	ln -sfn '$(LIB_DIR)/arcade' '$(BIN_DIR)/arcade'
 	install -m 0644 packaging/xyz.waozi.arcade.desktop '$(DATA_DIR)/applications/'
 
@@ -122,6 +123,7 @@ install: all install-arcade
 	install -m 0755 build/shovey '$(LIB_DIR)/shovey.new'
 	mv -f '$(LIB_DIR)/shovey.new' '$(LIB_DIR)/shovey'
 	install -m 0644 build/entity.zx build/arcade.zx build/arcade.json build/shovey.zx build/shovey.json '$(LIB_DIR)/'
+	install -m 0644 '$(APPS_BUNDLE)' '$(LIB_DIR)/apps.zx'
 	ln -sfn '$(LIB_DIR)/arcade' '$(BIN_DIR)/arcade'
 	ln -sfn '$(LIB_DIR)/shovey' '$(BIN_DIR)/shovey'
 	mkdir -p '$(DATA_DIR)/icons/hicolor/256x256/apps'

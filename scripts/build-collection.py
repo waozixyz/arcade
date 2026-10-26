@@ -86,6 +86,9 @@ def stage(root, controller, expected_controller_digest, output):
                 bytes=len(bundle_bytes),
                 preview=f"assets/arcade/previews/{name}.png",
                 icon=f"assets/arcade/previews/{name}.png")
+            # A thin add-on links its required games' verified code as libraries.
+            if app.get('shared_code'):
+                child['shared_code'] = True
             if app.get('requires'):
                 shared = json.loads((root / 'build/games' / (name + '-resources.json')).read_text())
                 if shared['dependencies'] != app['requires']:
@@ -135,11 +138,14 @@ def stage(root, controller, expected_controller_digest, output):
     return catalog, packages[1:]
 
 
-def stage_downloads(catalog, source, output, games):
-    """Keep Arcade's catalog and art together; serve each game separately.
+def stage_downloads(catalog, source, output, games, art):
+    """Keep only Arcade's catalog; serve each game and the library art separately.
 
-    The full staging directory is also used by standalone players, which
-    keep their bundled games. Validate every game before replacing outputs.
+    The published Arcade is a launcher: the host supplies the shared Apps
+    controller, and the games' covers and previews go to ART for one separate
+    download. The full staging directory is also used by standalone players,
+    which keep their bundled games, art and controller. Validate every game
+    before replacing outputs.
     """
     payloads = {}
     for child in catalog["children"]:
@@ -147,15 +153,36 @@ def stage_downloads(catalog, source, output, games):
         if hashlib.sha256(data).hexdigest() != child["sha256"]:
             raise ValueError("Game differs from the collection's declared digest")
         payloads[child["sha256"]] = data
-    for directory in (output, games):
+    for directory in (output, games, art):
         if directory.exists():
             shutil.rmtree(directory)
     shutil.copytree(source, output)
     games.mkdir(parents=True)
+    (output / catalog["harness"]).unlink()
     for child in catalog["children"]:
         (output / child["bundle"]).unlink()
+        pictures = [child["preview"]] + [path for key, path in child.get("cover", {}).items()
+                                         if key in ("portrait", "landscape", "logo")]
+        for relative in pictures:
+            if not (output / relative).exists():
+                continue
+            destination = art / relative
+            destination.parent.mkdir(parents=True, exist_ok=True)
+            shutil.move(output / relative, destination)
     for digest, data in payloads.items():
         (games / (digest + ".zx")).write_bytes(data)
+
+
+def add_art(output, games, art_bundle):
+    """Publish the art bundle beside the games and name it in the catalog."""
+    data = art_bundle.read_bytes()
+    digest = hashlib.sha256(data).hexdigest()
+    (games / (digest + ".zx")).write_bytes(data)
+    path = output / "assets/apps/catalog.json"
+    catalog = json.loads(path.read_text())
+    catalog["art"] = dict(sha256=digest, bytes=len(data))
+    path.write_text(json.dumps(catalog, indent=2) + "\n")
+    return catalog["art"]
 
 
 def archive_downloads(games, archive):
@@ -217,12 +244,16 @@ def main():
             sha256=digest(ROOT / f"build/{name}.zx"), apps_sha256=args.apps_sha256,
             children=children, source_mode="project")
         (ROOT / f"build/{name}.json").write_text(json.dumps(metadata, indent=2) + "\n")
-    # Arcade carries the catalog and artwork. Standalone players keep their
-    # offline games; Arcade downloads exactly the game the person selects.
+    # Arcade carries only its catalog. Standalone players keep their offline
+    # games; Arcade downloads the library art once and exactly the game the
+    # person selects.
     node_apps = ROOT / "build/node-apps"
     catalog_assets = node_apps / "arcade-catalog"
     game_downloads = node_apps / "arcade.games"
-    stage_downloads(catalog, output, catalog_assets, game_downloads)
+    art_assets = node_apps / "arcade-art"
+    stage_downloads(catalog, output, catalog_assets, game_downloads, art_assets)
+    bundle("art.zi", "art:Main", art_assets / "assets", node_apps / "arcade-art.zx")
+    add_art(catalog_assets, game_downloads, node_apps / "arcade-art.zx")
     archive_downloads(game_downloads, node_apps / "arcade.games.tar")
     bundle("collection.zi", "collection:Main", catalog_assets / "assets", node_apps / "arcade.zx")
     shutil.copyfile(node_apps / "arcade.zx", ROOT / "build/arcade.zx")

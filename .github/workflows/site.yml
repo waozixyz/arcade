@@ -75,6 +75,7 @@ jobs:
       - name: Build the browser edition
         run: |
           python3 scripts/build-entity.py
+          python3 scripts/build-apps.py --output build/apps-ui
           python3 scripts/build-web.py --bundle build/published/arcade.zx \
             --controller-sha256 "$(cat build/published/apps-controller.sha256)" \
             --version '${{ steps.published.outputs.version }}'

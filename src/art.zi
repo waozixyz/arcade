@@ -1,0 +1,4 @@
+// Arcade's library art: the games' covers, logos and previews, downloaded
+// beside the games. The Apps host only reads its assets; it never runs.
+#program_export
+Main :: () -> s32 { return 0 }

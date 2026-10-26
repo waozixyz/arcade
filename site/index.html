@@ -56,12 +56,21 @@
         onAbort: failed,
         onExit: function (code) { if (code !== 0) failed(); }
       };
-      // The build receipt names the collection's digest and its trusted Apps library.
-      fetch('arcade.json', { cache: 'no-cache' }).then(function (response) {
-        if (!response.ok) throw new Error(response.status);
-        return response.text();
-      }).then(function (receipt) {
-        Module.arcadeReceipt = receipt;
+      // The build receipt names the collection's digest and its trusted Apps
+      // library; Arcade's own copy of that library goes in beside it.
+      Promise.all([
+        fetch('arcade.json', { cache: 'no-cache' }).then(function (response) {
+          if (!response.ok) throw new Error(response.status);
+          return response.text();
+        }),
+        fetch('apps.zx').then(function (response) {
+          return response.ok ? response.arrayBuffer() : null;
+        })
+      ]).then(function (loaded) {
+        Module.arcadeReceipt = loaded[0];
+        if (loaded[1]) {
+          Module.preRun = [function () { FS.writeFile('/apps.zx', new Uint8Array(loaded[1])); }];
+        }
         var script = document.createElement('script');
         script.src = 'runtime.js';
         script.onerror = failed;

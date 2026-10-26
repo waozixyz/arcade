@@ -75,6 +75,9 @@ main :: () -> s32 {
     profile, profile_found := ReadEntireFile("/entity.zx")
     defer { AppFileFree(bytes) }
     receipt := ArcadeReceipt()
+    // The page writes Arcade's own Apps controller beside the collection.
+    controller, controller_found := ReadEntireFile("/apps.zx")
+    if controller_found { collection_controller = controller } else { AppFileFree(controller) }
     if !found || !profile_found || receipt == "" || !CollectionOpenBytes(bytes, receipt, data) { return 1 }
     if !EntityOpen(profile, data) { unused CollectionClose(); return 1 }
     session := SessionOpen()

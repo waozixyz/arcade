@@ -1,5 +1,11 @@
 # Arcade changelog
 
+## 0.7.78
+
+- Download Arcade itself in under one megabyte: it lists the games, and their covers and each game arrive separately when you need them.
+- Covers show only the game art; the download dialog shows the size.
+- Shovey Editor downloads as a small add-on that reuses Shovey’s game.
+
 ## 0.7.77
 
 - Apfelwurm 0.1.4: Press Play and go straight into the game: no stage or level select. Play every level in order through all five landscapes, earning lives as your score grows; a game over starts again from level 1.

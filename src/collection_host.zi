@@ -378,6 +378,14 @@ CollectionEffect :: (context: *void, account: string, locator: *AppLocator,
     return true
 }
 
+// Arcade's own copy of the shared Apps controller. A collection that does not
+// pack one uses it; the Apps host accepts it only by the trusted digest.
+collection_controller: string;
+
+CollectionController :: (context: *void) -> HostedAsset {
+    return HostedAsset.{.found = collection_controller.count > 0, .data = collection_controller}
+}
+
 CollectionOpen :: (bundle: string, digest: string, harness_digest: string,
     data: string, locale: string) -> bool {
     if collection_ready { return false }
@@ -391,7 +399,7 @@ CollectionOpen :: (bundle: string, digest: string, harness_digest: string,
         .effect = CollectionEffect,
         .bundle = CollectionBundle, .download = CollectionDownload, .fetch = CollectionFetch,
         // Covers show only the art; the download dialog names the size.
-        .presentation = AppPresentation.{.cover_grid = true, .hide_sizes = true}}
+        .controller = CollectionController, .presentation = AppPresentation.{.cover_grid = true, .hide_sizes = true}}
     collection_ready = AppHostStart(*collection_host, bundle, "arcade.local", "inbe.arcade",
         "arcade", digest, "local", platform, harness_digest, locale)
     if !collection_ready { Report("Arcade: the shared Apps host refused the collection") }
@@ -399,6 +407,11 @@ CollectionOpen :: (bundle: string, digest: string, harness_digest: string,
 }
 
 CollectionOpenFiles :: (directory: string, data: string) -> bool {
+    // The installed controller beside the collection; kept while Arcade runs.
+    controller_path := Join(directory, "apps.zx")
+    controller, controller_found := ReadEntireFile(controller_path)
+    AppFileFree(controller_path)
+    if controller_found { collection_controller = controller } else { AppFileFree(controller) }
     bundle_path := Join(directory, "arcade.zx")
     metadata_path := Join(directory, "arcade.json")
     defer { AppFileFree(bundle_path); AppFileFree(metadata_path) }
@@ -505,6 +518,8 @@ CollectionClose :: () -> bool {
     AppFilesClose(*collection_resources)
     AppFileFree(collection_resource_root)
     collection_resource_root = ""
+    AppFileFree(collection_controller)
+    collection_controller = ""
     return true
 }
 

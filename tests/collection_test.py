@@ -124,29 +124,45 @@ class CollectionTests(unittest.TestCase):
         catalog = self.stage()
         small = self.root / "small"
         games = self.root / "arcade.games"
-        builder.stage_downloads(catalog, self.output, small, games)
+        builder.stage_downloads(catalog, self.output, small, games, self.root / "art")
+        art = self.root / "art"
         self.assertEqual((small / "assets/apps/catalog.json").read_bytes(),
                          (self.output / "assets/apps/catalog.json").read_bytes())
-        self.assertEqual((small / catalog["harness"]).read_bytes(), self.controller.read_bytes())
+        # The published launcher packs neither the host's controller nor art.
+        self.assertFalse((small / catalog["harness"]).exists())
+        self.assertTrue((self.output / catalog["harness"]).is_file(), "Standalone players keep the controller")
         for child in catalog["children"]:
             full = self.output / child["bundle"]
             self.assertTrue(full.is_file(), "Standalone players retain the game")
             self.assertFalse((small / child["bundle"]).exists())
             self.assertEqual((games / (child["sha256"] + ".zx")).read_bytes(), full.read_bytes())
-            self.assertEqual((small / child["preview"]).read_bytes(),
-                             (self.output / child["preview"]).read_bytes())
-            for key in child["cover"].keys() & {"portrait", "landscape", "logo"}:
-                relative = child["cover"][key]
-                self.assertEqual((small / relative).read_bytes(), (self.output / relative).read_bytes())
+            pictures = [child["preview"]] + [child["cover"][key] for key in child["cover"].keys() & {"portrait", "landscape", "logo"}]
+            for relative in pictures:
+                self.assertFalse((small / relative).exists())
+                self.assertEqual((art / relative).read_bytes(), (self.output / relative).read_bytes())
+        packed = sum(path.stat().st_size for path in small.rglob("*") if path.is_file())
+        self.assertLess(packed, 1024 * 1024, "Arcade itself stays under one megabyte")
+
+    def test_art_bundle_is_published_and_named_by_the_catalog(self):
+        catalog = self.stage()
+        small = self.root / "small"
+        games = self.root / "arcade.games"
+        builder.stage_downloads(catalog, self.output, small, games, self.root / "art")
+        art_bundle = self.root / "art.zx"
+        art_bundle.write_bytes(b"ZX\0\0art fixture")
+        art = builder.add_art(small, games, art_bundle)
+        self.assertEqual(art, dict(sha256=builder.digest(art_bundle), bytes=art_bundle.stat().st_size))
+        self.assertEqual((games / (art["sha256"] + ".zx")).read_bytes(), art_bundle.read_bytes())
+        self.assertEqual(json.loads((small / "assets/apps/catalog.json").read_text())["art"], art)
 
     def test_changed_download_preserves_previous_outputs(self):
         catalog = self.stage()
         small = self.root / "small"
         games = self.root / "arcade.games"
-        builder.stage_downloads(catalog, self.output, small, games)
+        builder.stage_downloads(catalog, self.output, small, games, self.root / "art")
         (self.output / catalog["children"][0]["bundle"]).write_bytes(b"changed game")
         with self.assertRaisesRegex(ValueError, "declared digest"):
-            builder.stage_downloads(catalog, self.output, small, games)
+            builder.stage_downloads(catalog, self.output, small, games, self.root / "art")
         self.assertTrue((small / "assets/apps/catalog.json").exists())
         self.assertTrue((games / (catalog["children"][0]["sha256"] + ".zx")).exists())
 
@@ -154,7 +170,7 @@ class CollectionTests(unittest.TestCase):
         catalog = self.stage()
         small = self.root / "small"
         games = self.root / "arcade.games"
-        builder.stage_downloads(catalog, self.output, small, games)
+        builder.stage_downloads(catalog, self.output, small, games, self.root / "art")
         archive = self.root / "arcade.games.tar"
         builder.archive_downloads(games, archive)
         with tarfile.open(archive) as content:
@@ -168,12 +184,12 @@ class CollectionTests(unittest.TestCase):
         catalog = self.stage()
         small = self.root / "small"
         games = self.root / "arcade.games"
-        builder.stage_downloads(catalog, self.output, small, games)
+        builder.stage_downloads(catalog, self.output, small, games, self.root / "art")
         catalog["children"] = []
         # Build a fresh full stage as a real removed registration does.
         (self.root / "games.json").write_text(json.dumps({"packages": []}))
         catalog = self.stage()
-        builder.stage_downloads(catalog, self.output, small, games)
+        builder.stage_downloads(catalog, self.output, small, games, self.root / "art")
         self.assertEqual(list(games.iterdir()), [])
         self.assertFalse((small / "assets/arcade/games/shovey.zx").exists())
 

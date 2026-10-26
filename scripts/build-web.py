@@ -4,7 +4,8 @@
 The page runs a collection, by default this checkout's build/node-apps/arcade.zx;
 the website passes the published one Inner Breeze downloads. Arcade's own host
 is compiled to WebAssembly with the account Profile. The receipt names the
-collection's digest and the Apps library it trusts.
+collection's digest and the Apps library it trusts. Arcade's own copy of that
+library goes beside it for collections that do not pack one.
 """
 import argparse
 import hashlib
@@ -30,6 +31,7 @@ def main():
     parser.add_argument('--controller-sha256', default=(ROOT / 'apps-controller.sha256').read_text().strip())
     parser.add_argument('--version', default=(ROOT / 'VERSION').read_text().strip())
     parser.add_argument('--profile', type=Path, default=ROOT / 'build/entity.zx')
+    parser.add_argument('--controller', type=Path, default=ROOT / 'build/apps-ui/apps.zx')
     parser.add_argument('--output', type=Path, default=ROOT / 'build/web-site')
     args = parser.parse_args()
     bundle = args.bundle.resolve()
@@ -50,6 +52,12 @@ def main():
     for name in ('runtime.js', 'runtime.wasm', 'runtime.data'):
         shutil.copyfile(work / name, output / name)
     (output / 'arcade.json').write_text(json.dumps(receipt, indent=2) + '\n')
+    # Only the library the receipt trusts; the host refuses any other.
+    controller = args.controller.read_bytes() if args.controller.is_file() else b''
+    if hashlib.sha256(controller).hexdigest() == args.controller_sha256:
+        (output / 'apps.zx').write_bytes(controller)
+    else:
+        print('No matching Apps controller beside the collection; it must pack its own')
     print(f'Arcade {args.version} for the browser in {output}')
 
 
