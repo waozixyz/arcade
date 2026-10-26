@@ -1,5 +1,11 @@
 # Arcade changelog
 
+## 0.7.82
+
+- Apfelwurm 0.1.6: Try again after game over starts the furthest unlocked level with three lives and a fresh score.
+- Apfelwurm 0.1.6: Choose level from the title to browse all five landscapes, preview each board and replay any unlocked level. Future levels remain locked until you reach them.
+- Apfelwurm 0.1.6: Use Escape to pause or go back in the browser without stopping the game.
+
 ## 0.7.81
 
 - Update Shovey to the approved campaign and solve puzzles using wooden crates as water bridges.
