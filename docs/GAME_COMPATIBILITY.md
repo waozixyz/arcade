@@ -87,7 +87,15 @@ Host API numbers alone do not prove compatibility: the intended host must
 also understand the bundle's VM format. Test each platform and oldest host
 version a release is intended to support. An unsupported VM format requires
 a compatible build or a host update; never relabel a package to bypass it.
-Passing checks prepares a release; the owner still approves publication.
+Passing checks prepares a release.
+
+Game releases reach Arcade players automatically. Every fifteen minutes the
+Game updates workflow compares each game package's latest published GitHub
+release with Arcade's pin (`scripts/follow-game-releases.py`). For a newer
+version it pins that release, adds the game's notes as a new Arcade version,
+builds and checks the collection, commits it and attaches the catalog to the
+`node-arcade-VERSION` release. Inner Breeze's Node app follower then signs
+that release and publishes it to Waozi's node.
 
 Chess 1.1.0 requires host API 12. Public Inbe 2.1.34 supplies API 11 and
 predates installable Chess apps, so it is outside the declared range. The

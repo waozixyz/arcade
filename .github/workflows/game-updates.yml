@@ -1,0 +1,114 @@
+name: Game updates
+
+# Arcade follows its games by itself. When a game package (Shovey, Apfelwurm)
+# publishes a GitHub release, this pins Arcade to that release, adds the
+# game's notes to Arcade's changelog, builds and checks the collection,
+# commits the new Arcade version and attaches its catalog and game archive to
+# the node-arcade-VERSION release. Inner Breeze's node follower then signs
+# that release and publishes it to Waozi's node, where Arcade downloads games.
+on:
+  schedule:
+    - cron: '7,22,37,52 * * * *'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: arcade-node-release
+  cancel-in-progress: false
+
+jobs:
+  follow:
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    defaults:
+      run:
+        working-directory: waozixyz/arcade
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with:
+          path: waozixyz/arcade
+      - name: Pin the latest game releases
+        id: pin
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          python3 scripts/follow-game-releases.py pin
+          if git diff --quiet -- ziran.lock; then
+            echo "changed=false" >> "$GITHUB_OUTPUT"
+            echo "Arcade already pins every game's latest release."
+            exit 0
+          fi
+          echo "changed=true" >> "$GITHUB_OUTPUT"
+          python3 - <<'PY' >> "$GITHUB_OUTPUT"
+          import json
+          lock = json.load(open('ziran.lock'))
+          shovey = lock['root']['dependencies']['shovey']
+          print('toolchain=' + lock['toolchain']['commit'])
+          print('shovey=' + next(p['commit'] for p in lock['packages'] if p['id'] == shovey))
+          PY
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        if: steps.pin.outputs.changed == 'true'
+        with:
+          repository: ziranlang/ziran
+          ref: ${{ steps.pin.outputs.toolchain }}
+          path: ziranlang/ziran
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        if: steps.pin.outputs.changed == 'true'
+        with:
+          repository: waozixyz/shovey
+          ref: ${{ steps.pin.outputs.shovey }}
+          path: waozixyz/shovey
+      - name: Install build dependencies
+        if: steps.pin.outputs.changed == 'true'
+        working-directory: .
+        run: sh ziranlang/ziran/scripts/ci_packages.sh build-essential python3-pil python3-cryptography
+      - name: Build the locked toolchain and fetch packages
+        if: steps.pin.outputs.changed == 'true'
+        run: |
+          make -j2 -C ../../ziranlang/ziran
+          echo "$GITHUB_WORKSPACE/ziranlang/ziran/build/bin" >> "$GITHUB_PATH"
+          # The game is generated in its own checkout at the pinned release.
+          printf '[overrides]\nshovey = "../shovey"\nziran = "../../ziranlang/ziran"\n' > ziran.local.toml
+          ../../ziranlang/ziran/build/bin/ziran fetch
+      - name: Write the Arcade release
+        id: release
+        if: steps.pin.outputs.changed == 'true'
+        run: |
+          python3 scripts/follow-game-releases.py changelog --ziran ../../ziranlang/ziran/build/bin/ziran
+          sh update_version.sh
+          python3 scripts/follow-game-releases.py art
+          echo "version=$(cat VERSION)" >> "$GITHUB_OUTPUT"
+          head -12 CHANGELOG.md
+      - name: Build and check the collection
+        if: steps.pin.outputs.changed == 'true'
+        run: |
+          make -C ../shovey levels landscape
+          make collection
+          python3 tests/collection_test.py
+          python3 tests/publisher_test.py
+      - name: Commit the release
+        id: commit
+        if: steps.pin.outputs.changed == 'true'
+        env:
+          VERSION: ${{ steps.release.outputs.version }}
+        run: |
+          git config user.name Waozi
+          git config user.email waozi@proton.me
+          git add ziran.lock CHANGELOG.md VERSION apps/versions.json assets/arcade/library
+          git commit -q -m "Release Arcade $VERSION with the latest game releases"
+          git push origin HEAD:master
+          echo "sha=$(git rev-parse HEAD)" >> "$GITHUB_OUTPUT"
+      - name: Attach the checked catalog and game archive
+        if: steps.pin.outputs.changed == 'true'
+        env:
+          GH_TOKEN: ${{ github.token }}
+          VERSION: ${{ steps.release.outputs.version }}
+          SHA: ${{ steps.commit.outputs.sha }}
+        run: |
+          set -eu
+          gh release create "node-arcade-$VERSION" build/node-apps/arcade.zx build/node-apps/arcade.games.tar build/games/wurm.zx \
+            --target "$SHA" --title "Arcade $VERSION" \
+            --notes 'Arcade downloads the selected game separately and preserves earned progress.'
+          echo "Arcade $VERSION is ready for the node: sha256 $(sha256sum build/node-apps/arcade.zx | cut -d' ' -f1)"
