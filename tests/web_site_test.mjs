@@ -58,9 +58,11 @@ try {
   let ready = false;
   const deadline = Date.now() + 60000;
   while (!ready && Date.now() < deadline) {
+    // The page may still be loading; it answers once its status element exists.
     const state = await command('Runtime.evaluate', {
-      expression: 'JSON.stringify({ready: !!(window.Module && Module.profileReady), error: document.getElementById("loading").classList.contains("error")})',
+      expression: 'JSON.stringify({ready: !!(window.Module && Module.profileReady), error: !!document.getElementById("loading")?.classList.contains("error")})',
       returnByValue: true });
+    if (typeof state.result?.value !== 'string') { await delay(250); continue; }
     const value = JSON.parse(state.result.value);
     if (value.error) { failure = 'the page reported that Arcade could not start'; break; }
     ready = value.ready;
