@@ -43,6 +43,7 @@ Codec :: #import "apps/node_codec";
 #import "entity/publications_read"
 #import "entity/entity_records"
 #import "entity/entity_dew"
+#import "entity/leaderboard_native"
 #import "kryon/widget_palette"
 #import "kryon/image_raster"
 #import "kryon/loading_indicator"
@@ -133,7 +134,7 @@ CollectionAllows :: (context: *void, node: *AppNode, name: string) -> bool {
     name == "tile_map.sampling" || name == "arcade.controls" || name == "arcade.sound" || name == "arcade.navigation" ||
     name == "arcade.updates" ||
     name == PUBLICATIONS_READ_SERVICE || name == ENTITY_RECORDS_SERVICE || name == ENTITY_DEW_SERVICE ||
-    name == "entity.profile"
+    name == "entity.profile" || name == "leaderboard"
 }
 
 CollectionCall :: (context: *void, node: *AppNode, module: *u8, function: *u8,
@@ -176,6 +177,12 @@ CollectionCall :: (context: *void, node: *AppNode, module: *u8, function: *u8,
     HostScalarValid(arguments[1], "string", cast(s32)HostString) {
         service := AppArgumentText(arguments[0])
         request := AppArgumentText(arguments[1])
+        if service == "leaderboard" {
+            saved := EntityLeaderboardReport("arcade", "Arcade", TextUntilNul(node.identity.id[:]),
+                TextUntilNul(node.entry.title[:]), request)
+            result.* = AppHostText(ifx saved then "{\"status\":\"saved\"}" else "{\"status\":\"rejected\"}")
+            return 1
+        }
         // Public level collections, such as a game's live campaign.
         if service == PUBLICATIONS_READ_SERVICE {
             result.* = AppHostText(PublicationsReadAnswer(request))
@@ -322,6 +329,27 @@ CollectionWidgets :: (context: *void, node: *AppNode, module: *u8, function: *u8
     return WidgetHostCall(context, module, function, arguments, count, result)
 }
 
+// Check the same saved install state and verified download plan as Apps.
+// A cached payload or an old score alone is never installed membership.
+CollectionLeaderboardInstalled :: (game: string) -> bool {
+    if !collection_ready { return false }
+    for slot: cast(s64)0..collection_host.tree.nodes.count - 1 {
+        parent := collection_host.tree.nodes[slot].node
+        if parent == null || !parent.collection { continue }
+        index := AppCatalogFind(*parent.catalog, game)
+        if index < 0 { continue }
+        entry := AppCatalogAt(*parent.catalog, index)
+        identity := AppIdentity.{.authority = parent.identity.authority, .id = entry.id}
+        state: AppState
+        plan: AppInstallPlan
+        if CollectionState(null, "local", *identity, *state) && state.installed &&
+        AppHostInstallPlan(*collection_host, parent, entry, *plan) && plan.count == 0 {
+            return true
+        }
+    }
+    return false
+}
+
 CollectionSave :: (context: *void, node: *AppNode) -> bool {
     saved := collection_records
     while saved != null {
@@ -400,6 +428,7 @@ CollectionController :: (context: *void) -> HostedAsset {
 CollectionOpen :: (bundle: string, digest: string, harness_digest: string,
     data: string, locale: string) -> bool {
     if collection_ready { return false }
+    leaderboard_installed = CollectionLeaderboardInstalled
     collection_directory = data
     collection_resource_root = Join(data, "resources")
     opened := AppFilesOpen(*collection_resources, collection_resource_root)
@@ -466,6 +495,7 @@ CollectionOpenShovey :: (directory: string, data: string) -> bool {
 
 CollectionOpenShoveyBytes :: (bytes: string, metadata: string, data: string) -> bool {
     if collection_ready { return false }
+    leaderboard_installed = CollectionLeaderboardInstalled
     id: [128]u8
     digest: [65]u8
     harness: [65]u8

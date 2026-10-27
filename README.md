@@ -200,6 +200,12 @@ puzzle. Shovey also runs as its own desktop app.
 
 ## Shared Entity profile
 
+Leaderboard is inside the shared Profile, including standalone Arcade and
+Shovey. Games report their own level totals under their verified identity;
+Profile shows only games that are installed, with friend rankings for a
+connected account. Removing a game hides its board while retaining its save
+and reported score. Account switches keep rankings separate.
+
 Standalone Shovey's Profile control on its covers opens the shared `entity.zx`
 supplied by the Entity package. The host keeps account keys and native file
 access behind Entity's versioned management service. Returning from Profile
