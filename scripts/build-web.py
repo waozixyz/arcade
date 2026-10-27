@@ -9,7 +9,9 @@ library goes beside it for collections that do not pack one.
 
 With --shovey the page is shovey.waozi.xyz: the same host runs a released
 Shovey download's own shovey.zx, shovey.json and entity.zx, unchanged, on the
-page files --site names.
+page files --site names. Their programs, and the game and Apps controller
+packed in shovey.zx, are compiled into the page, so they run as fast as a
+native build of them; the page still opens those exact bytes.
 """
 import argparse
 import hashlib
@@ -61,9 +63,11 @@ def main():
     work = ROOT / 'build/web'
     work.mkdir(parents=True, exist_ok=True)
     env = {**os.environ, 'ZIRAN': str(package('ziran') / 'build/bin/ziran')}
+    linked = [item for path in (bundle, args.profile.resolve()) for item in ('--linked', str(path))] \
+        if args.shovey else []
     subprocess.run([sys.executable, str(package('entity') / 'scripts/build-web.py'),
                     '--bundle', str(bundle), '--profile', str(args.profile.resolve()),
-                    '--output', str(work / 'runtime.html'),
+                    '--output', str(work / 'runtime.html'), *linked,
                     '--entry', 'runtime:main', '--source', 'src/web/runtime.zi'], cwd=ROOT, env=env, check=True)
     output = args.output.resolve()
     if output.exists():
