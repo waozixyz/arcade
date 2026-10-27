@@ -1,7 +1,8 @@
-"""Release metadata must not prevent Arcade from following the actual game source."""
+"""Released games must bring new dependency edges without moving backwards."""
 import importlib.util
 import json
 from pathlib import Path
+import subprocess
 import tempfile
 import unittest
 from unittest.mock import patch
@@ -13,47 +14,91 @@ spec.loader.exec_module(follower)
 
 
 class GameUpdates(unittest.TestCase):
-    def follow(self, comparison, same_commit=False):
+    def follow(self, comparison, same_commit=False, failure=False, wrong_commit=False):
         with tempfile.TemporaryDirectory(prefix='arcade-release-metadata-') as temporary:
             root = Path(temporary)
             (root / 'apps').mkdir()
             old = '1' * 40
             new = old if same_commit else '2' * 40
-            url = 'https://github.com/waozixyz/wurm.git'
-            identifier = follower.package_id(url, old)
-            lock = {'format': 1, 'toolchain': {}, 'root': {'dependencies': {'wurm': identifier}},
-                    'packages': [{'id': identifier, 'name': 'Apfelwurm', 'url': url,
-                                  'commit': old, 'ref': 'master', 'dependencies': {}}]}
-            (root / 'ziran.lock').write_text(follower.write_lock(lock))
+            lock = {'format': 1, 'toolchain': {'commit': 'compiler'},
+                    'root': {'dependencies': {'wurm': 'old', 'other': 'unrelated'}},
+                    'packages': [{'id': 'old', 'name': 'Apfelwurm',
+                                  'url': 'https://github.com/waozixyz/wurm.git',
+                                  'commit': old, 'ref': 'master', 'dependencies': {}},
+                                 {'id': 'unrelated', 'commit': 'unchanged', 'dependencies': {}}]}
+            original_lock = json.dumps(lock)
+            (root / 'ziran.lock').write_text(original_lock)
+            original_manifest = ('[package]\nname = "Arcade"\n\n[dependencies.wurm]\n'
+                                 'git = "https://github.com/waozixyz/wurm.git"\nref = "master"\n\n'
+                                 '[dependencies.other]\nref = "stable"\n')
+            (root / 'ziran.toml').write_text(original_manifest)
             (root / 'games.json').write_text(json.dumps({'packages': ['wurm']}))
-            # This is the normal release order: metadata first, game release next.
-            (root / 'apps/versions.json').write_text(json.dumps({'node_apps': {'wurm': {'version': '0.1.8'}}}))
+            # Release metadata may name a release before its source is pinned.
+            (root / 'apps/versions.json').write_text(json.dumps({'node_apps': {'wurm': {'version': '0.2.0'}}}))
 
             def gh(*arguments):
                 if arguments[0] == 'release':
-                    return 'v0.1.8'
+                    return 'v0.2.0'
                 return comparison if '/compare/' in arguments[1] else new
 
-            updates = root / 'updates.json'
-            with patch.object(follower, 'ROOT', root), patch.object(follower, 'UPDATES', updates), patch.object(follower, 'gh', gh):
-                follower.pin()
-            return json.loads((root / 'ziran.lock').read_text()), json.loads(updates.read_text()), old, new
+            def resolve(command, **kwargs):
+                self.assertEqual(command, ['verified-ziran', 'update', 'wurm'])
+                self.assertEqual(kwargs, {'cwd': root, 'check': True})
+                self.assertIn(f'ref = "{new}"', (root / 'ziran.toml').read_text())
+                if failure:
+                    (root / 'ziran.lock').write_text('partial resolver output')
+                    raise subprocess.CalledProcessError(1, command)
+                # A package-manager result with a newly introduced Entity import.
+                # The follower must retain this graph verbatim, rather than
+                # replacing the game id while preserving its old empty edges.
+                lock['root']['dependencies']['wurm'] = 'released'
+                lock['packages'][0].update(id='released', commit=old if wrong_commit else new,
+                                          ref=new, dependencies={'entity': 'accounts'})
+                lock['packages'].append({'id': 'accounts', 'commit': 'new-entity', 'dependencies': {}})
+                (root / 'ziran.lock').write_text(json.dumps(lock))
 
-    def test_metadata_already_names_the_release(self):
-        lock, updates, old, new = self.follow('ahead')
+            updates = root / 'updates.json'
+            with patch.object(follower, 'ROOT', root), patch.object(follower, 'UPDATES', updates), \
+                    patch.object(follower, 'gh', gh), patch.object(follower.subprocess, 'run', side_effect=resolve) as run:
+                # Discovery must not require a compiler or modify either input.
+                follower.record_updates(follower.released_updates())
+                self.assertEqual((root / 'ziran.lock').read_text(), original_lock)
+                self.assertEqual((root / 'ziran.toml').read_text(), original_manifest)
+                run.assert_not_called()
+                if failure or wrong_commit:
+                    with self.assertRaises((subprocess.CalledProcessError, ValueError)):
+                        follower.pin('verified-ziran')
+                    self.assertEqual((root / 'ziran.lock').read_text(), original_lock)
+                    self.assertEqual((root / 'ziran.toml').read_text(), original_manifest)
+                else:
+                    follower.pin('verified-ziran')
+                calls = run.call_count
+            return json.loads((root / 'ziran.lock').read_text()), json.loads(updates.read_text()), old, new, calls
+
+    def test_new_release_refreshes_transitive_graph(self):
+        lock, updates, old, new, calls = self.follow('ahead')
         self.assertEqual(lock['packages'][0]['commit'], new)
         self.assertEqual(lock['root']['dependencies']['wurm'], lock['packages'][0]['id'])
-        self.assertEqual(len(updates), 1)
+        self.assertEqual(lock['packages'][0]['dependencies'], {'entity': 'accounts'})
+        self.assertEqual(lock['packages'][1]['commit'], 'unchanged')
+        self.assertEqual(lock['toolchain']['commit'], 'compiler')
+        self.assertEqual((len(updates), calls), (1, 1))
 
     def test_same_source_is_unchanged(self):
-        lock, updates, old, new = self.follow('identical', same_commit=True)
+        lock, updates, old, new, calls = self.follow('identical', same_commit=True)
         self.assertEqual(lock['packages'][0]['commit'], old)
-        self.assertEqual(updates, [])
+        self.assertEqual((updates, calls), ([], 0))
 
     def test_older_release_never_moves_the_pin_back(self):
-        lock, updates, old, new = self.follow('behind')
+        lock, updates, old, new, calls = self.follow('behind')
         self.assertEqual(lock['packages'][0]['commit'], old)
-        self.assertEqual(updates, [])
+        self.assertEqual((updates, calls), ([], 0))
+
+    def test_failed_resolution_restores_manifest_and_lock(self):
+        self.follow('ahead', failure=True)
+
+    def test_local_override_cannot_publish_wrong_game(self):
+        self.follow('ahead', wrong_commit=True)
 
 
 if __name__ == '__main__':

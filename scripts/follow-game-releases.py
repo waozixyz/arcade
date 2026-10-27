@@ -1,11 +1,11 @@
 #!/usr/bin/env python3
 """Follow the published releases of Arcade's game packages.
 
-`pin` moves each game package in ziran.lock to the commit of its repository's
-latest published GitHub release, when that commit is ahead of the current pin.
-Only the game's own entry changes: its dependencies keep Arcade's pins, so the
-games build against the same Kryon and Apps as Arcade. The ids and layout are
-the ones `ziran lock` writes. The updates are recorded in build/game-updates.json.
+`check` records newer published game releases without changing dependencies.
+`pin` selects their exact commits in ziran.toml and asks Ziran to update each
+game and its transitive dependencies. New game imports must reach the lock;
+unrelated packages and the compiler stay pinned. The updates are recorded in
+build/game-updates.json.
 
 `changelog` adds an Arcade release entry naming each updated game with the
 notes of its newest release, for update_version.sh to synchronize.
@@ -26,31 +26,6 @@ ROOT = Path(__file__).resolve().parents[1]
 UPDATES = ROOT / 'build/game-updates.json'
 
 
-def package_id(url, commit):
-    """The id `ziran lock` gives a source at a commit (PkgSourceId)."""
-    return 'p' + hashlib.sha256((url + '\n' + commit).encode()).hexdigest()[:16]
-
-
-def write_lock(lock):
-    """The lock as Ziran writes it: sorted keys, one-line maps, packages kept
-    in their order."""
-    def value(item):
-        if isinstance(item, dict):
-            return '{' + ', '.join(json.dumps(k) + ': ' + json.dumps(item[k]) for k in sorted(item)) + '}'
-        return json.dumps(item)
-
-    def block(item, indent):
-        pad = ' ' * indent
-        fields = [pad + '  ' + json.dumps(k) + ': ' + value(item[k]) for k in sorted(item)]
-        return pad + '{\n' + ',\n'.join(fields) + '\n' + pad + '}'
-
-    text = '{\n  "format": ' + json.dumps(lock['format']) + ',\n  "packages": [\n'
-    text += ',\n'.join(block(item, 4) for item in lock['packages']) + '\n  ],\n'
-    text += '  "root": ' + block(lock['root'], 2).lstrip() + ',\n'
-    text += '  "toolchain": ' + block(lock['toolchain'], 2).lstrip() + '\n}\n'
-    return text
-
-
 def gh(*args):
     return subprocess.check_output(['gh', *args], text=True).strip()
 
@@ -62,11 +37,8 @@ def repository(url):
     return match[1]
 
 
-def pin():
-    lock_path = ROOT / 'ziran.lock'
-    lock = json.loads(lock_path.read_text())
-    if write_lock(lock) != lock_path.read_text():
-        raise SystemExit('ziran.lock is not in the layout ziran lock writes')
+def released_updates():
+    lock = json.loads((ROOT / 'ziran.lock').read_text())
     names = json.loads((ROOT / 'games.json').read_text())['packages']
     updates = []
     for name in names:
@@ -75,6 +47,8 @@ def pin():
         repo = repository(entry['url'])
         tag = gh('release', 'view', '--repo', repo, '--json', 'tagName', '--jq', '.tagName')
         commit = gh('api', f'repos/{repo}/commits/{tag}', '--jq', '.sha')
+        if not re.fullmatch(r'[0-9a-f]{40}', commit):
+            raise SystemExit(f'{name}: invalid release commit')
         if commit == entry['commit']:
             continue
         # Release metadata can be recorded before the game is published.
@@ -84,18 +58,48 @@ def pin():
         if status != 'ahead':
             print(f'{name}: release {tag} is {status} of the pinned {entry["commit"][:12]}; kept')
             continue
-        new_id = package_id(entry['url'], commit)
-        entry['commit'] = commit
-        entry['id'] = new_id
-        for owner in [lock['root'], *lock['packages']]:
-            for alias, target in owner['dependencies'].items():
-                if target == old_id:
-                    owner['dependencies'][alias] = new_id
         updates.append({'name': name, 'repository': repo, 'tag': tag, 'commit': commit})
         print(f'{name}: {repo} {tag} ({commit[:12]})')
-    lock_path.write_text(write_lock(lock))
+    return updates
+
+
+def record_updates(updates):
     UPDATES.parent.mkdir(parents=True, exist_ok=True)
     UPDATES.write_text(json.dumps(updates, indent=2) + '\n')
+
+
+def pin(ziran):
+    updates = released_updates()
+    manifest = ROOT / 'ziran.toml'
+    lock_path = ROOT / 'ziran.lock'
+    original_manifest = manifest.read_bytes()
+    original_lock = lock_path.read_bytes()
+    try:
+        for update in updates:
+            name, commit = update['name'], update['commit']
+            # Edit the declaration; only the package manager writes the graph.
+            section = re.compile(r'(^\[dependencies\.' + re.escape(name) +
+                                 r'\]\s*\n)([^\[]*)', re.M)
+            match = section.search(manifest.read_text())
+            if match is None:
+                raise ValueError(f'{name}: missing dependency declaration')
+            body, count = re.subn(r'^ref\s*=\s*"[^"\n]*"\s*$',
+                                  f'ref = "{commit}"', match[2], flags=re.M)
+            if count != 1:
+                raise ValueError(f'{name}: expected one dependency ref')
+            text = manifest.read_text()
+            manifest.write_text(text[:match.start(2)] + body + text[match.end(2):])
+            subprocess.run([str(ziran), 'update', name], cwd=ROOT, check=True)
+            lock = json.loads(lock_path.read_text())
+            target = lock['root']['dependencies'][name]
+            entry = next(p for p in lock['packages'] if p['id'] == target)
+            if entry['commit'] != commit:
+                raise ValueError(f'{name}: Ziran did not select the released commit; remove its local override')
+    except BaseException:
+        manifest.write_bytes(original_manifest)
+        lock_path.write_bytes(original_lock)
+        raise
+    record_updates(updates)
 
 
 def newest_notes(changelog):
@@ -147,11 +151,13 @@ def art():
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument('command', choices=['pin', 'changelog', 'art'])
+    parser.add_argument('command', choices=['check', 'pin', 'changelog', 'art'])
     parser.add_argument('--ziran', default=str(ROOT / 'scripts/ziran.sh'))
     args = parser.parse_args()
-    if args.command == 'pin':
-        pin()
+    if args.command == 'check':
+        record_updates(released_updates())
+    elif args.command == 'pin':
+        pin(args.ziran)
     elif args.command == 'changelog':
         changelog(args.ziran)
     else:

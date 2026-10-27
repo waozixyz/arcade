@@ -31,13 +31,13 @@ jobs:
           path: waozixyz/arcade
       - name: Check release following
         run: python3 tests/game_updates_test.py
-      - name: Pin the latest game releases
-        id: pin
+      - name: Find newer game releases
+        id: updates
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
-          python3 scripts/follow-game-releases.py pin
-          if git diff --quiet -- ziran.lock; then
+          python3 scripts/follow-game-releases.py check
+          if [ "$(python3 -c 'import json; print(len(json.load(open("build/game-updates.json"))))')" = 0 ]; then
             echo "changed=false" >> "$GITHUB_OUTPUT"
             echo "Arcade already pins every game's latest release."
             exit 0
@@ -46,37 +46,48 @@ jobs:
           python3 - <<'PY' >> "$GITHUB_OUTPUT"
           import json
           lock = json.load(open('ziran.lock'))
-          shovey = lock['root']['dependencies']['shovey']
           print('toolchain=' + lock['toolchain']['commit'])
+          PY
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        if: steps.updates.outputs.changed == 'true'
+        with:
+          repository: ziranlang/ziran
+          ref: ${{ steps.updates.outputs.toolchain }}
+          path: ziranlang/ziran
+      - name: Install build dependencies
+        if: steps.updates.outputs.changed == 'true'
+        working-directory: .
+        run: sh ziranlang/ziran/scripts/ci_packages.sh build-essential python3-pil python3-cryptography
+      - name: Build the locked toolchain and pin game dependencies
+        id: pin
+        if: steps.updates.outputs.changed == 'true'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          make -j2 -C ../../ziranlang/ziran
+          echo "$GITHUB_WORKSPACE/ziranlang/ziran/build/bin" >> "$GITHUB_PATH"
+          python3 scripts/follow-game-releases.py pin --ziran ../../ziranlang/ziran/build/bin/ziran
+          python3 - <<'PY' >> "$GITHUB_OUTPUT"
+          import json
+          lock = json.load(open('ziran.lock'))
+          shovey = lock['root']['dependencies']['shovey']
           print('shovey=' + next(p['commit'] for p in lock['packages'] if p['id'] == shovey))
           PY
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
-        if: steps.pin.outputs.changed == 'true'
-        with:
-          repository: ziranlang/ziran
-          ref: ${{ steps.pin.outputs.toolchain }}
-          path: ziranlang/ziran
-      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
-        if: steps.pin.outputs.changed == 'true'
+        if: steps.updates.outputs.changed == 'true'
         with:
           repository: waozixyz/shovey
           ref: ${{ steps.pin.outputs.shovey }}
           path: waozixyz/shovey
-      - name: Install build dependencies
-        if: steps.pin.outputs.changed == 'true'
-        working-directory: .
-        run: sh ziranlang/ziran/scripts/ci_packages.sh build-essential python3-pil python3-cryptography
-      - name: Build the locked toolchain and fetch packages
-        if: steps.pin.outputs.changed == 'true'
+      - name: Fetch the updated packages
+        if: steps.updates.outputs.changed == 'true'
         run: |
-          make -j2 -C ../../ziranlang/ziran
-          echo "$GITHUB_WORKSPACE/ziranlang/ziran/build/bin" >> "$GITHUB_PATH"
           # The game is generated in its own checkout at the pinned release.
           printf '[overrides]\nshovey = "../shovey"\nziran = "../../ziranlang/ziran"\n' > ziran.local.toml
           ../../ziranlang/ziran/build/bin/ziran fetch
       - name: Write the Arcade release
         id: release
-        if: steps.pin.outputs.changed == 'true'
+        if: steps.updates.outputs.changed == 'true'
         run: |
           python3 scripts/follow-game-releases.py changelog --ziran ../../ziranlang/ziran/build/bin/ziran
           sh update_version.sh
@@ -84,7 +95,7 @@ jobs:
           echo "version=$(cat VERSION)" >> "$GITHUB_OUTPUT"
           head -12 CHANGELOG.md
       - name: Build and check the collection
-        if: steps.pin.outputs.changed == 'true'
+        if: steps.updates.outputs.changed == 'true'
         run: |
           make -C ../shovey levels landscape
           make collection
@@ -92,18 +103,18 @@ jobs:
           python3 tests/publisher_test.py
       - name: Commit the release
         id: commit
-        if: steps.pin.outputs.changed == 'true'
+        if: steps.updates.outputs.changed == 'true'
         env:
           VERSION: ${{ steps.release.outputs.version }}
         run: |
           git config user.name Waozi
           git config user.email waozi@proton.me
-          git add ziran.lock CHANGELOG.md VERSION apps/versions.json assets/arcade/library
+          git add ziran.toml ziran.lock CHANGELOG.md VERSION apps/versions.json assets/arcade/library
           git commit -q -m "Release Arcade $VERSION with the latest game releases"
           git push origin HEAD:master
           echo "sha=$(git rev-parse HEAD)" >> "$GITHUB_OUTPUT"
       - name: Attach the checked catalog and game archive
-        if: steps.pin.outputs.changed == 'true'
+        if: steps.updates.outputs.changed == 'true'
         env:
           GH_TOKEN: ${{ github.token }}
           VERSION: ${{ steps.release.outputs.version }}
