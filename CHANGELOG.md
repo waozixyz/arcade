@@ -1,5 +1,10 @@
 # Arcade changelog
 
+## 0.7.98
+
+- Shovey 0.6.158: In the Google Play version, buy Dew in Profile through Google Play.
+- Shovey 0.6.158: Pip explains wooden doors when Shovey walks up to one, rather than when the level starts.
+
 ## 0.7.97
 
 - Apfelwurm 0.2.6: Glowing portals arrive from level 61: first on a few boards, then more often, with two pairs late in the mountains. Steer into one ring to come out of its partner, keeping your direction. Each ring stands in open ground, so you can always go around it.
