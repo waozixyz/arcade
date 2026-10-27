@@ -1,5 +1,11 @@
 # Arcade changelog
 
+## 0.7.86
+
+- Shovey 0.6.154: Keep opened chests open across restarts and account sync; show the blue Dew diamond only while their reward is unclaimed.
+- Shovey 0.6.154: Show an empty open chest after its Dew is claimed.
+- Shovey 0.6.154: Use corrected campaign boards after an update, including level 29 when an older campaign was cached offline.
+
 ## 0.7.85
 
 - Shovey keeps opened and claimed chests synchronized, with a blue diamond only for an unclaimed reward.
