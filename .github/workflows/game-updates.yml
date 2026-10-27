@@ -6,6 +6,8 @@ name: Game updates
 # commits the new Arcade version and attaches its catalog and game archive to
 # the node-arcade-VERSION release. Inner Breeze's node follower then signs
 # that release and publishes it to Waozi's node, where Arcade downloads games.
+# A game's release workflow starts this at once; the timer is the fallback,
+# since GitHub runs scheduled workflows hours late.
 on:
   schedule:
     - cron: '7,22,37,52 * * * *'
@@ -125,3 +127,17 @@ jobs:
             --target "$SHA" --title "Arcade $VERSION" \
             --notes 'Arcade downloads the selected game separately and preserves earned progress.'
           echo "Arcade $VERSION is ready for the node: sha256 $(sha256sum build/node-apps/arcade.zx | cut -d' ' -f1)"
+      # Breeze's node follower signs this release and publishes it to the
+      # node now, not at its next timer. RELEASE_FOLLOW_TOKEN may only start
+      # workflows in Arcade and Breeze; the follower takes no input and
+      # checks Arcade's newest release itself. Without it the timer follows.
+      - name: Start the node follower
+        if: steps.updates.outputs.changed == 'true'
+        env:
+          GH_TOKEN: ${{ secrets.RELEASE_FOLLOW_TOKEN }}
+        run: |
+          if [ -z "$GH_TOKEN" ]; then
+            echo "No RELEASE_FOLLOW_TOKEN: Breeze's node follower picks this release up on its timer."
+            exit 0
+          fi
+          gh workflow run node-app-follow.yml -R waozixyz/breeze --ref master
