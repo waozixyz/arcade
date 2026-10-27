@@ -493,6 +493,13 @@ CollectionOpenShovey :: (directory: string, data: string) -> bool {
     return found && metadata_found && CollectionOpenShoveyBytes(bytes, metadata, data)
 }
 
+// Metadata of the standalone Shovey player, as the downloads and
+// shovey.waozi.xyz carry it, rather than of Arcade's collection.
+CollectionShoveyReceipt :: (metadata: string) -> bool {
+    id: [128]u8
+    return AppsReadText(metadata, 0, "id", id[:]) && TextUntilNul(id[:]) == "arcade.shovey-player"
+}
+
 CollectionOpenShoveyBytes :: (bytes: string, metadata: string, data: string) -> bool {
     if collection_ready { return false }
     leaderboard_installed = CollectionLeaderboardInstalled

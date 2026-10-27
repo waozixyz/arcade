@@ -1,6 +1,8 @@
 // Arcade in the browser: the same arcade.zx Inner Breeze downloads, with its
 // shared Apps library, the account Profile and each game downloaded from the
 // node when someone opens it. Saves stay in the page's persistent storage.
+// Given the released Shovey player instead, the shovey.zx and shovey.json of
+// the downloads, it is shovey.waozi.xyz and opens on Shovey's covers.
 using Canvas :: #import "kryon/Canvas";
 #import "kryon/bundle_storage_web"
 #import "kryon/app_files"
@@ -54,7 +56,8 @@ ArcadeFrame :: (session: Session) -> bool {
         TreeCancel(session)
         return false
     }
-    if EndFrame(session) != FrameStatus.FrameOk { return false }
+    // Only damaged pixels are cleared and repainted; the rest of the page stays.
+    if EndCanvasUiFrame(session) != FrameStatus.FrameOk { return false }
     TestDriverFrame(session)
     CanvasCursor(session)
     ok := EndCanvasFrame()
@@ -78,8 +81,11 @@ main :: () -> s32 {
     // The page writes Arcade's own Apps controller beside the collection.
     controller, controller_found := ReadEntireFile("/apps.zx")
     if controller_found { collection_controller = controller } else { AppFileFree(controller) }
-    if !found || !profile_found || receipt == "" || !CollectionOpenBytes(bytes, receipt, data) { return 1 }
-    if !EntityOpen(profile, data) { unused CollectionClose(); return 1 }
+    if !found || !profile_found || receipt == "" { return 1 }
+    shovey := CollectionShoveyReceipt(receipt)
+    opened := ifx shovey then CollectionOpenShoveyBytes(bytes, receipt, data) else CollectionOpenBytes(bytes, receipt, data)
+    if !opened { return 1 }
+    if !EntityOpen(profile, data, shovey) { unused CollectionClose(); return 1 }
     session := SessionOpen()
     if !SessionValid(session) { unused CollectionClose(); return 1 }
     defer { SessionClose(session) }
