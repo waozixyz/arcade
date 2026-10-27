@@ -80,14 +80,14 @@ def pin(ziran):
             # Edit the declaration; only the package manager writes the graph.
             section = re.compile(r'(^\[dependencies\.' + re.escape(name) +
                                  r'\]\s*\n)([^\[]*)', re.M)
-            match = section.search(manifest.read_text())
+            text = manifest.read_text()
+            match = section.search(text)
             if match is None:
                 raise ValueError(f'{name}: missing dependency declaration')
-            body, count = re.subn(r'^ref\s*=\s*"[^"\n]*"\s*$',
+            body, count = re.subn(r'^ref[ \t]*=[ \t]*"[^"\n]*"[ \t]*$',
                                   f'ref = "{commit}"', match[2], flags=re.M)
             if count != 1:
                 raise ValueError(f'{name}: expected one dependency ref')
-            text = manifest.read_text()
             manifest.write_text(text[:match.start(2)] + body + text[match.end(2):])
             subprocess.run([str(ziran), 'update', name], cwd=ROOT, check=True)
             lock = json.loads(lock_path.read_text())

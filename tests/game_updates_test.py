@@ -4,6 +4,7 @@ import json
 from pathlib import Path
 import subprocess
 import tempfile
+import tomllib
 import unittest
 from unittest.mock import patch
 
@@ -45,6 +46,9 @@ class GameUpdates(unittest.TestCase):
                 self.assertEqual(command, ['verified-ziran', 'update', 'wurm'])
                 self.assertEqual(kwargs, {'cwd': root, 'check': True})
                 self.assertIn(f'ref = "{new}"', (root / 'ziran.toml').read_text())
+                declaration = tomllib.loads((root / 'ziran.toml').read_text())
+                self.assertEqual(declaration['dependencies']['wurm']['ref'], new)
+                self.assertEqual(declaration['dependencies']['other']['ref'], 'stable')
                 if failure:
                     (root / 'ziran.lock').write_text('partial resolver output')
                     raise subprocess.CalledProcessError(1, command)
