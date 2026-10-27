@@ -22,14 +22,18 @@ def digest(path):
 
 
 def library_art(root, name, key, source):
-    """Arcade's committed library thumbnails (scripts/library-art.py).
-    Never pack a copy of outdated art."""
+    """Arcade's committed library thumbnail (scripts/library-art.py), as
+    (bytes, suffix): a PNG, or a JPEG for opaque cover art. Never pack a copy
+    of outdated art."""
     library = Path(root) / "assets/arcade/library"
     sources = json.loads((library / "sources.json").read_text())
     copy = f"{name}-{key}"
     if sources.get(copy, {}).get("source_sha256") != hashlib.sha256(source).hexdigest():
         raise ValueError(f"{copy} art changed; run scripts/library-art.py")
-    return (library / f"{copy}.png").read_bytes()
+    for suffix in (".png", ".jpg"):
+        if (library / (copy + suffix)).is_file():
+            return (library / (copy + suffix)).read_bytes(), suffix
+    raise ValueError(f"{copy} has no library copy; run scripts/library-art.py")
 
 
 def stage(root, controller, expected_controller_digest, output):
@@ -75,7 +79,7 @@ def stage(root, controller, expected_controller_digest, output):
             bundle_bytes, preview_bytes = bundle.read_bytes(), preview.read_bytes()
             if not bundle_bytes or not preview_bytes:
                 raise ValueError("Game bundles and previews must be built first")
-            preview_bytes = library_art(root, name, "preview", preview_bytes)
+            preview_bytes, preview_suffix = library_art(root, name, "preview", preview_bytes)
             total += len(bundle_bytes) + len(preview_bytes)
             child = dict(
                 id=identifier, title=game["title"],
@@ -83,8 +87,8 @@ def stage(root, controller, expected_controller_digest, output):
                 expected_id=name, version=component["version"],
                 sha256=hashlib.sha256(bundle_bytes).hexdigest(),
                 bytes=len(bundle_bytes),
-                preview=f"assets/arcade/previews/{name}.png",
-                icon=f"assets/arcade/previews/{name}.png")
+                preview=f"assets/arcade/previews/{name}{preview_suffix}",
+                icon=f"assets/arcade/previews/{name}{preview_suffix}")
             # A thin add-on links its required games' verified code as libraries.
             if app.get('shared_code'):
                 child['shared_code'] = True
@@ -107,8 +111,8 @@ def stage(root, controller, expected_controller_digest, output):
                     relative = Path(cover[key])
                     if relative.is_absolute() or ".." in relative.parts or relative.suffix != ".png":
                         raise ValueError("Invalid cover asset path")
-                    contents = library_art(root, name, key, (app["source"] / relative).read_bytes())
-                    destination = Path("arcade/covers") / f"{name}-{key}.png"
+                    contents, suffix = library_art(root, name, key, (app["source"] / relative).read_bytes())
+                    destination = Path("arcade/covers") / f"{name}-{key}{suffix}"
                     packed_cover[key] = "assets/" + destination.as_posix()
                     copies.append((contents, destination))
                     total += len(contents)
@@ -116,7 +120,7 @@ def stage(root, controller, expected_controller_digest, output):
             children.append(child)
             package["children"].append(identifier)
             copies += [(bundle_bytes, Path("arcade/games") / (name + ".zx")),
-                       (preview_bytes, Path("arcade/previews") / (name + ".png"))]
+                       (preview_bytes, Path("arcade/previews") / (name + preview_suffix))]
     if total > MAX_PAYLOAD_BYTES:
         raise ValueError("Arcade collection exceeds the host's payload limit")
     catalog = dict(schema=1, id=arcade["id"], title=arcade["title"],

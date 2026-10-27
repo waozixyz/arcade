@@ -78,11 +78,11 @@ class CollectionTests(unittest.TestCase):
             self.assertEqual(child["protocol"], "node/2")
             # The library packs its own small copy of each game's art.
             self.assertEqual((self.output / child["preview"]).read_bytes(),
-                             (ROOT / f"assets/arcade/library/{name}-preview.png").read_bytes())
+                             artist.copy_path(f"{name}-preview").read_bytes())
             for key, path in child["cover"].items():
                 if key in ("portrait", "landscape", "logo"):
                     self.assertEqual((self.output / path).read_bytes(),
-                                     (ROOT / f"assets/arcade/library/{name}-{key}.png").read_bytes())
+                                     artist.copy_path(f"{name}-{key}").read_bytes())
         self.assertEqual((self.output / catalog["harness"]).read_bytes(), self.controller.read_bytes())
 
     def test_changed_game_art_needs_fresh_library_copies(self):
@@ -115,6 +115,9 @@ class CollectionTests(unittest.TestCase):
                                 self.assertAlmostEqual(thumbnail.width / thumbnail.height,
                                                        source.width / source.height, delta=0.01)
                                 self.assertIn(thumbnail.mode, ('RGB', 'RGBA'))
+                                # Opaque cover art is a JPEG; transparency stays PNG.
+                                self.assertEqual(thumbnail.format, 'JPEG' if key != 'logo' and
+                                                 thumbnail.mode == 'RGB' else 'PNG')
 
     def test_editor_download_reuses_verified_shovey_assets(self):
         catalog = self.stage()
@@ -249,7 +252,7 @@ class CollectionTests(unittest.TestCase):
         (self.root / "games.json").write_text(json.dumps({"packages": []}))
         self.assertEqual(self.stage()["children"], [])
         self.assertFalse((self.output / "assets/arcade/games/shovey.zx").exists())
-        self.assertFalse((self.output / "assets/arcade/covers/shovey-portrait.png").exists())
+        self.assertFalse((self.output / "assets/arcade/covers/shovey-portrait.jpg").exists())
 
     def test_unknown_declaration_field_rejected(self):
         declaration = json.loads((self.root / "apps.json").read_text())
@@ -267,7 +270,10 @@ class LibraryThumbnailTests(unittest.TestCase):
                         for y in range(1200) for x in range(900)])
         data = io.BytesIO()
         source.save(data, 'PNG')
-        with Image.open(io.BytesIO(artist.small_copy(data.getvalue(), 'portrait'))) as thumbnail:
+        contents, suffix = artist.small_copy(data.getvalue(), 'portrait')
+        self.assertEqual(suffix, '.jpg')
+        with Image.open(io.BytesIO(contents)) as thumbnail:
+            self.assertEqual(thumbnail.format, 'JPEG')
             self.assertEqual(thumbnail.size, (480, 640))
             self.assertEqual(thumbnail.mode, 'RGB')
             self.assertIsNone(thumbnail.getcolors(256))
@@ -277,23 +283,34 @@ class LibraryThumbnailTests(unittest.TestCase):
         source.paste((200, 35, 100, 255), (100, 50, 1100, 350))
         data = io.BytesIO()
         source.save(data, 'PNG')
-        with Image.open(io.BytesIO(artist.small_copy(data.getvalue(), 'logo'))) as thumbnail:
+        contents, suffix = artist.small_copy(data.getvalue(), 'logo')
+        self.assertEqual(suffix, '.png')
+        with Image.open(io.BytesIO(contents)) as thumbnail:
             self.assertEqual(thumbnail.size, (512, 171))
             self.assertEqual(thumbnail.mode, 'RGBA')
             self.assertEqual(thumbnail.getpixel((0, 0))[3], 0)
             self.assertEqual(thumbnail.getpixel((256, 85))[3], 255)
 
-    def test_small_covers_are_neither_enlarged_nor_reencoded(self):
+    def test_small_covers_are_not_enlarged(self):
         source = Image.new('RGB', (120, 180), (25, 50, 75))
         data = io.BytesIO()
         source.save(data, 'PNG')
-        self.assertEqual(artist.small_copy(data.getvalue(), 'portrait'), data.getvalue())
+        contents, suffix = artist.small_copy(data.getvalue(), 'portrait')
+        self.assertEqual(suffix, '.jpg')
+        with Image.open(io.BytesIO(contents)) as thumbnail:
+            self.assertEqual(thumbnail.size, (120, 180))
+
+    def test_small_transparent_art_is_not_reencoded(self):
+        source = Image.new('RGBA', (120, 60), (25, 50, 75, 128))
+        data = io.BytesIO()
+        source.save(data, 'PNG')
+        self.assertEqual(artist.small_copy(data.getvalue(), 'logo'), (data.getvalue(), '.png'))
 
     def test_thin_logos_keep_at_least_one_pixel(self):
         source = Image.new('RGBA', (4096, 1), (25, 50, 75, 255))
         data = io.BytesIO()
         source.save(data, 'PNG')
-        with Image.open(io.BytesIO(artist.small_copy(data.getvalue(), 'logo'))) as thumbnail:
+        with Image.open(io.BytesIO(artist.small_copy(data.getvalue(), 'logo')[0])) as thumbnail:
             self.assertEqual(thumbnail.size, (512, 1))
 
 

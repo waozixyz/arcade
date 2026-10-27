@@ -1,8 +1,10 @@
 #!/usr/bin/env python3
 """Stage bounded thumbnails for every game's library covers and previews.
 
-Library covers retain full colour and transparency at thumbnail resolution.
-Games keep their own original title artwork. Arcade downloads this small art
+Library covers retain full colour and transparency at thumbnail resolution:
+opaque cover art is a JPEG, a sixth of its PNG size, while logos keep their
+transparency and previews their pixel art as PNG. Games keep their own
+original title artwork. Arcade downloads this small art
 bundle separately from its launcher and caches it by its content digest.
 
 The copies and sources.json, which records the SHA-256 of the art each copy
@@ -24,14 +26,28 @@ COVER_LONGEST = 640
 LOGO_LONGEST = 512
 
 
+COVER_QUALITY = 85
+SUFFIXES = ('.png', '.jpg')
+
+
+def copy_path(name):
+    """The committed copy for name, whichever format it was made in."""
+    for suffix in SUFFIXES:
+        if (LIBRARY / (name + suffix)).is_file():
+            return LIBRARY / (name + suffix)
+    raise FileNotFoundError(f'{name} has no library copy; run scripts/library-art.py')
+
+
 def small_copy(data, key):
+    """(bytes, suffix) of the library's copy of one picture."""
     image = Image.open(io.BytesIO(data))
     image.load()
     longest = PREVIEW_LONGEST if key == 'preview' else LOGO_LONGEST if key == 'logo' else COVER_LONGEST
     scale = min(1.0, longest / max(image.size))
-    if scale == 1.0 and key != 'preview':
-        return data
     alpha = 'A' in image.getbands() or 'transparency' in image.info
+    photo = key in ('portrait', 'landscape') and not alpha
+    if scale == 1.0 and key != 'preview' and not photo:
+        return data, '.png'
     image = image.convert('RGBA' if alpha else 'RGB')
     if scale < 1.0:
         size = (max(1, round(image.width * scale)), max(1, round(image.height * scale)))
@@ -42,8 +58,11 @@ def small_copy(data, key):
         else:
             image = image.quantize(256, dither=Image.Dither.FLOYDSTEINBERG)
     output = io.BytesIO()
+    if photo:
+        image.save(output, 'JPEG', quality=COVER_QUALITY, optimize=True, progressive=True)
+        return output.getvalue(), '.jpg'
     image.save(output, 'PNG', optimize=True)
-    return output.getvalue()
+    return output.getvalue(), '.png'
 
 
 def art(root=ROOT):
@@ -62,15 +81,19 @@ def art(root=ROOT):
 def main():
     LIBRARY.mkdir(parents=True, exist_ok=True)
     sources = {}
+    written = set()
     for name, key, data in art():
         copy = f'{name}-{key}'
-        (LIBRARY / f'{copy}.png').write_bytes(small_copy(data, key))
+        contents, suffix = small_copy(data, key)
+        (LIBRARY / (copy + suffix)).write_bytes(contents)
+        written.add(copy + suffix)
         sources[copy] = {'source_sha256': hashlib.sha256(data).hexdigest()}
-    for stale in LIBRARY.glob('*.png'):
-        if stale.stem not in sources:
-            stale.unlink()
+    for suffix in SUFFIXES:
+        for stale in LIBRARY.glob('*' + suffix):
+            if stale.name not in written:
+                stale.unlink()
     (LIBRARY / 'sources.json').write_text(json.dumps(dict(sorted(sources.items())), indent=2) + '\n')
-    total = sum((LIBRARY / f'{copy}.png').stat().st_size for copy in sources)
+    total = sum((LIBRARY / name).stat().st_size for name in written)
     print(f'{len(sources)} library images, {total / 1048576:.1f} MiB')
 
 
