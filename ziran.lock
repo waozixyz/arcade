@@ -53,6 +53,14 @@
       "url": "https://github.com/sqlite/sqlite.git"
     },
     {
+      "commit": "4f697bb244614d70943bbe92e504ba55db63de9e",
+      "dependencies": {"apps": "pfb2b063c26a84c8b", "entity": "pd2e439f031fa79fe", "kryon": "pd9f69e1ae2a63518", "mingcute": "pe1027b9d16704793"},
+      "id": "p4bab48e700ac3b32",
+      "name": "Apfelwurm",
+      "ref": "4f697bb244614d70943bbe92e504ba55db63de9e",
+      "url": "https://github.com/waozixyz/wurm.git"
+    },
+    {
       "commit": "fafa2cea97d0cb379d832086ba45a989fa6f9c8e",
       "dependencies": {},
       "id": "p5a77c9c35110e925",
@@ -128,14 +136,6 @@
       "url": "https://github.com/kryonlabs/kryon.git"
     },
     {
-      "commit": "7c19cb8a6be8ec1d69a755f597fbff5a1fb8ac9d",
-      "dependencies": {"apps": "pfb2b063c26a84c8b", "entity": "pd2e439f031fa79fe", "kryon": "pd9f69e1ae2a63518", "mingcute": "pe1027b9d16704793"},
-      "id": "pdfeb9039d890de79",
-      "name": "Apfelwurm",
-      "ref": "7c19cb8a6be8ec1d69a755f597fbff5a1fb8ac9d",
-      "url": "https://github.com/waozixyz/wurm.git"
-    },
-    {
       "commit": "9cc6872f75447c3a24c16764f9829d0f58751cb0",
       "dependencies": {},
       "id": "pe1027b9d16704793",
@@ -161,11 +161,11 @@
       "url": "https://github.com/kryonlabs/game2d.git"
     },
     {
-      "commit": "2419a7c645d3e2cfe904fc98763e06ee57cabbde",
+      "commit": "f6da6517c0886ead17d7fc8dd9471a07299f32b4",
       "dependencies": {"apps": "pfb2b063c26a84c8b", "entity": "pd2e439f031fa79fe", "kryon": "pd9f69e1ae2a63518", "mingcute": "pe1027b9d16704793"},
-      "id": "pf9aaac00f44c39f6",
+      "id": "pf52ce686d9c6ea6e",
       "name": "Shovey",
-      "ref": "2419a7c645d3e2cfe904fc98763e06ee57cabbde",
+      "ref": "f6da6517c0886ead17d7fc8dd9471a07299f32b4",
       "url": "https://github.com/waozixyz/shovey.git"
     },
     {
@@ -178,7 +178,7 @@
     }
   ],
   "root": {
-    "dependencies": {"apps": "pfb2b063c26a84c8b", "entity": "pd2e439f031fa79fe", "inbe": "p183b01bccc6424e7", "kryon": "pd9f69e1ae2a63518", "mingcute": "pe1027b9d16704793", "shovey": "pf9aaac00f44c39f6", "wurm": "pdfeb9039d890de79"},
+    "dependencies": {"apps": "pfb2b063c26a84c8b", "entity": "pd2e439f031fa79fe", "inbe": "p183b01bccc6424e7", "kryon": "pd9f69e1ae2a63518", "mingcute": "pe1027b9d16704793", "shovey": "pf52ce686d9c6ea6e", "wurm": "p4bab48e700ac3b32"},
     "name": "Arcade"
   },
   "toolchain": {
