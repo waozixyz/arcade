@@ -1,5 +1,9 @@
 # Arcade changelog
 
+## 0.7.92
+
+- Shovey 0.6.156: Finishing all 175 levels opens a reward window: press Claim to get your Dew. The first 10 players to finish get 100 Dew, the next 20 get 50, players up to the 100th get 20, and everyone after gets 5.
+
 ## 0.7.91
 
 - Shovey 0.6.155: Set an account alias with capitals, an @ or spaces; a taken alias now says so.
