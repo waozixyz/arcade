@@ -1,5 +1,9 @@
 # Arcade changelog
 
+## 0.7.100
+
+- Apfelwurm 0.2.9: More portal rooms in the mountains: five more boards have a walled corner room whose doorway closes, so a ring is the only way in, and boards there that bring portals use their room. Seven of the last twenty boards now have a portal room.
+
 ## 0.7.99
 
 - Shovey 0.6.158: In the Google Play version, buy Dew in Profile through Google Play.
