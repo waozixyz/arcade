@@ -1,5 +1,10 @@
 # Arcade changelog
 
+## 0.7.96
+
+- Shovey 0.6.157: Pip's tips keep what he points at in view: his card moves under the top bar when it would cover it, such as the home in level 1.
+- Apfelwurm 0.2.4: Play on the whole page at wurm.waozi.xyz, without a title bar above the game.
+
 ## 0.7.95
 
 - Shovey 0.6.157: Pip's tips keep what he points at in view: his card moves under the top bar when it would cover it, such as the home in level 1.
