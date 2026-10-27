@@ -10,6 +10,9 @@
   <link rel="icon" href="icon.svg" type="image/svg+xml">
   <link rel="apple-touch-icon" href="apple-touch-icon.png">
   <link rel="manifest" href="manifest.webmanifest">
+  <!-- The runtime downloads while the page fetches the collection's files. -->
+  <link rel="preload" href="runtime.js" as="script">
+  <link rel="preload" href="runtime.wasm" as="fetch" type="application/wasm" crossorigin>
   <meta property="og:type" content="website">
   <meta property="og:url" content="https://arcade.waozi.xyz/">
   <meta property="og:title" content="Arcade">
@@ -56,6 +59,27 @@
         onAbort: failed,
         onExit: function (code) { if (code !== 0) failed(); }
       };
+      // Bundles travel gzip-compressed beside their plain copies: Cloudflare
+      // does not compress binary files. Browsers without DecompressionStream,
+      // or a missing .gz, take the plain file; null when neither exists.
+      function plain(name) {
+        return fetch(name).then(function (response) {
+          return response.ok ? response.arrayBuffer() : null;
+        });
+      }
+      function bundle(name) {
+        if (typeof DecompressionStream !== 'function') return plain(name);
+        return fetch(name + '.gz').then(function (response) {
+          if (!response.ok) throw new Error(response.status);
+          return response.arrayBuffer();
+        }).then(function (packed) {
+          var head = new Uint8Array(packed, 0, Math.min(2, packed.byteLength));
+          // A server that already decoded it hands over the plain bytes.
+          if (head[0] !== 0x1f || head[1] !== 0x8b) return packed;
+          return new Response(new Blob([packed]).stream()
+            .pipeThrough(new DecompressionStream('gzip'))).arrayBuffer();
+        }).catch(function () { return plain(name); });
+      }
       // The build receipt names the collection's digest and its trusted Apps
       // library; Arcade's own copy of that library goes in beside it.
       Promise.all([
@@ -63,13 +87,16 @@
           if (!response.ok) throw new Error(response.status);
           return response.text();
         }),
-        fetch('apps.zx').then(function (response) {
-          return response.ok ? response.arrayBuffer() : null;
-        })
+        bundle('apps.zx'),
+        bundle('runtime.data')
       ]).then(function (loaded) {
         Module.arcadeReceipt = loaded[0];
         if (loaded[1]) {
           Module.preRun = [function () { FS.writeFile('/apps.zx', new Uint8Array(loaded[1])); }];
+        }
+        // The runtime's file package, already here, is not fetched again.
+        if (loaded[2]) {
+          Module.getPreloadedPackage = function () { return loaded[2]; };
         }
         function start() {
           var script = document.createElement('script');

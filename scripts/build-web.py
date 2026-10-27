@@ -14,6 +14,7 @@ packed in shovey.zx, are compiled into the page, so they run as fast as a
 native build of them; the page still opens those exact bytes.
 """
 import argparse
+import gzip
 import hashlib
 import json
 import os
@@ -29,6 +30,14 @@ ZIRAN = str(ROOT / 'scripts/ziran.sh')
 def package(name):
     flags = [] if (ROOT / 'ziran.local.toml').exists() else ['--locked']
     return Path(subprocess.check_output([ZIRAN, 'pkg', 'path', name, *flags], cwd=ROOT, text=True).strip())
+
+
+def compress(path):
+    """A gzip copy beside path, which the page fetches first: Cloudflare
+    Pages does not compress binary files (apps.zx 1.9 MB -> 0.24 MB)."""
+    with open(path.with_name(path.name + '.gz'), 'wb') as raw:
+        with gzip.GzipFile(filename='', mode='wb', compresslevel=9, fileobj=raw, mtime=0) as packed:
+            packed.write(path.read_bytes())
 
 
 def main():
@@ -75,11 +84,13 @@ def main():
     shutil.copytree(args.site, output)
     for name in ('runtime.js', 'runtime.wasm', 'runtime.data'):
         shutil.copyfile(work / name, output / name)
+    compress(output / 'runtime.data')
     (output / 'arcade.json').write_text(text)
     # Only the library the receipt trusts; the host refuses any other.
     controller = args.controller.read_bytes() if args.controller.is_file() else b''
     if hashlib.sha256(controller).hexdigest() == args.controller_sha256:
         (output / 'apps.zx').write_bytes(controller)
+        compress(output / 'apps.zx')
     else:
         print('No matching Apps controller beside the collection; it must pack its own')
     print(f'{"Shovey" if args.shovey else "Arcade"} {args.version} for the browser in {output}')
