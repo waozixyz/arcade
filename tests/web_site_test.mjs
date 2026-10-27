@@ -12,8 +12,16 @@ if (!site) throw new Error('Usage: node tests/web_site_test.mjs SITE_DIR');
 const types = { '.html': 'text/html', '.js': 'text/javascript', '.wasm': 'application/wasm', '.json': 'application/json',
   '.svg': 'image/svg+xml', '.png': 'image/png', '.jpg': 'image/jpeg', '.webmanifest': 'application/manifest+json' };
 const server = createServer(async (request, response) => {
-  const path = normalize(decodeURIComponent(new URL(request.url, 'http://x').pathname)).replace(/^\/+/, '') || 'index.html';
+  const url = new URL(request.url, 'http://x');
+  const path = normalize(decodeURIComponent(url.pathname)).replace(/^\/+/, '') || 'index.html';
   try {
+    // Model the previous runtime still cached under its unversioned URL.
+    // A new deployment must request its coherent runtime revision instead.
+    if (path === 'runtime.js' && !url.searchParams.has('v')) {
+      response.writeHead(200, { 'Content-Type': 'text/javascript', 'Cache-Control': 'public, max-age=14400' });
+      response.end('console.error("Stale cached Arcade runtime"); Module.onAbort();');
+      return;
+    }
     const body = await readFile(join(site, path));
     response.writeHead(200, { 'Content-Type': types[extname(path)] || 'application/octet-stream' });
     response.end(body);
@@ -69,6 +77,17 @@ try {
     if (!ready) await delay(250);
   }
   if (!ready && !failure) failure = 'the library never became ready';
+  if (ready) {
+    const resources = await command('Runtime.evaluate', {
+      expression: 'performance.getEntriesByType("resource").map(entry=>entry.name)', returnByValue: true });
+    const runtime = resources.result.value.map(name=>new URL(name)).filter(url=>
+      /\/(runtime\.(js|wasm|data)(\.gz)?|arcade\.json|apps\.zx(\.gz)?)$/.test(url.pathname));
+    const revisions = new Set(runtime.map(url=>url.searchParams.get('v')));
+    if (!runtime.some(url=>url.pathname.endsWith('/runtime.js')) ||
+        !runtime.some(url=>url.pathname.endsWith('/runtime.wasm')) ||
+        revisions.size !== 1 || !/^[a-f0-9]{64}$/.test([...revisions][0]))
+      failure = 'the runtime and collection files did not use one coherent cache revision';
+  }
   // Let the library draw several frames before judging them.
   await delay(3000);
   const failed = console_lines.find(line => /frame failed|portable execution failed/.test(line));

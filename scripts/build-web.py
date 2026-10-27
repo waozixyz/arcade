@@ -40,6 +40,27 @@ def compress(path):
             packed.write(path.read_bytes())
 
 
+def version_assets(output, receipt):
+    """Keep the runtime, its data and the verified collection on one cache key."""
+    page = output / 'index.html'
+    html = page.read_text()
+    if '__ARCADE_ASSET_REVISION__' not in html:
+        return
+    digest = hashlib.sha256()
+    for name in ('runtime.js', 'runtime.wasm', 'runtime.data', 'arcade.json', 'apps.zx'):
+        path = output / name
+        if path.is_file():
+            digest.update(name.encode() + b'\0')
+            digest.update(path.read_bytes())
+    revision = digest.hexdigest()
+    page.write_text(html.replace('__ARCADE_ASSET_REVISION__', revision))
+    source = subprocess.check_output(['git', 'rev-parse', 'HEAD'], cwd=ROOT, text=True).strip()
+    (output / 'build.json').write_text(json.dumps({
+        'source_revision': source, 'version': receipt['version'],
+        'assets_sha256': revision,
+    }, indent=2) + '\n')
+
+
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('--bundle', type=Path, default=ROOT / 'build/node-apps/arcade.zx')
@@ -93,6 +114,7 @@ def main():
         compress(output / 'apps.zx')
     else:
         print('No matching Apps controller beside the collection; it must pack its own')
+    version_assets(output, receipt)
     print(f'{"Shovey" if args.shovey else "Arcade"} {args.version} for the browser in {output}')
 
 

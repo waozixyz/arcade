@@ -11,8 +11,8 @@
   <link rel="apple-touch-icon" href="apple-touch-icon.png">
   <link rel="manifest" href="manifest.webmanifest">
   <!-- The runtime downloads while the page fetches the collection's files. -->
-  <link rel="preload" href="runtime.js" as="script">
-  <link rel="preload" href="runtime.wasm" as="fetch" type="application/wasm" crossorigin>
+  <link rel="preload" href="runtime.js?v=__ARCADE_ASSET_REVISION__" as="script">
+  <link rel="preload" href="runtime.wasm?v=__ARCADE_ASSET_REVISION__" as="fetch" type="application/wasm" crossorigin>
   <meta property="og:type" content="website">
   <meta property="og:url" content="https://arcade.waozi.xyz/">
   <meta property="og:title" content="Arcade">
@@ -44,6 +44,12 @@
     (function () {
       var loading = document.getElementById('loading');
       var bar = loading.querySelector('.bar');
+      var assetRevision = '__ARCADE_ASSET_REVISION__';
+      function assetUrl(name) {
+        var url = new URL(name, document.baseURI);
+        url.searchParams.set('v', assetRevision);
+        return url.href;
+      }
       function failed() { loading.classList.add('error'); }
       // Arcade's Profile reports ready once the library is about to draw.
       function watch() {
@@ -52,6 +58,7 @@
       }
       window.Module = {
         canvas: document.getElementById('canvas'),
+        locateFile: assetUrl,
         setStatus: function (text) {
           var match = /\((\d+(?:\.\d+)?)\/(\d+)\)/.exec(text || '');
           if (match) bar.style.width = Math.min(100, 100 * match[1] / match[2]) + '%';
@@ -63,13 +70,13 @@
       // does not compress binary files. Browsers without DecompressionStream,
       // or a missing .gz, take the plain file; null when neither exists.
       function plain(name) {
-        return fetch(name).then(function (response) {
+        return fetch(assetUrl(name)).then(function (response) {
           return response.ok ? response.arrayBuffer() : null;
         });
       }
       function bundle(name) {
         if (typeof DecompressionStream !== 'function') return plain(name);
-        return fetch(name + '.gz').then(function (response) {
+        return fetch(assetUrl(name + '.gz')).then(function (response) {
           if (!response.ok) throw new Error(response.status);
           return response.arrayBuffer();
         }).then(function (packed) {
@@ -83,7 +90,7 @@
       // The build receipt names the collection's digest and its trusted Apps
       // library; Arcade's own copy of that library goes in beside it.
       Promise.all([
-        fetch('arcade.json', { cache: 'no-cache' }).then(function (response) {
+        fetch(assetUrl('arcade.json'), { cache: 'no-cache' }).then(function (response) {
           if (!response.ok) throw new Error(response.status);
           return response.text();
         }),
@@ -100,7 +107,7 @@
         }
         function start() {
           var script = document.createElement('script');
-          script.src = 'runtime.js';
+          script.src = assetUrl('runtime.js');
           script.onerror = failed;
           document.body.appendChild(script);
           watch();
