@@ -1,6 +1,7 @@
 """Exercise packaging from the actual registered game builds, preserving bytes."""
 import hashlib
 import importlib.util
+import io
 import json
 from pathlib import Path
 import shlex
@@ -9,6 +10,7 @@ import tempfile
 import unittest
 import sys
 import tarfile
+from PIL import Image
 
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT / "scripts"))
@@ -91,7 +93,7 @@ class CollectionTests(unittest.TestCase):
         with self.assertRaisesRegex(ValueError, "wurm-portrait art changed"):
             self.stage()
 
-    def test_title_screens_keep_original_resolution_colours_and_transparency(self):
+    def test_every_library_cover_uses_a_bounded_thumbnail(self):
         catalog, packages = builder.stage(self.root, self.controller, self.controller_digest, self.output)
         children = {child['id']: child for child in catalog['children']}
         for package in packages:
@@ -104,8 +106,15 @@ class CollectionTests(unittest.TestCase):
                         continue
                     original = (app['source'] / app['cover'][key]).read_bytes()
                     with self.subTest(app=child['id'], image=key):
-                        self.assertEqual(artist.small_copy(original, key), original)
-                        self.assertEqual((self.output / child['cover'][key]).read_bytes(), original)
+                        with Image.open(io.BytesIO(original)) as source:
+                            with Image.open(self.output / child['cover'][key]) as thumbnail:
+                                limit = 512 if key == 'logo' else 640
+                                self.assertLessEqual(max(thumbnail.size), limit)
+                                self.assertLessEqual(thumbnail.width, source.width)
+                                self.assertLessEqual(thumbnail.height, source.height)
+                                self.assertAlmostEqual(thumbnail.width / thumbnail.height,
+                                                       source.width / source.height, delta=0.01)
+                                self.assertIn(thumbnail.mode, ('RGB', 'RGBA'))
 
     def test_editor_download_reuses_verified_shovey_assets(self):
         catalog = self.stage()
@@ -249,6 +258,43 @@ class CollectionTests(unittest.TestCase):
         with self.assertRaisesRegex(ValueError, "unknown apps.json field"):
             self.stage()
         self.assertFalse(self.output.exists())
+
+
+class LibraryThumbnailTests(unittest.TestCase):
+    def test_cover_keeps_full_colour_at_thumbnail_resolution(self):
+        source = Image.new('RGB', (900, 1200))
+        source.putdata([(x % 256, y % 256, (x + y) % 256)
+                        for y in range(1200) for x in range(900)])
+        data = io.BytesIO()
+        source.save(data, 'PNG')
+        with Image.open(io.BytesIO(artist.small_copy(data.getvalue(), 'portrait'))) as thumbnail:
+            self.assertEqual(thumbnail.size, (480, 640))
+            self.assertEqual(thumbnail.mode, 'RGB')
+            self.assertIsNone(thumbnail.getcolors(256))
+
+    def test_logo_retains_transparency(self):
+        source = Image.new('RGBA', (1200, 400), (45, 155, 90, 0))
+        source.paste((200, 35, 100, 255), (100, 50, 1100, 350))
+        data = io.BytesIO()
+        source.save(data, 'PNG')
+        with Image.open(io.BytesIO(artist.small_copy(data.getvalue(), 'logo'))) as thumbnail:
+            self.assertEqual(thumbnail.size, (512, 171))
+            self.assertEqual(thumbnail.mode, 'RGBA')
+            self.assertEqual(thumbnail.getpixel((0, 0))[3], 0)
+            self.assertEqual(thumbnail.getpixel((256, 85))[3], 255)
+
+    def test_small_covers_are_neither_enlarged_nor_reencoded(self):
+        source = Image.new('RGB', (120, 180), (25, 50, 75))
+        data = io.BytesIO()
+        source.save(data, 'PNG')
+        self.assertEqual(artist.small_copy(data.getvalue(), 'portrait'), data.getvalue())
+
+    def test_thin_logos_keep_at_least_one_pixel(self):
+        source = Image.new('RGBA', (4096, 1), (25, 50, 75, 255))
+        data = io.BytesIO()
+        source.save(data, 'PNG')
+        with Image.open(io.BytesIO(artist.small_copy(data.getvalue(), 'logo'))) as thumbnail:
+            self.assertEqual(thumbnail.size, (512, 1))
 
 
 if __name__ == "__main__":

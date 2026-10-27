@@ -1,5 +1,10 @@
 # Arcade changelog
 
+## 0.7.87
+
+- Open the game library faster with smaller cached cover thumbnails for every game.
+- Keep covers sharp and logos transparent while downloading much less artwork.
+
 ## 0.7.86
 
 - Shovey 0.6.154: Keep opened chests open across restarts and account sync; show the blue Dew diamond only while their reward is unclaimed.

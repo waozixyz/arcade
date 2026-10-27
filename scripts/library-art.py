@@ -1,9 +1,9 @@
 #!/usr/bin/env python3
-"""Stage each game's original title art and small library previews.
+"""Stage bounded thumbnails for every game's library covers and previews.
 
-Title screens and logos retain their original bytes, resolution, colours and
-transparency. Only small library previews are resized and palette limited.
-Arcade downloads the art separately from its small launcher.
+Library covers retain full colour and transparency at thumbnail resolution.
+Games keep their own original title artwork. Arcade downloads this small art
+bundle separately from its launcher and caches it by its content digest.
 
 The copies and sources.json, which records the SHA-256 of the art each copy
 was made from, are committed. The collection build uses them as they are,
@@ -19,23 +19,28 @@ from game_packages import declared_packages
 
 ROOT = Path(__file__).resolve().parents[1]
 LIBRARY = ROOT / 'assets/arcade/library'
-# Previews are small tiles and icons; full-screen artwork keeps its source.
 PREVIEW_LONGEST = 480
+COVER_LONGEST = 640
+LOGO_LONGEST = 512
 
 
 def small_copy(data, key):
-    if key != 'preview':
-        return data
     image = Image.open(io.BytesIO(data))
     image.load()
-    scale = min(1.0, PREVIEW_LONGEST / max(image.size))
+    longest = PREVIEW_LONGEST if key == 'preview' else LOGO_LONGEST if key == 'logo' else COVER_LONGEST
+    scale = min(1.0, longest / max(image.size))
+    if scale == 1.0 and key != 'preview':
+        return data
+    alpha = 'A' in image.getbands() or 'transparency' in image.info
+    image = image.convert('RGBA' if alpha else 'RGB')
     if scale < 1.0:
-        size = (round(image.width * scale), round(image.height * scale))
-        image = image.convert('RGBA' if 'A' in image.getbands() else 'RGB').resize(size, Image.Resampling.LANCZOS)
-    if 'A' in image.getbands():
-        image = image.convert('RGBA').quantize(256, method=Image.Quantize.FASTOCTREE, dither=Image.Dither.FLOYDSTEINBERG)
-    else:
-        image = image.convert('RGB').quantize(256, dither=Image.Dither.FLOYDSTEINBERG)
+        size = (max(1, round(image.width * scale)), max(1, round(image.height * scale)))
+        image = image.resize(size, Image.Resampling.LANCZOS)
+    if key == 'preview':
+        if alpha:
+            image = image.quantize(256, method=Image.Quantize.FASTOCTREE, dither=Image.Dither.FLOYDSTEINBERG)
+        else:
+            image = image.quantize(256, dither=Image.Dither.FLOYDSTEINBERG)
     output = io.BytesIO()
     image.save(output, 'PNG', optimize=True)
     return output.getvalue()
