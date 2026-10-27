@@ -17,7 +17,8 @@ def package(name):
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('--release', action='store_true', help='Build an unsigned release APK for the release signer')
-    parser.add_argument('--bundle', action='store_true', help='Build an unsigned release Android App Bundle for Google Play')
+    parser.add_argument('--bundle', action='store_true',
+                        help="Build the Google Play edition's unsigned release Android App Bundle")
     parser.add_argument('--application-id', help='Use an isolated package for device tests')
     parser.add_argument('--abis', default='arm64-v8a,armeabi-v7a', help='Native ABIs to build')
     parser.add_argument('--build-dir', type=Path, help='Separate Gradle and CMake output for verification')
@@ -49,12 +50,14 @@ def main():
                LIBOQS_DIR=str(package('liboqs')), MONOCYPHER_DIR=str(package('monocypher')))
     command = ['sh', str(ROOT / 'droid/gradlew'), '-p', str(ROOT / 'droid'), '--no-daemon', '--max-workers=2',
                '-Papp.product=shovey', '-Papp.abis=' + args.abis,
-               '-Papp.googlePlay=' + ('true' if args.bundle else 'false'),
                '-Pkryon.dir=' + str(package('kryon')), '-Pziran.dir=' + str(package('ziran')),
                '-Praylib.dir=' + str(package('raylib') / 'src'),
                '-Papp.versionName=' + metadata['version'], '-Papp.versionCode=' + str(release['sequence']),
                '-Pandroid.aapt2FromMavenOverride=' + str(sdk / 'build-tools/36.0.0/aapt2'),
                'bundleRelease' if args.bundle else 'assembleRelease' if args.release else 'assembleDebug']
+    # Kryon's Google Play edition adds Play Billing, so Dew is bought through Play.
+    if args.bundle:
+        command[-1:-1] = ['-Papp.edition=gplay', '-Pandroid.useAndroidX=true']
     if args.application_id:
         command.insert(-1, '-Papp.id=' + args.application_id)
     if args.build_dir:

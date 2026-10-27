@@ -22,6 +22,17 @@ def ledger = new groovy.json.JsonSlurper().parse(file('../../apps/versions.json'
 def appRelease = ledger.node_apps[standaloneShovey ? 'shovey' : 'arcade']
 
 def appCodegen = envOrProp('KRYON_PROJECT_CODEGEN', 'app.codegen') ?: 'c99'
+// Kryon's three editions: -Papp.edition=direct (the default), fdroid or gplay.
+// The Google Play edition adds Kryon's Play Billing (kryon/play_billing), so
+// Entity sells Dew through Google Play; it needs Android 6 and AndroidX
+// (-Pandroid.useAndroidX=true). Native code sees GOOGLE_PLAY or FDROID.
+def appEdition = (project.findProperty('app.edition') ?:
+    (project.findProperty('app.googlePlay') == 'true' ? 'gplay' : 'direct')).toString()
+if (!(appEdition in ['direct', 'fdroid', 'gplay'])) {
+    throw new GradleException('app.edition must be direct, fdroid or gplay')
+}
+def googlePlay = appEdition == 'gplay'
+def requestedMinSdk = Integer.parseInt((project.findProperty('app.minSdk') ?: '21').toString())
 def verificationOutput = project.findProperty('app.outputDir')
 if (verificationOutput != null) { buildDir = file(verificationOutput) }
 
@@ -32,7 +43,7 @@ android {
 
     defaultConfig {
         applicationId project.findProperty('app.id') ?: (standaloneShovey ? 'xyz.waozi.shovey' : 'xyz.waozi.arcade')
-        minSdk Integer.parseInt((project.findProperty('app.minSdk') ?: '21').toString())
+        minSdk googlePlay ? Math.max(requestedMinSdk, 23) : requestedMinSdk
         targetSdk 36
         versionCode Integer.parseInt((project.findProperty('app.versionCode') ?: appRelease.sequence).toString())
         versionName project.findProperty('app.versionName') ?: appRelease.version
@@ -48,7 +59,7 @@ android {
                     '-DRAYLIB_DIR=' + raylibDir,
                     '-DAPP_CODEGEN=' + appCodegen,
                     '-DSHOVEY_STANDALONE=' + (standaloneShovey ? 'ON' : 'OFF'),
-                    '-DGOOGLE_PLAY=' + (project.findProperty('app.googlePlay') == 'true' ? 'ON' : 'OFF')
+                    '-DAPP_EDITION=' + appEdition
             }
         }
     }
@@ -74,10 +85,24 @@ android {
         sourceSets.release.manifest.srcFile 'src/zx/AndroidManifest.xml'
     }
 
+    if (googlePlay) {
+        // Kryon's Play Billing class, from the Kryon checkout this build uses.
+        sourceSets.main.java.srcDir "${kryonDir}/templates/droid/droid/app/src/gplay/java"
+    }
+
     buildTypes {
         release {
             minifyEnabled false
         }
+    }
+}
+
+dependencies {
+    if (googlePlay) {
+        implementation 'com.android.billingclient:billing:9.1.0'
+        // Billing's AndroidX libraries mix Kotlin 1.6 and 1.8 standard
+        // libraries; one Kotlin version keeps their classes from colliding.
+        implementation platform('org.jetbrains.kotlin:kotlin-bom:1.8.22')
     }
 }
 
