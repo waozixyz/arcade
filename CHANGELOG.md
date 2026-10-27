@@ -1,5 +1,19 @@
 # Arcade changelog
 
+## 0.7.89
+
+- Apfelwurm 0.2.1: Use Arcade or Inner Breeze's Profile, Dew and navigation when playing inside them, without duplicate title controls or an extra Back button.
+- Apfelwurm 0.2.1: Open the shared Profile reliably from the skin shop's sign-in button.
+
+## 0.7.88
+
+- Apfelwurm 0.2.0: Play with softer Dusk, Forest and Sage themes, with saved sound and control settings.
+- Apfelwurm 0.2.0: See a continuous painted meadow instead of a repeating grass grid, and clear Profile and Dew icons on the title.
+- Apfelwurm 0.2.0: Sign in through the shared Profile to sync completed levels, playtime, settings and your chosen character across devices.
+- Apfelwurm 0.2.0: Browse the skin shop from the title beside Profile and your Dew balance. Mint, Berry and Rose cost 10, 20 and 30 Dew, with confirmation before buying.
+- Apfelwurm 0.2.0: Earn Night owl after five hours of active play, Golden apple by reaching level 40, and Explorer by visiting waozi.xyz. Purchased skins belong to your account.
+- Apfelwurm 0.2.0: Unlock all 200 levels by playing. The mobile selector shows large previews for unlocked levels and only a lock for later ones. Dew is used for optional cosmetics.
+
 ## 0.7.87
 
 - Open the game library faster with smaller cached cover thumbnails for every game.
