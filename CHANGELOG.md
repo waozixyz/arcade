@@ -1,5 +1,13 @@
 # Arcade changelog
 
+## 0.7.97
+
+- Apfelwurm 0.2.6: Glowing portals arrive from level 61: first on a few boards, then more often, with two pairs late in the mountains. Steer into one ring to come out of its partner, keeping your direction. Each ring stands in open ground, so you can always go around it.
+- Apfelwurm 0.2.6: See your best run on the Profile leaderboard: the furthest level you reached and your highest score, as separate Level and Score columns ranked against your friends.
+- Apfelwurm 0.2.6: Sign in once for every waozi.xyz site: a profile signed in on Arcade, Dew or here is used by the others in the same browser.
+- Apfelwurm 0.2.6: Buy Dew inside the Google Play version through Google Play, priced in your own currency. The direct download and F-Droid versions keep buying Dew with Monero.
+- Apfelwurm 0.2.6: The privacy page explains Google Play purchases and how to delete your account.
+
 ## 0.7.96
 
 - Shovey 0.6.157: Pip's tips keep what he points at in view: his card moves under the top bar when it would cover it, such as the home in level 1.
