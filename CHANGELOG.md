@@ -1,5 +1,10 @@
 # Arcade changelog
 
+## 0.7.90
+
+- Set an account alias with capitals, an @ or spaces; a taken alias now says so.
+- Shovey 0.6.155: Set an account alias with capitals, an @ or spaces; a taken alias now says so.
+
 ## 0.7.89
 
 - Apfelwurm 0.2.1: Use Arcade or Inner Breeze's Profile, Dew and navigation when playing inside them, without duplicate title controls or an extra Back button.
