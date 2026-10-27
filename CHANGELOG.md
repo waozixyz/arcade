@@ -1,5 +1,10 @@
 # Arcade changelog
 
+## 0.7.89
+
+- Apfelwurm 0.2.1: Use Arcade or Inner Breeze's Profile, Dew and navigation when playing inside them, without duplicate title controls or an extra Back button.
+- Apfelwurm 0.2.1: Open the shared Profile reliably from the skin shop's sign-in button.
+
 ## 0.7.88
 
 - Apfelwurm 0.2.0: Play with softer Dusk, Forest and Sage themes, with saved sound and control settings.

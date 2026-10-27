@@ -34,15 +34,15 @@
     "arcade": {
       "id": "inbe.arcade",
       "title": "Arcade",
-      "version": "0.7.88",
-      "sequence": 167,
+      "version": "0.7.89",
+      "sequence": 168,
       "host_api": 36
     },
     "wurm": {
       "id": "xyz.waozi.wurm",
       "title": "Apfelwurm",
-      "version": "0.2.0",
-      "sequence": 7,
+      "version": "0.2.1",
+      "sequence": 8,
       "host_api": 12
     }
   }
