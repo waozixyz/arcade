@@ -224,6 +224,12 @@ def main():
             driver.press(label='Profile', role='button')
             driver.wait(label='Account', role='text')
             capture(child, 'arcade-profile')
+            driver.press(label='Leaderboard', role='button')
+            driver.wait(label='Leaderboard', role='text')
+            driver.wait(label='No leaderboard data yet.', role='text')
+            capture(child, 'leaderboard-empty')
+            driver.press(label='Back', role='button')
+            driver.wait(label='Account', role='text')
             driver.press(label="Back", role="button")
             driver.wait(label='Shovey', role='button')
             assert not [path for path in (profile / 'resources/downloads').glob('*.zx') if path.stem in games]
@@ -261,6 +267,23 @@ def main():
             saved = wait(lambda: record.read_bytes() if record.exists() else None, "Classic did not save")
             driver.press(label="Back", role="button")
             driver.wait(label="Shovey Editor", role="button")
+            driver.press(label='Profile', role='button')
+            driver.press(label='Leaderboard', role='button')
+            driver.wait(label='Shovey', role='button')
+            assert not driver.find(label='Apfelwurm', role='button'), 'An undownloaded game has a board'
+            assert not driver.find(label='Shovey Editor', role='button'), 'An unranked editor has a board'
+            capture(child, 'leaderboard-installed')
+            state = profile / 'resources/state/arcade.shovey.json'
+            state.parent.mkdir(parents=True, exist_ok=True)
+            state.write_text('{"v":1,"installed":0,"favorite":0}')
+            driver.wait(label='No leaderboard data yet.', role='text')
+            assert not driver.find(label='Shovey', role='button'), 'A retained score kept an uninstalled board visible'
+            state.write_text('{"v":1,"installed":1,"favorite":0}')
+            driver.wait(label='Shovey', role='button')
+            driver.press(label='Back', role='button')
+            driver.wait(label='Account', role='text')
+            driver.press(label='Back', role='button')
+            driver.wait(label='Shovey Editor', role='button')
             assert not driver.find(label=sizes["shovey"], role="text"), "Installed games must omit their download size"
             driver.press(label="Shovey Editor", role="button")
             driver.wait(label='Download size: ' + sizes['shovey-editor'], role='text')
