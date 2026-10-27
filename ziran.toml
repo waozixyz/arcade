@@ -39,7 +39,7 @@ ref = "master"
 # Shovey's editions and editor are available as separate downloads.
 [dependencies.shovey]
 git = "https://github.com/waozixyz/shovey.git"
-ref = "master"
+ref = "b16edce6913dc708d7b56c9b1759ab17cdd1b6e3"
 
 # Compatibility tooling runs Inner Breeze's host checks; releases check its publisher pins.
 [dependencies.inbe]
@@ -56,4 +56,4 @@ ref = "master"
 
 [dependencies.wurm]
 git = "https://github.com/waozixyz/wurm.git"
-ref = "941c0c1b73ad14b1f03320d181c118057a0c3e0f"
+ref = "3cead1f21720258c0acffa84c8625579d68c3a9e"

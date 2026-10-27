@@ -1,5 +1,10 @@
 # Arcade changelog
 
+## 0.7.91
+
+- Shovey 0.6.155: Set an account alias with capitals, an @ or spaces; a taken alias now says so.
+- Apfelwurm 0.2.2: Set an account alias with capitals, an @ or spaces; a taken alias now says so.
+
 ## 0.7.90
 
 - Set an account alias with capitals, an @ or spaces; a taken alias now says so.
