@@ -1,5 +1,9 @@
 # Arcade changelog
 
+## 0.7.95
+
+- Shovey 0.6.157: Pip's tips keep what he points at in view: his card moves under the top bar when it would cover it, such as the home in level 1.
+
 ## 0.7.94
 
 - The library's game covers download about four times faster.
