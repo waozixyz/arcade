@@ -71,11 +71,23 @@
         if (loaded[1]) {
           Module.preRun = [function () { FS.writeFile('/apps.zx', new Uint8Array(loaded[1])); }];
         }
-        var script = document.createElement('script');
-        script.src = 'runtime.js';
-        script.onerror = failed;
-        document.body.appendChild(script);
-        watch();
+        function start() {
+          var script = document.createElement('script');
+          script.src = 'runtime.js';
+          script.onerror = failed;
+          document.body.appendChild(script);
+          watch();
+        }
+        // One sign-in for every waozi.xyz site: account.waozi.xyz hands over
+        // the shared profile before Arcade starts, or Arcade starts without it.
+        var started = false;
+        function go() { if (!started) { started = true; start(); } }
+        var shared = document.createElement('script');
+        shared.src = 'https://account.waozi.xyz/share.js';
+        shared.onload = function () { WaoziAccount.attach(Module, 2500).then(go, go); };
+        shared.onerror = go;
+        setTimeout(go, 4000);
+        document.head.appendChild(shared);
       }).catch(failed);
     })();
   </script>
