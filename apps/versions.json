@@ -13,8 +13,8 @@
     "shovey": {
       "id": "arcade.shovey",
       "title": "Shovey",
-      "version": "0.6.158",
-      "sequence": 166,
+      "version": "0.6.159",
+      "sequence": 167,
       "host_api": 12
     },
     "shovey-island": {
