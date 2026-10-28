@@ -1,5 +1,9 @@
 # Arcade changelog
 
+## 0.7.103
+
+- Apfelwurm 0.2.11: Buy a small 10 Dew pack in the Google Play edition and see each larger pack’s savings per Dew.
+
 ## 0.7.102
 
 - Update Apfelwurm and Shovey with a small 10 Dew pack and visible larger-pack savings in their Google Play editions.
