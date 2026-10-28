@@ -1,5 +1,9 @@
 # Arcade changelog
 
+## 0.7.104
+
+- Apfelwurm 0.2.12: Download the Google Play edition as a separate `-gplay.apk`. The standard and F-Droid APKs exclude Google libraries and keep Monero top-ups.
+
 ## 0.7.103
 
 - Apfelwurm 0.2.11: Buy a small 10 Dew pack in the Google Play edition and see each larger pack’s savings per Dew.
