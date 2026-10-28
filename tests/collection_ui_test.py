@@ -310,8 +310,10 @@ def main():
             assert not driver.find(label='Pause', role='button'), 'Unverified bytes must never run'
             server['corrupt_wurm'] = False
             primary_download('Try again')
-            # The cover is its title: Apfelwurm asks once how to move, then plays.
-            driver.wait(label='How do you want to move?', role='text', timeout=60)
+            # The hosted player opens its title before its first steering choice.
+            driver.wait(label='Play', role='button', timeout=60)
+            driver.press(label='Play', role='button')
+            driver.wait(label='How do you want to move?', role='text')
             driver.press(label='Swipe', role='button')
             driver.wait(label='Pause', role='button')
             capture(child, 'wurm-playing')
@@ -320,7 +322,7 @@ def main():
             driver.press(label='Back to title', role='button')
             driver.wait(label='Play', role='button')
             capture(child, 'wurm-title')
-            driver.press(label='Back', role='button')
+            driver.key('escape')
             driver.wait(label='Shovey', role='button')
             for entry in json.loads((root / 'build/arcade.json').read_text())['children']:
                 path = profile / 'resources/downloads' / (entry['sha256'] + '.zx')
