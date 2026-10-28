@@ -206,8 +206,20 @@ try {
       // Depending on the game version it first reads records on its title
       // or on Play. Either path must expose a usable recovery control.
       if (!await evaluate('!!Module.arcadeFailed')) {
-        const play=button(await tree(),'Play');
-        if (play) await click(play);
+        try {
+          const play=button(await tree(),'Play');
+          if (play) await click(play);
+        } catch (error) {
+          // The first game frame can fail between sampling the flag and
+          // asking for its tree. Require the runtime's failure signal.
+          let failed=false;
+          for (const end=Date.now()+1000; Date.now()<end;) {
+            failed=await evaluate('!!Module.arcadeFailed');
+            if (failed) break;
+            await delay(50);
+          }
+          if (!failed) throw error;
+        }
       }
       let recovered=false;
       for (const end=Date.now()+15000; Date.now()<end;) {
