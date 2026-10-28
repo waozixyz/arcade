@@ -56,4 +56,4 @@ ref = "master"
 
 [dependencies.wurm]
 git = "https://github.com/waozixyz/wurm.git"
-ref = "f2622e2b51d2593a9e984c0fd00f10258f2e374d"
+ref = "1af02f67771a1136fbb0029f84701418d1974a4d"

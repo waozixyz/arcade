@@ -1,5 +1,11 @@
 # Arcade changelog
 
+## 0.7.101
+
+- Apfelwurm 0.2.10: Keep signed-in progress and unfinished runs after closing or updating Apfelwurm inside Arcade and Breeze.
+- Apfelwurm 0.2.10: Restore earned unlocks from older account saves without changing completed levels or the current run.
+- Apfelwurm 0.2.10: Give Apfelwurm its own Android launcher icon.
+
 ## 0.7.100
 
 - Apfelwurm 0.2.9: More portal rooms in the mountains: five more boards have a walled corner room whose doorway closes, so a ring is the only way in, and boards there that bring portals use their room. Seven of the last twenty boards now have a portal room.
