@@ -89,12 +89,19 @@ main :: () -> s32 {
     session := SessionOpen()
     if !SessionValid(session) { unused CollectionClose(); return 1 }
     defer { SessionClose(session) }
-    WebSet(WebGetObject(WebGlobal, WebName("Module")), WebName("profileReady"), WebBool(true))
     saved := PageNow()
     ok := true
     while ok && PollCanvas() {
         scope := WebScope()
         ok = ArcadeFrame(session)
+        // main returning does not notify Emscripten's onExit unless its
+        // runtime exits too. Tell the page explicitly, so a failed game can
+        // never leave an apparently live library with no input loop.
+        if !ok {
+            WebSet(WebGetObject(WebGlobal, WebName("Module")), WebName("arcadeFailed"), WebBool(true))
+        } else {
+            WebSet(WebGetObject(WebGlobal, WebName("Module")), WebName("profileReady"), WebBool(true))
+        }
         // Saves reach the browser's storage about once a second.
         if PageNow() - saved >= 1000.0 {
             unused BundleStorageSync(false)

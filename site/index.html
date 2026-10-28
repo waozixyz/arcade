@@ -30,6 +30,8 @@
     #loading .failed { display: none; color: #ffb4a8; text-align: center; padding: 0 24px; }
     #loading.error .failed { display: block; }
     #loading.error .track { display: none; }
+    #loading.error { opacity: 1; pointer-events: auto; }
+    #loading button { border: 0; border-radius: 12px; padding: 14px 24px; background: #ffd166; color: #111223; font: inherit; cursor: pointer; }
   </style>
 </head>
 <body>
@@ -38,7 +40,8 @@
     <!-- MingCute game_2 gamepad, Apache-2.0 -->
     <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M15 9v3M13.5 10.5h3M7 5c1 0 3 1 5 1s4-1 5-1c3 0 7 14 3 14-3 0-4.5-4-8-4s-5 4-8 4C0 19 4 5 7 5Zm3 5.5a1.5 1.5 0 1 1-3 0 1.5 1.5 0 0 1 3 0Z"/></svg>
     <div class="track"><div class="bar"></div></div>
-    <p class="failed">Arcade could not start. Reload the page to try again.</p>
+    <p class="failed">Arcade stopped while opening an app. Your saved games are kept.</p>
+    <button class="failed" id="retry" type="button">Return to library</button>
   </div>
   <script>
     (function () {
@@ -50,10 +53,12 @@
         url.searchParams.set('v', assetRevision);
         return url.href;
       }
-      function failed() { loading.classList.add('error'); }
-      // Arcade's Profile reports ready once the library is about to draw.
+      function failed() { loading.classList.remove('done'); loading.classList.add('error'); }
+      document.getElementById('retry').addEventListener('click', function () { location.reload(); });
+      // Keep watching after startup: a later game failure also needs recovery.
       function watch() {
-        if (window.Module && Module.profileReady) { loading.classList.add('done'); return; }
+        if (window.Module && Module.arcadeFailed) { failed(); return; }
+        if (window.Module && Module.profileReady) loading.classList.add('done');
         requestAnimationFrame(watch);
       }
       window.Module = {
