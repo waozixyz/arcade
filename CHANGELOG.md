@@ -1,5 +1,9 @@
 # Arcade changelog
 
+## 0.7.102
+
+- Update Apfelwurm and Shovey with a small 10 Dew pack and visible larger-pack savings in their Google Play editions.
+
 ## 0.7.101
 
 - Apfelwurm 0.2.10: Keep signed-in progress and unfinished runs after closing or updating Apfelwurm inside Arcade and Breeze.
