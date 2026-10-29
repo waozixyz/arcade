@@ -1,5 +1,9 @@
 # Arcade changelog
 
+## [Unreleased]
+
+- On a computer, games start without asking how to move, also inside Breeze.
+
 ## 0.7.108
 
 - Every game runs in Inner Breeze 2.1.61's smaller app format.

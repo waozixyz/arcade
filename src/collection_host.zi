@@ -26,6 +26,9 @@
 #import "kryon/app_files"
 #import "kryon/app_protocol"
 #import "kryon/app_context_host"
+#if !#defined(PLATFORM_DESKTOP) && !#defined(ANDROID_BUILD) && !#defined(PLATFORM_WEB) {
+    CollectionHost :: #import "kryon/app_context";
+}
 #import "kryon/key_input"
 #import "kryon/system_clipboard"
 #import "apps/host"
@@ -92,12 +95,23 @@ collection_leave_to_library: bool;
 // 2 not answered yet.
 collection_updates: s32 = -1;
 
-CollectionTouchFirst :: () -> bool {
-    #if #defined(PLATFORM_DESKTOP) {
-        return false
+// Whether the device's main input is a keyboard and mouse. A native build
+// knows its platform; the collection running as a bundle inside Breeze asks
+// Breeze (Kryon's kryon.input.desktop), and passes the answer to its games.
+CollectionInputDesktop :: () -> bool {
+    #if #defined(PLATFORM_DESKTOP) && !#defined(ANDROID_BUILD) && !#defined(PLATFORM_WEB) {
+        return true
+    } else {
+        #if #defined(ANDROID_BUILD) || #defined(PLATFORM_WEB) {
+            return false
+        } else {
+            return CollectionHost.AppSupports(COLLECTION_INPUT_DESKTOP)
+        }
     }
-    return true
 }
+COLLECTION_INPUT_DESKTOP :: "kryon.input.desktop"
+
+CollectionTouchFirst :: () -> bool { return !CollectionInputDesktop() }
 
 CollectionRecordsFor :: (id: string) -> *CollectionRecords {
     saved := collection_records
@@ -135,7 +149,8 @@ CollectionAllows :: (context: *void, node: *AppNode, name: string) -> bool {
     name == "tile_map.sampling" || name == "arcade.controls" || name == "arcade.sound" || name == "arcade.navigation" ||
     name == "arcade.updates" ||
     name == PUBLICATIONS_READ_SERVICE || name == ENTITY_RECORDS_SERVICE || name == ENTITY_DEW_SERVICE ||
-    name == "entity.profile" || name == "leaderboard"
+    name == "entity.profile" || name == "leaderboard" ||
+    (name == COLLECTION_INPUT_DESKTOP && CollectionInputDesktop())
 }
 
 CollectionCall :: (context: *void, node: *AppNode, module: *u8, function: *u8,
