@@ -11,14 +11,6 @@
       "url": "https://github.com/raysan5/rini.git"
     },
     {
-      "commit": "cb36ad8b060a38fe6be12932d5bcb63eb32a8e50",
-      "dependencies": {"apps": "p9c41020c62c76410", "entity": "p2d0aef8034912fe3", "kryon": "p678dfe3877859170", "mingcute": "pe1027b9d16704793"},
-      "id": "p0def0931b5e6e27e",
-      "name": "Apfelwurm",
-      "ref": "cb36ad8b060a38fe6be12932d5bcb63eb32a8e50",
-      "url": "https://github.com/waozixyz/wurm.git"
-    },
-    {
       "commit": "2944b2e668e735438d8ce24e47a39be3f5c36af5",
       "dependencies": {},
       "id": "p0dfa70137405b096",
@@ -28,7 +20,7 @@
     },
     {
       "commit": "d74348c2e288ac55740461f7e106cda365b4db4a",
-      "dependencies": {"apps": "p9c41020c62c76410", "crypto": "pc23fbf455e97614d", "curl": "p1ca0e8d3c19dbe4c", "daochi_client": "pf7b24c15869d6839", "entity": "p2d0aef8034912fe3", "game2d": "pf2f54c7603f6e861", "kryon": "p678dfe3877859170", "kss": "p1b13dda539ed2a39", "liboqs": "pecdb097af6ab16f7", "mingcute": "pe1027b9d16704793", "monocypher": "p809b4d31a48625a3", "oqs": "p7098ac9cd92f7e5f", "plot": "pab5377a2950368a2", "practices": "p9079dde0fcc11248", "qrcode": "p0dfa70137405b096", "rini": "p09fa77e94b0dfc6c", "sqlite": "p1d80baafaa5fa18a"},
+      "dependencies": {"apps": "p1e4e4f044a26528c", "crypto": "pc23fbf455e97614d", "curl": "p1ca0e8d3c19dbe4c", "daochi_client": "pf7b24c15869d6839", "entity": "p4fd05d3b01b94ee1", "game2d": "pf2f54c7603f6e861", "kryon": "p678dfe3877859170", "kss": "p1b13dda539ed2a39", "liboqs": "p563eec337af1337e", "mingcute": "pe1027b9d16704793", "monocypher": "p809b4d31a48625a3", "oqs": "p7098ac9cd92f7e5f", "plot": "pab5377a2950368a2", "practices": "p9079dde0fcc11248", "qrcode": "p0dfa70137405b096", "rini": "p09fa77e94b0dfc6c", "sqlite": "p1d80baafaa5fa18a"},
       "id": "p183b01bccc6424e7",
       "name": "Inbe",
       "ref": "master",
@@ -61,12 +53,37 @@
       "url": "https://github.com/sqlite/sqlite.git"
     },
     {
-      "commit": "d420622f7f530b573d28f52ca5fbebbaa9c3cc24",
+      "commit": "6c274894cd98cd37f727c06ed7a5bce768a0cbda",
+      "dependencies": {"crypto": "pc23fbf455e97614d", "kryon": "p678dfe3877859170"},
+      "id": "p1e4e4f044a26528c",
+      "name": "Apps",
+      "ref": "master",
+      "url": "https://github.com/waozixyz/apps.git"
+    },
+    {
+      "commit": "8c6e7af9fc7ee16671e9909ccf105a2557bce3f2",
+      "dependencies": {"apps": "p1e4e4f044a26528c", "entity": "p4fd05d3b01b94ee1", "kryon": "p678dfe3877859170", "mingcute": "pe1027b9d16704793"},
+      "id": "p2f1f1d74f54ee8cd",
+      "name": "Apfelwurm",
+      "ref": "8c6e7af9fc7ee16671e9909ccf105a2557bce3f2",
+      "url": "https://github.com/waozixyz/wurm.git"
+    },
+    {
+      "commit": "02a1dfbba9eef37c8ac9f201eb583b097ccf12d8",
       "dependencies": {"daochi_client": "pf7b24c15869d6839", "kryon": "p678dfe3877859170", "monocypher": "p809b4d31a48625a3", "qrcode": "p0dfa70137405b096"},
-      "id": "p2d0aef8034912fe3",
+      "id": "p4fd05d3b01b94ee1",
       "name": "Entity",
       "ref": "master",
       "url": "https://github.com/waozixyz/entity.git"
+    },
+    {
+      "commit": "9fb80ab00d4b37503e66eb7ee7cdec6b305adf8e",
+      "dependencies": {},
+      "id": "p563eec337af1337e",
+      "name": "liboqs",
+      "ref": "main",
+      "source": true,
+      "url": "https://github.com/open-quantum-safe/liboqs.git"
     },
     {
       "commit": "fafa2cea97d0cb379d832086ba45a989fa6f9c8e",
@@ -87,7 +104,7 @@
     },
     {
       "commit": "22d2ddbdc236796953c905a05a2cebf5ab1b4ff3",
-      "dependencies": {"liboqs": "pecdb097af6ab16f7"},
+      "dependencies": {"liboqs": "p563eec337af1337e"},
       "id": "p7098ac9cd92f7e5f",
       "name": "Oqs",
       "ref": "master",
@@ -112,14 +129,6 @@
       "url": "https://github.com/waozixyz/practices.git"
     },
     {
-      "commit": "becce9220e092d33b26a2ec106b93e43714f3946",
-      "dependencies": {"crypto": "pc23fbf455e97614d", "kryon": "p678dfe3877859170"},
-      "id": "p9c41020c62c76410",
-      "name": "Apps",
-      "ref": "master",
-      "url": "https://github.com/waozixyz/apps.git"
-    },
-    {
       "commit": "3f888653b6b97010163d824c4cc72476be3214f3",
       "dependencies": {"kryon": "p678dfe3877859170"},
       "id": "pab5377a2950368a2",
@@ -129,7 +138,7 @@
     },
     {
       "commit": "742d45c1ee04c5ef94d8c2b75605a2081ec94e03",
-      "dependencies": {"apps": "p9c41020c62c76410", "entity": "p2d0aef8034912fe3", "kryon": "p678dfe3877859170", "mingcute": "pe1027b9d16704793"},
+      "dependencies": {"apps": "p1e4e4f044a26528c", "entity": "p4fd05d3b01b94ee1", "kryon": "p678dfe3877859170", "mingcute": "pe1027b9d16704793"},
       "id": "pb78ec98f9af772eb",
       "name": "Shovey",
       "ref": "f6da6517c0886ead17d7fc8dd9471a07299f32b4",
@@ -152,15 +161,6 @@
       "url": "https://github.com/kryonlabs/mingcute.git"
     },
     {
-      "commit": "4778aa5044bf119c30df54219fa89357080af27f",
-      "dependencies": {},
-      "id": "pecdb097af6ab16f7",
-      "name": "liboqs",
-      "ref": "main",
-      "source": true,
-      "url": "https://github.com/open-quantum-safe/liboqs.git"
-    },
-    {
       "commit": "cee04692f3461dcb098833472f071c434980debb",
       "dependencies": {"kryon": "p678dfe3877859170"},
       "id": "pf2f54c7603f6e861",
@@ -178,7 +178,7 @@
     }
   ],
   "root": {
-    "dependencies": {"apps": "p9c41020c62c76410", "entity": "p2d0aef8034912fe3", "inbe": "p183b01bccc6424e7", "kryon": "p678dfe3877859170", "mingcute": "pe1027b9d16704793", "shovey": "pb78ec98f9af772eb", "wurm": "p0def0931b5e6e27e"},
+    "dependencies": {"apps": "p1e4e4f044a26528c", "entity": "p4fd05d3b01b94ee1", "inbe": "p183b01bccc6424e7", "kryon": "p678dfe3877859170", "mingcute": "pe1027b9d16704793", "shovey": "pb78ec98f9af772eb", "wurm": "p2f1f1d74f54ee8cd"},
     "name": "Arcade"
   },
   "toolchain": {

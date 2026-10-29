@@ -1,5 +1,10 @@
 # Arcade changelog
 
+## 0.7.107
+
+- Apfelwurm 0.2.24: Keep the entrance area free of enemies: none start there or wander in, so nothing vanishes when you lose a life.
+- Apfelwurm 0.2.24: Restart Profile and Leaderboard by themselves if they stop, or say why instead of showing an empty page.
+
 ## 0.7.106
 
 - Apfelwurm 0.2.23: Move a little faster throughout the campaign, with a consistent pace across Meadow.
