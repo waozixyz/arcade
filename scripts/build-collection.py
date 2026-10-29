@@ -42,8 +42,9 @@ def stage(root, controller, expected_controller_digest, output):
     if not re.fullmatch(r"[0-9a-f]{64}", expected_controller_digest):
         raise ValueError("An exact trusted Apps controller SHA-256 is required")
     controller_bytes = controller.read_bytes()
-    if hashlib.sha256(controller_bytes).hexdigest() != expected_controller_digest:
-        raise ValueError("Apps controller differs from the trusted SHA-256")
+    controller_digest = hashlib.sha256(controller_bytes).hexdigest()
+    if controller_digest != expected_controller_digest:
+        raise ValueError(f"Apps controller SHA-256 {controller_digest} differs from trusted {expected_controller_digest}")
     packages = declared_packages(root)
     arcade = packages[0]
     if not 1 <= sum(len(package["apps"]) for package in packages) <= MAX_GAMES:
