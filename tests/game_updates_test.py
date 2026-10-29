@@ -104,6 +104,24 @@ class GameUpdates(unittest.TestCase):
     def test_local_override_cannot_publish_wrong_game(self):
         self.follow('ahead', wrong_commit=True)
 
+    def test_release_ships_unreleased_notes(self):
+        with tempfile.TemporaryDirectory(prefix='arcade-release-notes-') as temporary:
+            root = Path(temporary)
+            game = root / 'game'
+            game.mkdir()
+            (game / 'apps.json').write_text(json.dumps({'title': 'Apfelwurm', 'apps': [{'manifest': 'catalog.json'}]}))
+            (game / 'CHANGELOG.md').write_text('## [Unreleased]\n\n- Later.\n\n## [0.2.1] - 2026-10-29\n\n- Faster.\n')
+            (root / 'CHANGELOG.md').write_text('# Arcade changelog\n\n## [Unreleased]\n\n- Keyboard first.\n\n'
+                                               '## 0.7.1\n\n- Older.\n')
+            updates = root / 'updates.json'
+            updates.write_text(json.dumps([{'name': 'wurm'}]))
+            with patch.object(follower, 'ROOT', root), patch.object(follower, 'UPDATES', updates), \
+                    patch.object(follower.subprocess, 'check_output', return_value=str(game) + '\n'):
+                follower.changelog('ziran')
+            self.assertEqual((root / 'CHANGELOG.md').read_text(),
+                             '# Arcade changelog\n\n## 0.7.2\n\n- Keyboard first.\n'
+                             '- Apfelwurm 0.2.1: Faster.\n\n## 0.7.1\n\n- Older.\n')
+
 
 if __name__ == '__main__':
     unittest.main()

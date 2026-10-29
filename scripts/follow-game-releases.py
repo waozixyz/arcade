@@ -132,6 +132,12 @@ def changelog(ziran):
     current = re.search(r'^## (\d+)\.(\d+)\.(\d+)\s*$', text, re.M)
     if current is None:
         raise SystemExit('CHANGELOG.md needs a numeric release entry')
+    # Arcade's own changes wait under Unreleased; this release ships them.
+    pending = re.search(r'^## \[Unreleased\]\s*$', text[:current.start()], re.M)
+    if pending is not None:
+        lines = [line for line in text[pending.end():current.start()].splitlines() if line.startswith('- ')] + lines
+        text = text[:pending.start()] + text[current.start():]
+        current = re.search(r'^## (\d+)\.(\d+)\.(\d+)\s*$', text, re.M)
     version = f'{current[1]}.{current[2]}.{int(current[3]) + 1}'
     entry = f'## {version}\n\n' + '\n'.join(lines) + '\n\n'
     path.write_text(text[:current.start()] + entry + text[current.start():])
