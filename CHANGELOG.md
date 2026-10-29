@@ -3,7 +3,7 @@
 ## 0.7.108
 
 - Every game runs in Inner Breeze 2.1.61's smaller app format.
-- Shovey 0.6.160, Editor 0.2.145 and Island 0.4.8, and Apfelwurm 0.2.25 with hand-painted skins.
+- Shovey 0.6.160, Editor 0.2.145 and Island 0.4.8, and Apfelwurm 0.2.26 with newly painted skins that have calm, plain bodies.
 
 ## 0.7.107
 
