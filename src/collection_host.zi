@@ -38,6 +38,7 @@ Node :: #import "apps/node_types";
 Codec :: #import "apps/node_codec";
 #import "platform"
 #import, file "collection_downloads.zi";
+#import, file "game_contract.zi";
 #import "sound"
 #import "entity_host"
 #import "entity/publications_read"
@@ -437,7 +438,7 @@ CollectionOpen :: (bundle: string, digest: string, harness_digest: string,
     platform := AppPlatform.{.allows = CollectionAllows, .call = CollectionCall,
         .widgets = CollectionWidgets, .save = CollectionSave, .state = CollectionState,
         .effect = CollectionEffect,
-        .bundle = CollectionBundle, .download = CollectionDownload, .fetch = CollectionFetch,
+        .bundle = CollectionBundle, .download = CollectionDownload, .fetch = CollectionFetch, .host_api = GAME_HOST_API,
         // Covers show only the art; the download dialog names the size.
         .controller = CollectionController, .presentation = AppPresentation.{.cover_grid = true, .hide_sizes = true}}
     collection_ready = AppHostStart(*collection_host, bundle, "arcade.local", "inbe.arcade",
@@ -517,7 +518,7 @@ CollectionOpenShoveyBytes :: (bytes: string, metadata: string, data: string) -> 
     language := ifx locale.count >= 2 then locale[:2] else "en"
     platform := AppPlatform.{.allows = CollectionAllows, .call = CollectionCall,
         .widgets = CollectionWidgets, .save = CollectionSave, .state = CollectionState,
-        .effect = CollectionEffect}
+        .effect = CollectionEffect, .host_api = GAME_HOST_API}
     collection_ready = AppHostStart(*collection_host, bytes, "arcade.local", "arcade.shovey-player",
         "shovey", TextUntilNul(digest[:]), "local", platform, TextUntilNul(harness[:]), language)
     return collection_ready

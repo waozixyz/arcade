@@ -34,7 +34,7 @@ ref = "master"
 [dependencies.apps]
 git = "https://github.com/waozixyz/apps.git"
 # Use the shared controller reviewed with the supported collection host.
-ref = "cabc0424e45a4a8ef652944b5e2226e9375177c3"
+ref = "5b67236a8e355e67ce4f8cc0389b9ce3805b874b"
 
 # Shovey's editions and editor are available as separate downloads.
 [dependencies.shovey]

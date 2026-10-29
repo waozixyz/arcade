@@ -1,0 +1,6 @@
+// The game standard every Arcade game implements (standards/game-v1.json).
+// GAME_HOST_API is the newest host interface Arcade's players run; a game
+// that declares a newer one is refused. scripts/check-games.py fails while it
+// differs from the standard and the ledger.
+GAME_CONTRACT_VERSION :: 1
+GAME_HOST_API :: 41

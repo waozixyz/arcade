@@ -1,6 +1,7 @@
 // Runs the registered game bundles. The host owns files and input;
 // each game owns its rules and screens. Chess also runs in Inbe.
 #import "std/file"
+#import, file "game_contract.zi";
 #import "std/bundle_host"
 #import "std/byte_text_linux"
 #import "std/date_time_linux"
@@ -19,10 +20,6 @@
 
 using HostValueKind;
 
-GAME_CONTRACT_VERSION :: 1
-// The game standard's host interface (standards/game-v1.json); the game
-// check fails while they differ.
-GAME_HOST_API :: 41
 
 GameHost :: struct {
     app: HostedApp
