@@ -1,0 +1,189 @@
+name: Android
+
+# Arcade's own Android APKs, with the whole library for offline play, for an
+# Arcade release (node-arcade-VERSION). Game updates starts this on the new
+# release's tag; started by hand on master, it fills in the APKs of the
+# release master is at. Three signed editions are attached: arcade-VERSION.apk
+# and arcade-VERSION-fdroid.apk hold no Google library, arcade-VERSION-gplay.apk
+# is the only one with Play Billing.
+on:
+  workflow_dispatch:
+    inputs:
+      version:
+        description: Arcade release version; empty uses VERSION at the chosen ref
+        required: false
+        type: string
+
+permissions:
+  contents: write
+
+concurrency:
+  group: arcade-android-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    outputs:
+      version: ${{ steps.release.outputs.version }}
+      due: ${{ steps.release.outputs.due }}
+      toolchain: ${{ steps.release.outputs.toolchain }}
+      shovey: ${{ steps.release.outputs.shovey }}
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+      - name: Find the release and its locked dependencies
+        id: release
+        env:
+          GH_TOKEN: ${{ github.token }}
+          REQUESTED: ${{ inputs.version }}
+        run: |
+          set -eu
+          version=$(cat VERSION)
+          if [ -n "$REQUESTED" ] && [ "$REQUESTED" != "$version" ]; then
+            echo "::error::$GITHUB_REF is at Arcade $version, not $REQUESTED"
+            exit 1
+          fi
+          # The APKs carry exactly the release's catalog and games.
+          gh release view "node-arcade-$version" --json name > /dev/null
+          assets=$(gh release view "node-arcade-$version" --json assets --jq '.assets[].name')
+          due=false
+          for name in "arcade-$version.apk" "arcade-$version-fdroid.apk" "arcade-$version-gplay.apk"; do
+            printf '%s\n' "$assets" | grep -qxF "$name" || due=true
+          done
+          if [ "$due" = false ]; then
+            echo "::notice title=Android::Arcade $version already has its APKs"
+          fi
+          python3 - <<'PY' >> "$GITHUB_OUTPUT"
+          import json
+          lock = json.load(open('ziran.lock'))
+          shovey = lock['root']['dependencies']['shovey']
+          print('toolchain=' + lock['toolchain']['commit'])
+          print('shovey=' + next(p['commit'] for p in lock['packages'] if p['id'] == shovey))
+          PY
+          echo "version=$version" >> "$GITHUB_OUTPUT"
+          echo "due=$due" >> "$GITHUB_OUTPUT"
+
+  build:
+    needs: release
+    if: needs.release.outputs.due == 'true'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 90
+    strategy:
+      fail-fast: false
+      matrix:
+        edition: [direct, fdroid, gplay]
+    defaults:
+      run:
+        working-directory: waozixyz/arcade
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with:
+          path: waozixyz/arcade
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with:
+          repository: ziranlang/ziran
+          ref: ${{ needs.release.outputs.toolchain }}
+          path: ziranlang/ziran
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with:
+          repository: waozixyz/shovey
+          ref: ${{ needs.release.outputs.shovey }}
+          path: waozixyz/shovey
+      # Only the Google Play edition may name a Google library, in its build
+      # files as in its APK.
+      - name: Keep Google libraries out of the normal and F-Droid build files
+        if: matrix.edition != 'gplay'
+        uses: kryonlabs/kryon/.github/actions/google-free@7217475dfa7f462939e47e3f0bc918aef248b179
+        with:
+          source: waozixyz/arcade
+      - name: Install build dependencies
+        working-directory: .
+        run: |
+          sh ziranlang/ziran/scripts/ci_packages.sh build-essential cmake pkg-config python3-pil python3-numpy python3-cryptography
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '21'
+      - name: Install the Android SDK parts Kryon's Android host needs
+        working-directory: .
+        run: |
+          sdkmanager="$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager"
+          yes | "$sdkmanager" --licenses > /dev/null
+          "$sdkmanager" --install 'ndk;28.2.13676358' 'build-tools;36.0.0' 'platforms;android-36' 'cmake;3.22.1' > /dev/null
+      - name: Build the locked toolchain and fetch packages
+        run: |
+          make -j2 -C ../../ziranlang/ziran
+          echo "$GITHUB_WORKSPACE/ziranlang/ziran/build/bin" >> "$GITHUB_PATH"
+          # The game is generated in its own checkout at the locked release.
+          printf '[overrides]\nshovey = "../shovey"\nziran = "../../ziranlang/ziran"\n' > ziran.local.toml
+          ../../ziranlang/ziran/build/bin/ziran fetch
+      - name: Build the APK
+        env:
+          EDITION: ${{ matrix.edition }}
+        run: |
+          make -C ../shovey levels landscape
+          if [ "$EDITION" = direct ]; then make android; else make "android-$EDITION"; fi
+      - name: Keep Google libraries out of the normal and F-Droid APK
+        if: matrix.edition != 'gplay'
+        uses: kryonlabs/kryon/.github/actions/google-free@7217475dfa7f462939e47e3f0bc918aef248b179
+        with:
+          packages: waozixyz/arcade/build/android/arcade*-unsigned.apk
+          source: ''
+      # The check must still recognise Play Billing, or its passes on the
+      # other editions prove nothing.
+      - name: Find Play Billing in the Google Play APK
+        if: matrix.edition == 'gplay'
+        uses: kryonlabs/kryon/.github/actions/google-free@7217475dfa7f462939e47e3f0bc918aef248b179
+        with:
+          packages: waozixyz/arcade/build/android/arcade-gplay-unsigned.apk
+          source: ''
+          expect-google: 'true'
+      - name: Sign and check the APK
+        env:
+          KEYSTORE: ${{ secrets.ARCADE_ANDROID_KEYSTORE }}
+          PASSWORD: ${{ secrets.ARCADE_ANDROID_KEYSTORE_PASSWORD }}
+          VERSION: ${{ needs.release.outputs.version }}
+          EDITION: ${{ matrix.edition }}
+        run: |
+          set -eu
+          umask 077
+          suffix=$([ "$EDITION" = direct ] && echo '' || echo "-$EDITION")
+          printf '%s' "$KEYSTORE" | base64 -d > "$RUNNER_TEMP/arcade-release.p12"
+          printf '%s\n' "$PASSWORD" > "$RUNNER_TEMP/password"
+          python3 scripts/android-release.py sign "build/android/arcade$suffix-unsigned.apk" \
+            --edition "$EDITION" --version "$VERSION" \
+            --keystore "$RUNNER_TEMP/arcade-release.p12" --password-file "$RUNNER_TEMP/password" \
+            --output "build/downloads/arcade-$VERSION$suffix.apk"
+          rm -f "$RUNNER_TEMP/arcade-release.p12" "$RUNNER_TEMP/password"
+      - uses: actions/upload-artifact@v4
+        with:
+          name: arcade-android-${{ matrix.edition }}
+          path: waozixyz/arcade/build/downloads/*.apk
+          if-no-files-found: error
+          retention-days: 7
+
+  publish:
+    needs: [release, build]
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+      - uses: actions/download-artifact@v4
+        with:
+          pattern: arcade-android-*
+          path: build/downloads
+          merge-multiple: true
+      - name: Check and attach the APKs to the release
+        env:
+          GH_TOKEN: ${{ github.token }}
+          VERSION: ${{ needs.release.outputs.version }}
+        run: |
+          set -eu
+          for edition in direct fdroid gplay; do
+            suffix=$([ "$edition" = direct ] && echo '' || echo "-$edition")
+            python3 scripts/android-release.py verify "build/downloads/arcade-$VERSION$suffix.apk" \
+              --edition "$edition" --version "$VERSION"
+          done
+          gh release upload "node-arcade-$VERSION" "build/downloads/arcade-$VERSION.apk" \
+            "build/downloads/arcade-$VERSION-fdroid.apk" "build/downloads/arcade-$VERSION-gplay.apk" --clobber

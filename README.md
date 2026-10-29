@@ -123,8 +123,28 @@ make
 Desktop builds need SDL2, Cairo, FreeType, Fontconfig and Pango development
 packages, a C compiler, Python 3 and Ziran. `make install` installs the command
 and desktop-menu entry for the current user; it does not publish a release.
-Harmony registry delivery and Android builds are not implemented in this first
-desktop version.
+
+## Android
+
+Arcade's APK opens the whole library offline: `make android` packs the
+collection with every game, its art and the Apps controller, and builds an
+unsigned release APK in `build/android/`. `make android-fdroid` and
+`make android-gplay` build the other editions; only `-gplay` carries a Google
+library (Play Billing). Builds need the Android SDK with NDK 28.2.13676358,
+build-tools 36.0.0, platform 36 and CMake 3.22.1, and Java 21.
+
+```sh
+make android
+python3 scripts/android-release.py sign build/android/arcade-unsigned.apk --version "$(cat VERSION)"
+make android-offline-ui-test
+```
+
+The release key is `backup/android-signing/arcade-release.p12` (ignored) and
+the GitHub secrets `ARCADE_ANDROID_KEYSTORE` and
+`ARCADE_ANDROID_KEYSTORE_PASSWORD`; `packaging/android/certificate.pem` is its
+public certificate. The Android workflow attaches `arcade-VERSION.apk`,
+`arcade-VERSION-fdroid.apk` and `arcade-VERSION-gplay.apk` to each
+`node-arcade-VERSION` release; Game updates starts it for every new release.
 
 Game packages are registered in `games.json`; each declares its apps in its
 `apps.json`. `scripts/build-games.py` generates the catalog and bundles

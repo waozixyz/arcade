@@ -1,5 +1,9 @@
 # Arcade changelog
 
+## [Unreleased]
+
+- Arcade is available as an Android app that plays every game offline, in normal, F-Droid and Google Play editions.
+
 ## 0.7.109
 
 - On a computer, games start without asking how to move, also inside Breeze.

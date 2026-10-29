@@ -133,6 +133,26 @@ install: all install-arcade
 	install -m 0644 build/shovey-icon.png '$(DATA_DIR)/icons/hicolor/256x256/apps/xyz.waozi.shovey.png'
 	install -m 0644 packaging/xyz.waozi.arcade.desktop packaging/xyz.waozi.shovey.desktop '$(DATA_DIR)/applications/'
 
+# Arcade's own APK opens its whole library offline. Each builds an unsigned
+# release APK in build/android/; only -gplay carries a Google library.
+# scripts/android-release.py signs and checks them.
+.PHONY: android android-fdroid android-gplay
+android: collection
+	python3 scripts/build-android.py --product arcade --release
+
+android-fdroid: collection
+	python3 scripts/build-android.py --product arcade --release --edition fdroid
+
+android-gplay: collection
+	python3 scripts/build-android.py --product arcade --release --edition gplay
+
+# The collection make android packed opens every game offline (desktop host).
+.PHONY: android-offline-ui-test
+android-offline-ui-test: build/arcade build/entity.zx
+	env -u DISPLAY -u WAYLAND_DISPLAY -u XAUTHORITY -u DBUS_SESSION_BUS_ADDRESS \
+		-u SESSION_MANAGER -u GDK_DISPLAY YUE_DESKTOP_RECOVERY=0 SDL_AUDIODRIVER=dummy \
+		timeout 240s xvfb-run -a -n 400 -s '-screen 0 1280x1000x24' python3 tests/android_offline_ui_test.py --binary '$(CURDIR)/build/arcade' --inbe-source '$(INBE_SOURCE)'
+
 .PHONY: android-shovey android-shovey-release android-shovey-bundle
 android-shovey: collection
 	python3 scripts/build-android.py

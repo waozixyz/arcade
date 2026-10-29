@@ -48,7 +48,7 @@ android {
         targetSdk 36
         versionCode Integer.parseInt((project.findProperty('app.versionCode') ?: appRelease.sequence).toString())
         versionName project.findProperty('app.versionName') ?: appRelease.version
-        manifestPlaceholders = [appLabel: standaloneShovey ? 'Shovey' : 'Arcade', appIcon: standaloneShovey ? '@mipmap/ic_launcher' : '@android:drawable/sym_def_app_icon', zxPlayer: (appCodegen == 'zx').toString(),
+        manifestPlaceholders = [appLabel: standaloneShovey ? 'Shovey' : 'Arcade', appIcon: '@mipmap/ic_launcher', zxPlayer: (appCodegen == 'zx').toString(),
             nativeLaunchMode: appCodegen == 'zx' ? 'singleTask' : 'standard']
         ndk {
             abiFilters += androidAbis
@@ -74,11 +74,10 @@ android {
     }
 
     sourceSets.main.assets.srcDir "${rootProject.projectDir}/../build/entity-assets"
-    // Arcade's collection and receipt, staged by make android.
+    // The collection, its receipt and the launcher icon, staged by make android
+    // (scripts/build-android.py).
     sourceSets.main.assets.srcDir "${rootProject.projectDir}/../build/${standaloneShovey ? 'android-shovey-assets' : 'android-assets'}"
-    if (standaloneShovey) {
-        sourceSets.main.res.srcDir "${rootProject.projectDir}/../build/android-shovey-res"
-    }
+    sourceSets.main.res.srcDir "${rootProject.projectDir}/../build/${standaloneShovey ? 'android-shovey-res' : 'android-res'}"
 
     if (appCodegen == 'zx') {
         sourceSets.main.assets.srcDir "${rootProject.projectDir}/../build/android/zx-assets"

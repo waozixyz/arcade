@@ -10,6 +10,7 @@ on:
 
 permissions:
   contents: write
+  actions: write
 
 concurrency:
   group: arcade-node-release
@@ -104,4 +105,6 @@ jobs:
             gh release create "$tag" build/node-apps/arcade.zx build/node-apps/arcade.games.tar build/games/wurm.zx \
               --target "$GITHUB_SHA" --title "Arcade $version" \
               --notes 'Arcade downloads the selected game separately and preserves earned progress.'
+            # Arcade's own APKs build from the release's tag and join its release.
+            gh workflow run android.yml -R "$GITHUB_REPOSITORY" --ref "$tag" -f version="$version"
           fi
