@@ -1,5 +1,10 @@
 # Arcade changelog
 
+## 0.7.108
+
+- Every game runs in Inner Breeze 2.1.61's smaller app format.
+- Shovey 0.6.160, Editor 0.2.145 and Island 0.4.8, and Apfelwurm 0.2.25 with hand-painted skins.
+
 ## 0.7.107
 
 - Apfelwurm 0.2.24: Keep the entrance area free of enemies: none start there or wander in, so nothing vanishes when you lose a life.

@@ -1,5 +1,9 @@
 # Chess changelog
 
+## [1.2.1] - 2026-10-29
+
+- Runs in Inner Breeze 2.1.61's smaller app format.
+
 ## [1.2.0] - 2026-10-18
 
 - Paste one PGN game or a FEN position into the study board.

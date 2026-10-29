@@ -1,49 +1,49 @@
 {
-  "host_api": 12,
-  "oldest_host_api": 12,
+  "host_api": 41,
+  "oldest_host_api": 41,
   "module_api": 2,
   "node_apps": {
     "chess": {
       "id": "inbe.chess",
       "title": "Chess",
-      "version": "1.2.0",
-      "sequence": 5,
-      "host_api": 12
+      "version": "1.2.1",
+      "sequence": 6,
+      "host_api": 41
     },
     "shovey": {
       "id": "arcade.shovey",
       "title": "Shovey",
-      "version": "0.6.159",
-      "sequence": 167,
-      "host_api": 12
+      "version": "0.6.160",
+      "sequence": 168,
+      "host_api": 41
     },
     "shovey-island": {
       "id": "arcade.shovey-island",
       "title": "Shovey Island \u2014 Coming Soon",
-      "version": "0.4.7",
-      "sequence": 11,
-      "host_api": 12
+      "version": "0.4.8",
+      "sequence": 12,
+      "host_api": 41
     },
     "shovey-editor": {
       "id": "arcade.shovey-editor",
       "title": "Shovey Editor",
-      "version": "0.2.144",
-      "sequence": 146,
-      "host_api": 12
+      "version": "0.2.145",
+      "sequence": 147,
+      "host_api": 41
     },
     "arcade": {
       "id": "inbe.arcade",
       "title": "Arcade",
-      "version": "0.7.107",
-      "sequence": 186,
-      "host_api": 36
+      "version": "0.7.108",
+      "sequence": 187,
+      "host_api": 41
     },
     "wurm": {
       "id": "xyz.waozi.wurm",
       "title": "Apfelwurm",
-      "version": "0.2.24",
-      "sequence": 19,
-      "host_api": 12
+      "version": "0.2.25",
+      "sequence": 20,
+      "host_api": 41
     }
   }
 }
