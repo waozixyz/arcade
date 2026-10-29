@@ -20,7 +20,7 @@ assert chess["kind"] == "game"
 assert (ROOT / "apps/chess/engine.zi").is_file(), "Arcade must own the game"
 assert not (inbe / "apps/chess").exists(), "Inbe must consume Chess, not own another copy"
 assert chess["contract_version"] == 1 and chess["module_api"] == 2
-assert chess["host_api"] == 12 and chess["save_schema"] == 1
+assert chess["host_api"] == 41 and chess["save_schema"] == 1
 assert (ROOT / chess["preview"]).is_file()
 env = {key: value for key, value in os.environ.items()
        if key not in {"DISPLAY", "WAYLAND_DISPLAY", "XAUTHORITY", "DBUS_SESSION_BUS_ADDRESS"}}

@@ -5,7 +5,7 @@
   "kind": "game",
   "contract_version": 1,
   "module_api": 2,
-  "host_api": 12,
+  "host_api": 41,
   "save_schema": 1,
   "harnesses": ["arcade", "inbe"],
   "entry": "chess:Main",

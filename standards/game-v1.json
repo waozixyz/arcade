@@ -2,7 +2,7 @@
   "name": "kryon-node-app",
   "contract_version": 1,
   "module_api": 2,
-  "host_api": 12,
+  "host_api": 41,
   "identity": "Stable signed package ID; moving source must not rename installed games",
   "frames": {
     "matching": "Fields match by name",
