@@ -1,5 +1,7 @@
 // Open Arcade's browser edition in a private headless browser and require
-// install, play, reopen and recover from a failed saved-record read.
+// install, play, reopen and recover from a failed saved-record read. The
+// library's art never comes from api.waozi.xyz: those requests are refused,
+// and the covers must draw from the site's own copies or its exact art.
 // Usage: node tests/web_site_test.mjs SITE_DIR
 import { spawn } from 'node:child_process';
 import { createServer } from 'node:http';
@@ -12,7 +14,13 @@ const site = process.argv[2];
 const game = process.env.ARCADE_TEST_GAME || 'Apfelwurm';
 if (!site) throw new Error('Usage: node tests/web_site_test.mjs SITE_DIR');
 const types = { '.html': 'text/html', '.js': 'text/javascript', '.wasm': 'application/wasm', '.json': 'application/json',
-  '.svg': 'image/svg+xml', '.png': 'image/png', '.jpg': 'image/jpeg', '.webmanifest': 'application/manifest+json' };
+  '.svg': 'image/svg+xml', '.png': 'image/png', '.jpg': 'image/jpeg', '.webp': 'image/webp',
+  '.webmanifest': 'application/manifest+json' };
+const library = JSON.parse(await readFile(join(site, 'library.json'), 'utf8').catch(() => 'null'));
+// 'site' serves the library as built; 'corrupt' damages every small copy;
+// 'missing' also withholds the exact art bundle.
+let libraryMode = 'site';
+const served = { pictures: 0, art: 0 }, refusedArt = [];
 const server = createServer(async (request, response) => {
   const url = new URL(request.url, 'http://x');
   const path = normalize(decodeURIComponent(url.pathname)).replace(/^\/+/, '') || 'index.html';
@@ -25,6 +33,15 @@ const server = createServer(async (request, response) => {
       return;
     }
     let body = await readFile(join(site, path));
+    if (library && path.startsWith('library/')) {
+      if (path.endsWith('.zx')) {
+        served.art++;
+        if (libraryMode === 'missing') throw new Error('withheld');
+      } else {
+        served.pictures++;
+        if (libraryMode !== 'site') body[body.length - 1] ^= 1;
+      }
+    }
     if (path === 'index.html') {
       // Enable only the existing widget-tree reader in this disposable page.
       // Input still travels through the browser's real pointer and key events.
@@ -69,6 +86,15 @@ try {
   await new Promise((resolve, reject) => { socket.onopen = resolve; socket.onerror = reject; });
   socket.onmessage = event => {
     const message = JSON.parse(event.data);
+    if (message.method === 'Fetch.requestPaused') {
+      const { requestId, request } = message.params;
+      const refuse = library && request.url.includes(library.art);
+      if (refuse) refusedArt.push(request.url);
+      socket.send(JSON.stringify(refuse
+        ? { id: ++sequence, method: 'Fetch.failRequest', params: { requestId, errorReason: 'BlockedByClient' } }
+        : { id: ++sequence, method: 'Fetch.continueRequest', params: { requestId } }));
+      return;
+    }
     if (message.method === 'Runtime.consoleAPICalled')
       console_lines.push(message.params.args.map(arg => arg.value ?? arg.description ?? '').join(' '));
     if (message.method === 'Runtime.exceptionThrown')
@@ -80,6 +106,8 @@ try {
     message.error ? request.reject(new Error(JSON.stringify(message.error))) : request.resolve(message.result);
   };
   await command('Runtime.enable'); await command('Page.enable');
+  // Games still download from the API; only its art requests are refused.
+  await command('Fetch.enable', { patterns: [{ urlPattern: '*://api.waozi.xyz/*' }] });
   await command('Emulation.setDeviceMetricsOverride', { width: 1280, height: 800, deviceScaleFactor: 1, mobile: false });
   await command('Page.navigate', { url: `http://127.0.0.1:${server.address().port}/` });
   let ready = false;
@@ -157,6 +185,43 @@ try {
       }
       throw new Error('The library did not reopen');
     };
+    // The covers' own pixels: art has far more colours than an empty tile.
+    const coverColours = async () => {
+      const covers = (await tree()).filter(node => node.kind === 'button' && node.visible &&
+        node.visible_width >= 100 && node.visible_height >= 100);
+      return evaluate(`(() => {
+        const canvas = document.getElementById('canvas'), context = canvas.getContext('2d');
+        const scale = canvas.width / canvas.clientWidth;
+        return ${JSON.stringify(covers)}.map(node => {
+          const pixels = context.getImageData(Math.round(node.visible_x * scale), Math.round(node.visible_y * scale),
+            Math.round(node.visible_width * scale), Math.round(node.visible_height * scale)).data;
+          const colours = new Set();
+          for (let at = 0; at < pixels.length; at += 8) colours.add(pixels[at] << 16 | pixels[at + 1] << 8 | pixels[at + 2]);
+          return colours.size;
+        });
+      })()`);
+    };
+    const DRAWN = 1500;
+    const coversDrawn = async () => {
+      let colours = [];
+      for (const end = Date.now() + 15000; Date.now() < end;) {
+        colours = await coverColours();
+        if (colours.length && colours.every(count => count >= DRAWN)) return colours;
+        await delay(250);
+      }
+      throw new Error('The library covers did not draw: ' + JSON.stringify(colours));
+    };
+    const libraryFetched = async () => evaluate(`performance.getEntriesByType('resource').map(entry => entry.name)
+      .filter(name => /\\/library\\//.test(new URL(name).pathname) || name.includes(${JSON.stringify(library?.art || '-')}))`);
+    if (library) {
+      // The first visit draws every cover from the small copies alone.
+      const colours = await coversDrawn();
+      const fetched = await libraryFetched();
+      if (served.art || refusedArt.length || served.pictures !== Object.keys(library.pictures).length ||
+          fetched.some(name => !/\.webp\?v=/.test(name) && !Object.values(library.pictures).some(picture => name.includes(picture.file))))
+        throw new Error('The covers did not come from the small copies alone: ' + JSON.stringify({ served, refusedArt, fetched }));
+      console.log(`Covers drew from ${served.pictures} small copies (${Object.values(library.pictures).reduce((sum, picture) => sum + picture.bytes, 0)} bytes, art ${library.bytes} bytes); colours ${colours}`);
+    }
     const cover = button(await tree(), game);
     if (!cover) throw new Error('Game cover missing');
     await click(cover);
@@ -239,6 +304,26 @@ try {
       await click(button(await tree(),game));
       await waitButton('Play');
       console.log('The reported ReadLevel failure showed recovery; returning reopened the installed game and retained its saved record');
+    }
+    if (library) {
+      // Damaged copies are refused; the exact art from the site draws instead.
+      libraryMode = 'corrupt'; served.pictures = served.art = 0;
+      await command('Page.reload');
+      await pageReady();
+      const colours = await coversDrawn();
+      if (served.art !== 1 || refusedArt.length)
+        throw new Error('Damaged copies did not fall back to the site\'s exact art: ' + JSON.stringify({ served, refusedArt }));
+      console.log(`Damaged copies were refused and the site's exact art drew the covers; colours ${colours}`);
+      // Without the site's art the covers stay empty and Arcade asks the API.
+      libraryMode = 'missing';
+      await command('Page.reload');
+      await pageReady();
+      await delay(3000);
+      const empty = await coverColours();
+      if (!refusedArt.length || !empty.length || empty.some(count => count >= DRAWN))
+        throw new Error('The cover check did not tell empty covers apart: ' + JSON.stringify({ empty, refusedArt }));
+      console.log(`Without the site's art the covers stayed empty (colours ${empty}) and the API art request was refused`);
+      libraryMode = 'site';
     }
   }
   const failed = console_lines.slice(expectedDiagnostics).find(line => /frame failed|portable execution failed/.test(line));

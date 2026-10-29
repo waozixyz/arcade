@@ -303,14 +303,47 @@ CollectionCall :: (context: *void, node: *AppNode, module: *u8, function: *u8,
     return 0
 }
 
+// The website's small copies of a collection's separate library art, under
+// its signed catalog's art digest. The page writes only copies whose digests
+// match its library.json (scripts/build-web.py); "" on other hosts.
+collection_thumbnails: string;
+
+CollectionThumbnail :: (node: *AppNode, path: string) -> string {
+    if collection_thumbnails == "" || node == null || !node.collection ||
+    node.catalog.art_sha256[0] == 0 || !AppAssetPathValid(path) { return "" }
+    copy: Vec(u8)
+    BuilderPrint(*copy, "%/%/%", collection_thumbnails, TextUntilNul(node.catalog.art_sha256[:]), path)
+    thumbnail := BuilderFinish(copy)
+    file := OpenRead(thumbnail)
+    if file.valid { unused CloseFile(file); return thumbnail }
+    AppFileFree(thumbnail)
+    return ""
+}
+
+// The website names where its page writes the library's pictures: small
+// copies, or the exact art bundle for a browser that cannot draw them.
+CollectionWebLibrary :: (thumbnails: string, packages: string) {
+    collection_thumbnails = thumbnails
+    collection_package_folder = packages
+}
+
 CollectionAssetAllowed :: (path: string) -> bool {
-    return path == "" || (collection_widget_node != null && (AppHostAsset(collection_widget_node, path).found ||
-        AppHostAssetPending(collection_widget_node, path)))
+    if path == "" { return true }
+    if collection_widget_node == null { return false }
+    // Checked first: asking for the art itself starts its download.
+    thumbnail := CollectionThumbnail(collection_widget_node, path)
+    if thumbnail != "" { AppFileFree(thumbnail); return true }
+    return AppHostAsset(collection_widget_node, path).found || AppHostAssetPending(collection_widget_node, path)
 }
 
 CollectionAssetPath :: (path: string) -> string {
     if path == "" { return "" }
     if collection_widget_node == null { return "" }
+    thumbnail := CollectionThumbnail(collection_widget_node, path)
+    if thumbnail != "" {
+        if !VecPush(collection_frame_paths, thumbnail) { AppFileFree(thumbnail); return "" }
+        return thumbnail
+    }
     asset := AppHostAsset(collection_widget_node, path)
     if !asset.found { collection_pictures_missing = true; return "" }
     relative := Join(TextUntilNul(collection_widget_node.entry.sha256[:]), path)

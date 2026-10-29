@@ -82,6 +82,9 @@ main :: () -> s32 {
     controller, controller_found := ReadEntireFile("/apps.zx")
     if controller_found { collection_controller = controller } else { AppFileFree(controller) }
     if !found || !profile_found || receipt == "" { return 1 }
+    // The page writes the library's pictures from this site: small copies
+    // under /library, or else the exact art bundle under /packages.
+    CollectionWebLibrary("/library", "/packages")
     shovey := CollectionShoveyReceipt(receipt)
     opened := ifx shovey then CollectionOpenShoveyBytes(bytes, receipt, data) else CollectionOpenBytes(bytes, receipt, data)
     if !opened { return 1 }

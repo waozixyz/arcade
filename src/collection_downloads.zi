@@ -25,6 +25,9 @@ CollectionPackage :: struct {
 collection_packages: *CollectionPackage;
 collection_package_result: string;
 collection_package_files: *AppFiles;
+// Packages the platform already holds, read-only and verified like a
+// download: the website's own copy of the library art. "" for none.
+collection_package_folder: string;
 package_c :: #system_library "c";
 PackageFree :: (memory: *void) #foreign package_c "free";
 CollectionDownloadsOpen :: (files: *AppFiles) { collection_package_files = files }
@@ -60,6 +63,20 @@ CollectionPackageFor :: (entry: *AppEntry) -> *CollectionPackage {
         AppFileFree(package.bytes)
         package.bytes = ""
         package.failed = true
+    }
+    if package.bytes == "" && collection_package_folder != "" {
+        held: Vec(u8)
+        BuilderPrint(*held, "%/%.zx", collection_package_folder, TextUntilNul(package.digest[:]))
+        path := BuilderFinish(held)
+        package.bytes = CollectionReadPackage(path)
+        AppFileFree(path)
+        if package.bytes != "" && CollectionPackageValid(package) {
+            package.failed = false
+        } else if package.bytes != "" {
+            AppFileFree(package.bytes)
+            package.bytes = ""
+            package.failed = true
+        }
     }
     package.next = collection_packages
     collection_packages = package

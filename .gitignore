@@ -1,5 +1,6 @@
 /build/
 /backup/
+/work/
 /ziran.local.toml
 __pycache__/
 *.pyc

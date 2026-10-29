@@ -12,19 +12,155 @@ Shovey download's own shovey.zx, shovey.json and entity.zx, unchanged, on the
 page files --site names. Their programs, and the game and Apps controller
 packed in shovey.zx, are compiled into the page, so they run as fast as a
 native build of them; the page still opens those exact bytes.
+
+The library's pictures come from the site too (stage_web_library_art), so
+the covers never wait for the art bundle from api.waozi.xyz.
 """
 import argparse
 import gzip
 import hashlib
+import io
 import json
 import os
 from pathlib import Path
+import re
 import shutil
+import struct
 import subprocess
 import sys
+import tarfile
 
 ROOT = Path(__file__).resolve().parents[1]
 ZIRAN = str(ROOT / 'scripts/ziran.sh')
+ART_LIMIT = 64 * 1024 * 1024
+# The committed library copies are at most this large (scripts/library-art.py).
+PICTURE_LONGEST = 640
+COVER_QUALITY = 80
+
+
+def bundle_assets(data):
+    """The files embedded in a ZX v26 bundle by path; never runs it."""
+    if data[:8] != b'ZX\0\0\x1a\0\0\0' or len(data) > ART_LIMIT:
+        raise ValueError('unsupported bundle')
+    at = 8
+
+    def take(size):
+        nonlocal at
+        if at + size > len(data):
+            raise ValueError('truncated bundle')
+        value = data[at:at + size]
+        at += size
+        return value
+
+    def number():
+        return struct.unpack('<I', take(4))[0]
+
+    def text():
+        return take(number())
+
+    text(); text()
+    for _ in range(number()):
+        text(); text()
+    for _ in range(number()):
+        for _ in range(7):
+            text()
+        take(8); text(); take(4)
+    for _ in range(number()):
+        for _ in range(3):
+            text()
+    take(number())
+    assets = {}
+    for _ in range(number()):
+        path = text().decode()
+        if path in assets:
+            raise ValueError('duplicate bundle file')
+        assets[path] = take(number())
+    if at != len(data):
+        raise ValueError('trailing bundle bytes')
+    return assets
+
+
+def published_art(folder, digest):
+    """The art bundle a collection names, from the release's game archive
+    beside it or a local build's arcade.games folder."""
+    built = folder / 'arcade.games' / f'{digest}.zx'
+    if built.is_file():
+        return built.read_bytes()
+    archive = folder / 'arcade.games.tar'
+    if archive.is_file():
+        with tarfile.open(archive) as games:
+            member = next((entry for entry in games if entry.name == f'{digest}.zx'), None)
+            if member is not None and member.isfile() and member.size <= ART_LIMIT:
+                return games.extractfile(member).read()
+    raise ValueError('The collection\'s art bundle is not beside it')
+
+
+def web_picture(data, exact):
+    """(bytes, suffix) of the page's copy of one verified library picture: a
+    WebP, lossless when exact (pixel-art previews), unless the original is
+    smaller. Transparency is kept; nothing is larger than PICTURE_LONGEST."""
+    from PIL import Image
+    image = Image.open(io.BytesIO(data))
+    image.load()
+    original = '.' + image.format.lower().replace('jpeg', 'jpg')
+    alpha = 'A' in image.getbands() or 'transparency' in image.info
+    image = image.convert('RGBA' if alpha else 'RGB')
+    scale = min(1.0, PICTURE_LONGEST / max(image.size))
+    if scale < 1.0:
+        size = (max(1, round(image.width * scale)), max(1, round(image.height * scale)))
+        image = image.resize(size, Image.Resampling.LANCZOS)
+    output = io.BytesIO()
+    if exact:
+        image.save(output, 'WEBP', lossless=True, method=6)
+    else:
+        image.save(output, 'WEBP', quality=COVER_QUALITY, method=6)
+    if scale == 1.0 and len(data) <= output.tell():
+        return data, original
+    return output.getvalue(), '.webp'
+
+
+def stage_web_library_art(bundle, output):
+    """Serve the collection's separate library art from the site.
+
+    The art bundle must have the exact digest and size the collection's
+    signed catalog names. Its pictures go to output/library as small WebP
+    copies, named by content and listed in library.json under that digest;
+    the exact bundle goes beside them for browsers that cannot draw WebP.
+    Returns the listing, or None when the collection packs its own art.
+    """
+    assets = bundle_assets(bundle.read_bytes())
+    catalog = json.loads(assets['assets/apps/catalog.json'])
+    art = catalog.get('art')
+    if art is None:
+        return None
+    digest, size = art.get('sha256', ''), art.get('bytes')
+    if not re.fullmatch(r'[0-9a-f]{64}', digest) or not isinstance(size, int):
+        raise ValueError('Invalid art in the collection catalog')
+    data = published_art(bundle.parent, digest)
+    if len(data) != size or hashlib.sha256(data).hexdigest() != digest:
+        raise ValueError('The art bundle differs from the collection catalog')
+    pictures = bundle_assets(data)
+    previews = {child[key] for child in catalog['children'] for key in ('preview', 'icon') if child.get(key)}
+    covers = {path for child in catalog['children'] for key, path in child.get('cover', {}).items()
+              if key in ('portrait', 'landscape', 'logo')}
+    copies = {}
+    for path in sorted(previews | covers):
+        if path not in pictures:
+            raise ValueError(f'The art bundle lacks {path}')
+        copies[path] = web_picture(pictures[path], path in previews)
+    library = output / 'library'
+    if library.exists():
+        shutil.rmtree(library)
+    library.mkdir(parents=True)
+    (library / f'{digest}.zx').write_bytes(data)
+    listed = {}
+    for path, (contents, suffix) in copies.items():
+        name = hashlib.sha256(contents).hexdigest()
+        (library / (name + suffix)).write_bytes(contents)
+        listed[path] = dict(file=f'library/{name}{suffix}', sha256=name, bytes=len(contents))
+    manifest = dict(art=digest, bytes=size, pictures=listed)
+    (output / 'library.json').write_text(json.dumps(manifest, indent=2) + '\n')
+    return manifest
 
 
 def package(name):
@@ -47,7 +183,7 @@ def version_assets(output, receipt):
     if '__ARCADE_ASSET_REVISION__' not in html:
         return
     digest = hashlib.sha256()
-    for name in ('runtime.js', 'runtime.wasm', 'runtime.data', 'arcade.json', 'apps.zx'):
+    for name in ('runtime.js', 'runtime.wasm', 'runtime.data', 'arcade.json', 'apps.zx', 'library.json'):
         path = output / name
         if path.is_file():
             digest.update(name.encode() + b'\0')
@@ -114,6 +250,8 @@ def main():
         compress(output / 'apps.zx')
     else:
         print('No matching Apps controller beside the collection; it must pack its own')
+    if not args.shovey and stage_web_library_art(bundle, output) is None:
+        print('The collection packs its own library art')
     version_assets(output, receipt)
     print(f'{"Shovey" if args.shovey else "Arcade"} {args.version} for the browser in {output}')
 

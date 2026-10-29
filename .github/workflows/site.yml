@@ -48,7 +48,7 @@ jobs:
           node-version: 22
       - name: Install build dependencies
         working-directory: .
-        run: sh ziranlang/ziran/scripts/ci_packages.sh build-essential cmake pkg-config
+        run: sh ziranlang/ziran/scripts/ci_packages.sh build-essential cmake pkg-config python3-pil
       - uses: mymindstorm/setup-emsdk@v14
         with:
           version: '6.0.6'
@@ -68,12 +68,15 @@ jobs:
             -q '[.[] | select(.isDraft | not) | .tagName | select(startswith("node-arcade-"))][0]')
           test -n "$tag"
           mkdir -p build/published
-          gh release download "$tag" --repo waozixyz/arcade --pattern arcade.zx --dir build/published
+          # Its game archive holds the library art the site serves itself.
+          gh release download "$tag" --repo waozixyz/arcade --pattern arcade.zx \
+            --pattern arcade.games.tar --dir build/published
           # The Apps library that release packs, by the digest its own commit trusts.
           git show "$tag:apps-controller.sha256" > build/published/apps-controller.sha256
           echo "version=${tag#node-arcade-}" >> "$GITHUB_OUTPUT"
       - name: Build the browser edition
         run: |
+          python3 tests/web_library_art_test.py
           python3 scripts/build-entity.py
           python3 scripts/build-apps.py --output build/apps-ui
           python3 scripts/build-web.py --bundle build/published/arcade.zx \

@@ -92,6 +92,58 @@
             .pipeThrough(new DecompressionStream('gzip'))).arrayBuffer();
         }).catch(function () { return plain(name); });
       }
+      function hex(buffer) {
+        return Array.prototype.map.call(new Uint8Array(buffer), function (byte) {
+          return (byte < 16 ? '0' : '') + byte.toString(16);
+        }).join('');
+      }
+      function file(name) {
+        return fetch(assetUrl(name)).then(function (response) {
+          if (!response.ok) throw new Error(response.status);
+          return response.arrayBuffer();
+        });
+      }
+      // The library's pictures come from this site, never api.waozi.xyz:
+      // small copies of the collection's signed art (library.json), each
+      // checked against its digest, or the exact art bundle for a browser
+      // that cannot draw WebP or check them. The host verifies that bundle.
+      function library() {
+        return fetch(assetUrl('library.json')).then(function (response) {
+          return response.ok ? response.json() : null;
+        }).then(function (listing) {
+          if (!listing) return null;
+          var paths = Object.keys(listing.pictures);
+          return Promise.all(paths.map(function (path) {
+            var picture = listing.pictures[path];
+            return file(picture.file).then(function (bytes) {
+              return crypto.subtle.digest('SHA-256', bytes).then(function (digest) {
+                if (hex(digest) !== picture.sha256) throw new Error(path);
+                return bytes;
+              });
+            });
+          })).then(function (copies) {
+            var webp = paths.findIndex(function (path) { return /\.webp$/.test(listing.pictures[path].file); });
+            var drawn = webp < 0 ? Promise.resolve() : createImageBitmap(new Blob([copies[webp]])).then(function (bitmap) { bitmap.close(); });
+            return drawn.then(function () { return { art: listing.art, paths: paths, copies: copies }; });
+          }).catch(function () {
+            return file('library/' + listing.art + '.zx').then(function (bundle) {
+              return { art: listing.art, bundle: bundle };
+            });
+          });
+        }).catch(function () { return null; });
+      }
+      function writeLibrary(pictures) {
+        if (pictures.bundle) {
+          FS.mkdirTree('/packages');
+          FS.writeFile('/packages/' + pictures.art + '.zx', new Uint8Array(pictures.bundle));
+          return;
+        }
+        pictures.paths.forEach(function (path, index) {
+          var name = '/library/' + pictures.art + '/' + path;
+          FS.mkdirTree(name.slice(0, name.lastIndexOf('/')));
+          FS.writeFile(name, new Uint8Array(pictures.copies[index]));
+        });
+      }
       // The build receipt names the collection's digest and its trusted Apps
       // library; Arcade's own copy of that library goes in beside it.
       Promise.all([
@@ -100,12 +152,14 @@
           return response.text();
         }),
         bundle('apps.zx'),
-        bundle('runtime.data')
+        bundle('runtime.data'),
+        library()
       ]).then(function (loaded) {
         Module.arcadeReceipt = loaded[0];
-        if (loaded[1]) {
-          Module.preRun = [function () { FS.writeFile('/apps.zx', new Uint8Array(loaded[1])); }];
-        }
+        Module.preRun = [function () {
+          if (loaded[1]) FS.writeFile('/apps.zx', new Uint8Array(loaded[1]));
+          if (loaded[3]) writeLibrary(loaded[3]);
+        }];
         // The runtime's file package, already here, is not fetched again.
         if (loaded[2]) {
           Module.getPreloadedPackage = function () { return loaded[2]; };
