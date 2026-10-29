@@ -1,4 +1,4 @@
-// Classic, Island and Editor keep independent verified identities.
+// Classic and the Editor keep independent verified identities.
 #import "kryon/app_context"
 #import "kryon/app_protocol"
 

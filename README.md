@@ -192,8 +192,8 @@ in the person's private data directory.
 
 ## Shovey
 
-[Shovey](https://github.com/waozixyz/shovey) has its own repository: Classic,
-Island and Editor, their artwork, puzzles and tests live there. Arcade builds
+[Shovey](https://github.com/waozixyz/shovey) has its own repository: Classic
+and the Editor, their artwork, puzzles and tests live there. Arcade builds
 Shovey from that package and offers it as a separate download. Opening Classic
 or Editor goes straight to its own screen; Levels lets you replay any unlocked
 puzzle. Shovey also runs as its own desktop app.

@@ -17,13 +17,6 @@
       "sequence": 168,
       "host_api": 41
     },
-    "shovey-island": {
-      "id": "arcade.shovey-island",
-      "title": "Shovey Island \u2014 Coming Soon",
-      "version": "0.4.8",
-      "sequence": 12,
-      "host_api": 41
-    },
     "shovey-editor": {
       "id": "arcade.shovey-editor",
       "title": "Shovey Editor",
