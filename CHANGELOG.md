@@ -1,5 +1,9 @@
 # Arcade changelog
 
+## 0.7.106
+
+- Apfelwurm 0.2.23: Move a little faster throughout the campaign, with a consistent pace across Meadow.
+
 ## 0.7.105
 
 - Apfelwurm 0.2.22: Keep the leaderboard visible when you or a friend uses a special Wurm skin.
