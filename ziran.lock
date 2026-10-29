@@ -96,14 +96,6 @@
       "url": "https://github.com/LoupVaillant/Monocypher.git"
     },
     {
-      "commit": "5b01cefc1213e587235cade4875840ea1acbe9ca",
-      "dependencies": {"apps": "p5d084698913942da", "entity": "pdc16ac5fc40634fd", "kryon": "pdebdfc245399d82e", "mingcute": "pe1027b9d16704793"},
-      "id": "p82a2ee46b49ca53b",
-      "name": "Shovey",
-      "ref": "5b01cefc1213e587235cade4875840ea1acbe9ca",
-      "url": "https://github.com/waozixyz/shovey.git"
-    },
-    {
       "commit": "8b81994303400255ddb0ee2da49044dbaef4397f",
       "dependencies": {},
       "id": "p9079dde0fcc11248",
@@ -111,6 +103,14 @@
       "ref": "master",
       "source": true,
       "url": "https://github.com/waozixyz/practices.git"
+    },
+    {
+      "commit": "576b084c10bd6d3abc4565c6f7ffbace7001177c",
+      "dependencies": {"apps": "p5d084698913942da", "entity": "pdc16ac5fc40634fd", "kryon": "pdebdfc245399d82e", "mingcute": "pe1027b9d16704793"},
+      "id": "p965d3da6e709049f",
+      "name": "Shovey",
+      "ref": "576b084c10bd6d3abc4565c6f7ffbace7001177c",
+      "url": "https://github.com/waozixyz/shovey.git"
     },
     {
       "commit": "3f888653b6b97010163d824c4cc72476be3214f3",
@@ -178,7 +178,7 @@
     }
   ],
   "root": {
-    "dependencies": {"apps": "p5d084698913942da", "entity": "pdc16ac5fc40634fd", "inbe": "p183b01bccc6424e7", "kryon": "pdebdfc245399d82e", "mingcute": "pe1027b9d16704793", "shovey": "p82a2ee46b49ca53b", "wurm": "pebd7a7ec1483e6b8"},
+    "dependencies": {"apps": "p5d084698913942da", "entity": "pdc16ac5fc40634fd", "inbe": "p183b01bccc6424e7", "kryon": "pdebdfc245399d82e", "mingcute": "pe1027b9d16704793", "shovey": "p965d3da6e709049f", "wurm": "pebd7a7ec1483e6b8"},
     "name": "Arcade"
   },
   "toolchain": {
