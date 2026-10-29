@@ -1,5 +1,9 @@
 # Arcade changelog
 
+## 0.7.105
+
+- Apfelwurm 0.2.22: Keep the leaderboard visible when you or a friend uses a special Wurm skin.
+
 ## 0.7.104
 
 - Apfelwurm 0.2.12: Download the Google Play edition as a separate `-gplay.apk`. The standard and F-Droid APKs exclude Google libraries and keep Monero top-ups.
