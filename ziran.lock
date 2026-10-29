@@ -105,14 +105,6 @@
       "url": "https://github.com/waozixyz/practices.git"
     },
     {
-      "commit": "39e63374c8d1654bfa79c00cb3d41c9e658ea938",
-      "dependencies": {"apps": "p9928fc15e7b93288", "curl": "p1ca0e8d3c19dbe4c", "entity": "pfed93ebbf687d016", "kryon": "pc051b826eca4a134", "mingcute": "pe1027b9d16704793"},
-      "id": "p90f772e223a8bf77",
-      "name": "Shovey",
-      "ref": "39e63374c8d1654bfa79c00cb3d41c9e658ea938",
-      "url": "https://github.com/waozixyz/shovey.git"
-    },
-    {
       "commit": "5b67236a8e355e67ce4f8cc0389b9ce3805b874b",
       "dependencies": {"crypto": "pc23fbf455e97614d", "kryon": "pc051b826eca4a134"},
       "id": "p9928fc15e7b93288",
@@ -143,6 +135,14 @@
       "name": "crypto",
       "ref": "master",
       "url": "https://github.com/ziranlang/crypto.git"
+    },
+    {
+      "commit": "5b561abf79d56fc5a25a6df2ff4f3c0e823546b4",
+      "dependencies": {"apps": "p9928fc15e7b93288", "curl": "p1ca0e8d3c19dbe4c", "entity": "pfed93ebbf687d016", "kryon": "pc051b826eca4a134", "mingcute": "pe1027b9d16704793"},
+      "id": "pccfee5fb122e2a41",
+      "name": "Shovey",
+      "ref": "5b561abf79d56fc5a25a6df2ff4f3c0e823546b4",
+      "url": "https://github.com/waozixyz/shovey.git"
     },
     {
       "commit": "af296359a1519b9451e1c4b634422da802f6748f",
@@ -178,7 +178,7 @@
     }
   ],
   "root": {
-    "dependencies": {"apps": "p9928fc15e7b93288", "entity": "pfed93ebbf687d016", "inbe": "p183b01bccc6424e7", "kryon": "pc051b826eca4a134", "mingcute": "pe1027b9d16704793", "shovey": "p90f772e223a8bf77", "wurm": "pcf25d4810f410073"},
+    "dependencies": {"apps": "p9928fc15e7b93288", "entity": "pfed93ebbf687d016", "inbe": "p183b01bccc6424e7", "kryon": "pc051b826eca4a134", "mingcute": "pe1027b9d16704793", "shovey": "pccfee5fb122e2a41", "wurm": "pcf25d4810f410073"},
     "name": "Arcade"
   },
   "toolchain": {

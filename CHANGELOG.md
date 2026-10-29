@@ -1,8 +1,10 @@
 # Arcade changelog
 
-## [Unreleased]
+## 0.7.109
 
 - On a computer, games start without asking how to move, also inside Breeze.
+- Shovey 0.6.162: Coloured pits have new artwork.
+- Shovey 0.6.162: On a computer, play starts without asking how to move.
 
 ## 0.7.108
 

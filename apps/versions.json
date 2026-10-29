@@ -13,22 +13,22 @@
     "shovey": {
       "id": "arcade.shovey",
       "title": "Shovey",
-      "version": "0.6.160",
-      "sequence": 168,
+      "version": "0.6.162",
+      "sequence": 169,
       "host_api": 41
     },
     "shovey-editor": {
       "id": "arcade.shovey-editor",
       "title": "Shovey Editor",
-      "version": "0.2.145",
-      "sequence": 147,
+      "version": "0.2.146",
+      "sequence": 148,
       "host_api": 41
     },
     "arcade": {
       "id": "inbe.arcade",
       "title": "Arcade",
-      "version": "0.7.108",
-      "sequence": 187,
+      "version": "0.7.109",
+      "sequence": 188,
       "host_api": 41
     },
     "wurm": {
