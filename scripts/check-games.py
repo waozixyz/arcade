@@ -11,6 +11,11 @@ ROOT = Path(__file__).resolve().parents[1]
 def check():
     standard = json.loads((ROOT / 'standards/game-v1.json').read_text())
     ledger = json.loads((ROOT / 'apps/versions.json').read_text())
+    # Arcade's own players refuse games newer than GAME_HOST_API, so it moves
+    # with the standard and the ledger whenever the host interface does.
+    player = re.search(r'^GAME_HOST_API :: (\d+)$', (ROOT / 'src/games.zi').read_text(), re.M)
+    assert player and int(player[1]) == standard['host_api'] == ledger['host_api'], \
+        'src/games.zi GAME_HOST_API, standards/game-v1.json and apps/versions.json must name the same host interface'
     for app in declared_apps(ROOT):
         source, manifest, game = app['source'], app['manifest'], app['descriptor']
         for field in ['contract_version', 'module_api', 'host_api']:

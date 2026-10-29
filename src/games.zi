@@ -20,7 +20,9 @@
 using HostValueKind;
 
 GAME_CONTRACT_VERSION :: 1
-GAME_HOST_API :: 12
+// The game standard's host interface (standards/game-v1.json); the game
+// check fails while they differ.
+GAME_HOST_API :: 41
 
 GameHost :: struct {
     app: HostedApp
