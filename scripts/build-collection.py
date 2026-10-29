@@ -44,7 +44,7 @@ def stage(root, controller, expected_controller_digest, output):
     controller_bytes = controller.read_bytes()
     controller_digest = hashlib.sha256(controller_bytes).hexdigest()
     if controller_digest != expected_controller_digest:
-        raise ValueError(f"Apps controller SHA-256 {controller_digest} differs from trusted {expected_controller_digest}")
+        raise ValueError(f"Apps controller differs from the trusted SHA-256: {controller_digest} != {expected_controller_digest}")
     packages = declared_packages(root)
     arcade = packages[0]
     if not 1 <= sum(len(package["apps"]) for package in packages) <= MAX_GAMES:
