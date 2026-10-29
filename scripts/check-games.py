@@ -32,7 +32,9 @@ def check():
         assert component['sequence'] > 0
         required = set()
         for file in manifest.parent.glob('*.zi'):
-            required.update(re.findall(r'"(' + re.escape(game['locale_prefix']) + r'[a-z0-9_]+)"', file.read_text()))
+            # Module names in #import lines share the prefix but are not text keys.
+            code = re.sub(r'^\s*#import\s+"[^"\n]*"', '', file.read_text(), flags=re.M)
+            required.update(re.findall(r'"(' + re.escape(game['locale_prefix']) + r'[a-z0-9_]+)"', code))
         locales = {}
         for file in (source / game['locales']).glob('*.txt'):
             text = file.read_text()
