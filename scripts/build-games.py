@@ -99,9 +99,18 @@ def build(ziran, lock_flags):
         generated.mkdir(parents=True, exist_ok=True)
         if descriptor.get('prepare_assets'):
             prepare = Path(descriptor['prepare_assets'])
-            if prepare.is_absolute() or '..' in prepare.parts or prepare.suffix != '.py':
+            if prepare.is_absolute() or '..' in prepare.parts or prepare.suffix not in ('.py', '.zi'):
                 raise ValueError('Invalid game asset preparation script')
-            subprocess.run(['python3', str(source / prepare), str(resources), str(generated)], check=True)
+            if prepare.suffix == '.zi':
+                # A Ziran preparation program builds with Arcade's compiler and
+                # runs from the game's checkout, where its own files are.
+                tool = ROOT / 'build/game-tools' / name
+                subprocess.run([str(compiler), 'build', '--target=c', '--exe', '--root', str((source / prepare).parent),
+                                '--module-path', 'std=' + str(toolchain / 'std'), '--entry', prepare.stem + ':main',
+                                '-o', str(tool), str(source / prepare)], cwd=ROOT, check=True)
+                subprocess.run([str(tool / prepare.stem), str(resources), str(generated)], cwd=source, check=True)
+            else:
+                subprocess.run(['python3', str(source / prepare), str(resources), str(generated)], check=True)
         shared = share_resources(app, apps, resources, ROOT / 'build/game-assets')
         metadata = ROOT / 'build/games' / (name + '-resources.json')
         metadata.parent.mkdir(parents=True, exist_ok=True)
