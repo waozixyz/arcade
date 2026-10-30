@@ -54,36 +54,157 @@ class CollectionTests(unittest.TestCase):
     def stage(self):
         return builder.stage(self.root, self.controller, self.controller_digest, self.output)[0]
 
+    def assert_children_match_declarations(self, catalog, packages, payload_root):
+        declarations = builder.declared_packages(self.root)
+        ledger = json.loads((self.root / "apps/versions.json").read_text())["node_apps"]
+        expected_children = []
+        for app in (app for package in declarations for app in package["apps"] if app["enabled"]):
+            descriptor = app["descriptor"]
+            cover = app["cover"] or {}
+            expected_children.append((
+                descriptor["id"], descriptor["title"], descriptor["name"],
+                ledger[descriptor["name"]]["version"], cover.get("caption", ""),
+                cover.get("action"), tuple(app["requires"]), app["shared_code"],
+            ))
+        self.assertEqual([(
+            child["id"], child["title"], child["expected_id"], child["version"],
+            child.get("cover", {}).get("caption", ""), child.get("cover", {}).get("action"),
+            tuple(child.get("dependencies", [])), child.get("shared_code", False),
+        ) for child in catalog["children"]], expected_children)
+        self.assertEqual([(p["name"], p["id"], p["children"]) for p in packages],
+                         [(package["name"], package["id"],
+                           [app["descriptor"]["id"] for app in package["apps"] if app["enabled"]])
+                          for package in declarations[1:]])
+        library = payload_root / "assets/arcade/library"
+        for child in catalog["children"]:
+            name = child["expected_id"]
+            source = payload_root / f"build/games/{name}.zx"
+            packed = self.output / child["bundle"]
+            self.assertEqual(packed.read_bytes(), source.read_bytes())
+            self.assertEqual(builder.digest(packed), child["sha256"])
+            self.assertEqual(child["bytes"], source.stat().st_size)
+            self.assertEqual(child["protocol"], "node/2")
+            expected_preview = next(library.glob(f"{name}-preview.*"))
+            self.assertEqual(child["preview"], child["icon"])
+            self.assertEqual(child["preview"], f"assets/arcade/previews/{name}{expected_preview.suffix}")
+            self.assertEqual((self.output / child["preview"]).read_bytes(), expected_preview.read_bytes())
+            for key in ("portrait", "landscape", "logo"):
+                if key not in child.get("cover", {}):
+                    continue
+                expected_cover = next(library.glob(f"{name}-{key}.*"))
+                self.assertEqual(child["cover"][key],
+                                 f"assets/arcade/covers/{name}-{key}{expected_cover.suffix}")
+                self.assertEqual((self.output / child["cover"][key]).read_bytes(),
+                                 expected_cover.read_bytes())
+
+    def add_library_copy(self, name, key, data):
+        library = self.root / "assets/arcade/library"
+        sources = json.loads((library / "sources.json").read_text())
+        contents, suffix = artist.small_copy(data, key)
+        copy = library / f"{name}-{key}{suffix}"
+        copy.write_bytes(contents)
+        sources[f"{name}-{key}"] = {"source_sha256": hashlib.sha256(data).hexdigest()}
+        (library / "sources.json").write_text(json.dumps(sources))
+
+    def stage_four_leaf_wurm_fixture(self):
+        source = self.root / "fixture-packages/wurm"
+        (source / "editor").mkdir(parents=True)
+        (source / "assets").mkdir()
+
+        def image(color, path):
+            picture = Image.new("RGB", (640, 480), color)
+            picture.save(path)
+            return path.read_bytes()
+
+        (source / "catalog.json").write_text(json.dumps({
+            "id": "xyz.waozi.wurm", "name": "wurm", "title": "Apfelwurm",
+            "kind": "game", "contract_version": 1, "module_api": 2, "host_api": 41,
+            "harnesses": ["arcade"], "preview": "assets/wurm-preview.png",
+        }))
+        (source / "editor/catalog.json").write_text(json.dumps({
+            "id": "xyz.waozi.wurm-editor", "name": "wurm-editor", "title": "Apfelwurm Editor",
+            "kind": "game", "contract_version": 1, "module_api": 2, "host_api": 41,
+            "harnesses": ["arcade"], "preview": "assets/wurm-editor-preview.png",
+        }))
+        images = {
+            "wurm-preview": image((255, 0, 0), source / "assets/wurm-preview.png"),
+            "wurm-portrait": image((0, 255, 0), source / "assets/wurm-portrait.png"),
+            "wurm-editor-preview": image((0, 0, 255), source / "assets/wurm-editor-preview.png"),
+            "wurm-editor-portrait": image((255, 255, 0), source / "assets/wurm-editor-portrait.png"),
+        }
+        (source / "apps.json").write_text(json.dumps({
+            "id": "xyz.waozi.wurm-player", "title": "Apfelwurm", "apps": [
+                {"manifest": "catalog.json", "cover": {
+                    "portrait": "assets/wurm-portrait.png", "caption": "Classic", "action": "play"}},
+                {"manifest": "editor/catalog.json",
+                 "requires": ["xyz.waozi.wurm"], "cover": {
+                     "portrait": "assets/wurm-editor-portrait.png", "caption": "Editor", "action": "open"}},
+            ],
+        }))
+        games = self.root / "build/games"
+        for name, prefix in (("wurm", b"synthetic wurm payload\n"),
+                             ("wurm-editor", b"synthetic wurm editor payload\n")):
+            (games / f"{name}.zx").write_bytes(prefix + name.encode())
+            preview_name = f"{name}-preview.png"
+            (games / preview_name).write_bytes(images[f"{name}-preview"])
+        (games / "wurm-editor-resources.json").write_text(json.dumps({
+            "dependencies": ["xyz.waozi.wurm"],
+            "resources": [{"dependency": "xyz.waozi.wurm", "path": "assets/wurm/classic/",
+                           "source": "assets/wurm-preview.png"}],
+        }))
+        for name, key in (("wurm", "preview"), ("wurm", "portrait"),
+                          ("wurm-editor", "preview"), ("wurm-editor", "portrait")):
+            self.add_library_copy(name, key, images[f"{name}-{key}"])
+        ledger_path = self.root / "apps/versions.json"
+        ledger = json.loads(ledger_path.read_text())
+        ledger["node_apps"]["wurm-editor"] = {
+            "id": "xyz.waozi.wurm-editor", "title": "Apfelwurm Editor", "version": "0.1.0",
+            "sequence": 1, "host_api": 41,
+        }
+        ledger_path.write_text(json.dumps(ledger))
+        resolver = self.root / "scripts/ziran.sh"
+        resolver.write_text(
+            f'#!/bin/sh\n'
+            f'if [ "$1" = pkg ] && [ "$2" = path ] && [ "$3" = wurm ]; then\n'
+            f'  printf \'%s\\n\' {shlex.quote(str(source))}\n'
+            f'  exit 0\n'
+            f'fi\n'
+            f'cd {shlex.quote(str(ROOT))} && exec ./scripts/ziran.sh "$@"\n'
+        )
+
     def test_unchanged_games_keep_canonical_identity_and_version(self):
         catalog, packages = builder.stage(self.root, self.controller, self.controller_digest, self.output)
         self.assertEqual(catalog["id"], "inbe.arcade")
         # Inbe draws the launcher icon from the collection's own assets.
         self.assertEqual((self.output / "assets/arcade/sidebar.shape").read_bytes(),
                          (ROOT / "assets/arcade/sidebar.shape").read_bytes())
-        # The ledger also versions Arcade itself, which is not one of its games.
-        ledger = json.loads((ROOT / "apps/versions.json").read_text())["node_apps"]
-        self.assertEqual({c["id"] for c in catalog["children"]},
-                         {"arcade.shovey", "arcade.shovey-editor", "xyz.waozi.wurm"})
-        # Each leaf keeps the cover its own package declares.
-        self.assertEqual([c["cover"].get("caption", "") for c in catalog["children"]], ["Classic", "Editor", ""])
-        self.assertEqual([(p["name"], p["id"], p["children"]) for p in packages],
-                         [("shovey", "arcade.shovey-player", ["arcade.shovey", "arcade.shovey-editor"]),
-                          ("wurm", "xyz.waozi.wurm-player", ["xyz.waozi.wurm"])])
-        for child in catalog["children"]:
-            name = child["expected_id"]
-            packed = self.output / child["bundle"]
-            self.assertEqual(packed.read_bytes(), (ROOT / f"build/games/{name}.zx").read_bytes())
-            self.assertEqual(builder.digest(packed), child["sha256"])
-            self.assertEqual(child["version"], ledger[name]["version"])
-            self.assertEqual(child["protocol"], "node/2")
-            # The library packs its own small copy of each game's art.
-            self.assertEqual((self.output / child["preview"]).read_bytes(),
-                             artist.copy_path(f"{name}-preview").read_bytes())
-            for key, path in child["cover"].items():
-                if key in ("portrait", "landscape", "logo"):
-                    self.assertEqual((self.output / path).read_bytes(),
-                                     artist.copy_path(f"{name}-{key}").read_bytes())
+        # Expected identities and versions come from each package's declarations.
+        self.assert_children_match_declarations(catalog, packages, ROOT)
         self.assertEqual((self.output / catalog["harness"]).read_bytes(), self.controller.read_bytes())
+
+        pinned_ledger = json.loads((ROOT / "apps/versions.json").read_text())["node_apps"]
+        wurm_version = pinned_ledger["wurm"]["version"]
+        self.stage_four_leaf_wurm_fixture()
+        catalog, packages = builder.stage(self.root, self.controller, self.controller_digest, self.output)
+        self.assert_children_match_declarations(catalog, packages, self.root)
+        self.assertEqual([child["id"] for child in catalog["children"]],
+                         ["arcade.shovey", "arcade.shovey-editor",
+                          "xyz.waozi.wurm", "xyz.waozi.wurm-editor"])
+        self.assertEqual(packages[-1]["children"], ["xyz.waozi.wurm", "xyz.waozi.wurm-editor"])
+        children = {child["id"]: child for child in catalog["children"]}
+        self.assertEqual(children["xyz.waozi.wurm"]["version"], wurm_version)
+        self.assertEqual(children["xyz.waozi.wurm-editor"]["version"], "0.1.0")
+        self.assertEqual(children["xyz.waozi.wurm"]["cover"]["caption"], "Classic")
+        self.assertEqual(children["xyz.waozi.wurm-editor"]["cover"]["caption"], "Editor")
+        self.assertEqual(children["xyz.waozi.wurm-editor"]["dependencies"], ["xyz.waozi.wurm"])
+        self.assertFalse(children["xyz.waozi.wurm-editor"].get("shared_code", False))
+        self.assertEqual(children["xyz.waozi.wurm-editor"]["resources"], [{
+            "dependency": "xyz.waozi.wurm", "path": "assets/wurm/classic/",
+            "source": "assets/wurm-preview.png"}])
+        self.assertEqual(children["xyz.waozi.wurm"]["expected_id"], "wurm")
+        self.assertEqual(children["xyz.waozi.wurm-editor"]["expected_id"], "wurm-editor")
+        self.assertNotEqual(children["xyz.waozi.wurm"]["bundle"],
+                            children["xyz.waozi.wurm-editor"]["bundle"])
 
     def test_changed_game_art_needs_fresh_library_copies(self):
         sources = self.root / "assets/arcade/library/sources.json"
