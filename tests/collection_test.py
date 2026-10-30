@@ -189,9 +189,13 @@ class CollectionTests(unittest.TestCase):
         self.assert_children_match_declarations(catalog, packages, self.root)
         self.assertEqual([child["id"] for child in catalog["children"]],
                          ["arcade.shovey", "arcade.shovey-editor",
-                          "xyz.waozi.wurm", "xyz.waozi.wurm-editor"])
-        self.assertEqual(packages[-1]["children"], ["xyz.waozi.wurm", "xyz.waozi.wurm-editor"])
+                          "xyz.waozi.wurm", "xyz.waozi.wurm-editor", "xyz.waozi.choano"])
+        wurm_package = next(package for package in packages if package["name"] == "wurm")
+        self.assertEqual(wurm_package["children"], ["xyz.waozi.wurm", "xyz.waozi.wurm-editor"])
         children = {child["id"]: child for child in catalog["children"]}
+        self.assertEqual(children["xyz.waozi.choano"]["title"], "Choano")
+        self.assertEqual(children["xyz.waozi.choano"]["version"], "0.1.2")
+        self.assertEqual(children["xyz.waozi.choano"]["expected_id"], "choano")
         self.assertEqual(children["xyz.waozi.wurm"]["version"], wurm_version)
         self.assertEqual(children["xyz.waozi.wurm-editor"]["version"], "0.1.0")
         self.assertEqual(children["xyz.waozi.wurm"]["cover"]["caption"], "Classic")
