@@ -23,6 +23,15 @@
   "shovey-preview": {
     "source_sha256": "96db251f36835c76cd03cd0104a6e1b5096e4c442d410960457edcd8e2377a38"
   },
+  "wurm-editor-landscape": {
+    "source_sha256": "670255e43a6fd232951fb3d1ce0d62d098d663230d731e7c447c44a944a907d3"
+  },
+  "wurm-editor-portrait": {
+    "source_sha256": "f3475185324e4f4bfa37561f09422546eab5595ab3887d26e684128b2ac9480b"
+  },
+  "wurm-editor-preview": {
+    "source_sha256": "670255e43a6fd232951fb3d1ce0d62d098d663230d731e7c447c44a944a907d3"
+  },
   "wurm-landscape": {
     "source_sha256": "472773b7c106325e12777a81a29209496e22e0853782ca76955b6587824b1b30"
   },

@@ -1,5 +1,25 @@
 # Arcade changelog
 
+## 0.7.111
+
+- Apfelwurm 0.2.27: Earn coins for every level you clear and spend them on new skins.
+- Apfelwurm 0.2.27: Claim a daily reward from the chest on the title: 30 days of coins, two new skins and rare Dew on days 10 and 25.
+- Apfelwurm 0.2.27: The title has painted Shop, Profile, Leaderboard and Settings icons, with your coins and Dew beside the Shop.
+- Apfelwurm 0.2.27: The Shop has Skins, Coins and Dew tabs: buy coin packs with Dew and top up Dew without leaving it.
+- Apfelwurm 0.2.27: Browse thirteen skins with slimmer bodies, closer segments, clean edges and matching leaderboard pictures.
+- Apfelwurm 0.2.27: Open the level editor directly from the title. Settings previews both touch control styles, or shows the steering keys on a computer.
+- Apfelwurm 0.2.27: The level editor has its own title screen. Start a **New level** in any landscape you have reached, or copy one **From a level**.
+- Apfelwurm 0.2.27: Keep your levels in **My levels**, in collections you can name and reorder. They stay private to you.
+- Apfelwurm 0.2.27: Share a collection with your friends or everyone, and find other players' collections in **Community**. Added collections become your own private copies.
+- Apfelwurm 0.2.27: Campaign levels you changed before still play as you made them; **Campaign changes** lists them so you can reset each one.
+- Apfelwurm 0.2.27: Open the editor as its own **Apfelwurm Editor** app in Arcade.
+- Apfelwurm 0.2.27: Play local desktop rounds with two to four players, separate bottom entrances and four keyboard control sets.
+- Apfelwurm 0.2.27: Name each local player and pick their skin; start local rounds from Settings. Each open entrance has rock posts beside it.
+- Apfelwurm 0.2.27: Play every level in the same layout in portrait and landscape, shaped after the portrait, with roomier portrait boards.
+- Apfelwurm 0.2.27: Your own portrait level now also shapes its landscape until you save a landscape of your own.
+- Apfelwurm 0.2.27: On a computer, play starts without asking how to steer, also inside Breeze and Arcade, and the keyboard steers without an on-screen pad.
+- Apfelwurm 0.2.27: Level 19 is roomier: every side passage is wide enough to turn and come back out.
+
 ## 0.7.110
 
 - Arcade is available as an Android app that plays every game offline, in normal, F-Droid and Google Play editions.

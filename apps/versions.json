@@ -27,15 +27,22 @@
     "arcade": {
       "id": "inbe.arcade",
       "title": "Arcade",
-      "version": "0.7.110",
-      "sequence": 189,
+      "version": "0.7.111",
+      "sequence": 190,
       "host_api": 41
     },
     "wurm": {
       "id": "xyz.waozi.wurm",
       "title": "Apfelwurm",
-      "version": "0.2.26",
-      "sequence": 21,
+      "version": "0.2.27",
+      "sequence": 22,
+      "host_api": 41
+    },
+    "wurm-editor": {
+      "id": "xyz.waozi.wurm-editor",
+      "title": "Apfelwurm Editor",
+      "version": "0.1.0",
+      "sequence": 1,
       "host_api": 41
     }
   }
