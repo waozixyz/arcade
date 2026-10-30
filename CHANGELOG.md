@@ -1,10 +1,12 @@
 # Arcade changelog
 
-## [Unreleased]
+## 0.7.110
 
 - Arcade is available as an Android app that plays every game offline, in normal, F-Droid and Google Play editions.
 - On arcade.waozi.xyz the game covers appear sooner, as smaller WebP pictures from the site itself.
 - Editors can share level collections through Arcade's signed-in Entity account.
+- Shovey 0.6.163: Keep named collections in the Editor, share them with friends or everyone, and add new private collections from Explore.
+- Shovey 0.6.163: Mirror and laser names and the level heading display correctly in every language.
 
 ## 0.7.109
 
