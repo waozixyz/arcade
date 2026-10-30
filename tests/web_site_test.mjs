@@ -3,6 +3,7 @@
 // library's art never comes from api.waozi.xyz: those requests are refused,
 // and the covers must draw from the site's own copies or its exact art.
 // Usage: node tests/web_site_test.mjs SITE_DIR
+// ARCADE_TEST_LIBRARY_ONLY=1 checks painted library covers and titles without downloading games.
 import { spawn } from 'node:child_process';
 import { createServer } from 'node:http';
 import { access, mkdtemp, readFile, rm } from 'node:fs/promises';
@@ -11,6 +12,8 @@ import { extname, join, normalize } from 'node:path';
 import { setTimeout as delay } from 'node:timers/promises';
 
 const site = process.argv[2];
+const libraryOnly = process.env.ARCADE_TEST_LIBRARY_ONLY === '1';
+const requiredTitles = ['Apfelwurm', 'Apfelwurm Editor', 'Choano'];
 const game = process.env.ARCADE_TEST_GAME || 'Apfelwurm';
 if (!site) throw new Error('Usage: node tests/web_site_test.mjs SITE_DIR');
 const types = { '.html': 'text/html', '.js': 'text/javascript', '.wasm': 'application/wasm', '.json': 'application/json',
@@ -220,110 +223,135 @@ try {
       if (served.art || refusedArt.length || served.pictures !== Object.keys(library.pictures).length ||
           fetched.some(name => !/\.webp\?v=/.test(name) && !Object.values(library.pictures).some(picture => name.includes(picture.file))))
         throw new Error('The covers did not come from the small copies alone: ' + JSON.stringify({ served, refusedArt, fetched }));
-      console.log(`Covers drew from ${served.pictures} small copies (${Object.values(library.pictures).reduce((sum, picture) => sum + picture.bytes, 0)} bytes, art ${library.bytes} bytes); colours ${colours}`);
+      await command('Emulation.setDeviceMetricsOverride', { width: 1280, height: 1400, deviceScaleFactor: 1, mobile: false });
+      await delay(500);
+      // Sample only the Text widget's rectangle below each cover. Neither the
+      // cover image nor its invisible button/alt text can satisfy this check.
+      const titles = (await tree()).filter(node => node.kind === 'text' && node.visible &&
+        node.visible_height >= 20 && requiredTitles.includes(node.label));
+      const paintedTitles = await evaluate(`(() => {
+        const canvas = document.getElementById('canvas'), context = canvas.getContext('2d');
+        const scale = canvas.width / canvas.clientWidth;
+        return Object.fromEntries(${JSON.stringify(titles)}.map(node => {
+          const pixels = context.getImageData(Math.round(node.visible_x * scale), Math.round(node.visible_y * scale),
+            Math.round(node.visible_width * scale), Math.round(node.visible_height * scale)).data;
+          let ink = 0;
+          for (let at = 0; at < pixels.length; at += 4)
+            if (pixels[at] > 120 && pixels[at + 1] > 120 && pixels[at + 2] > 120) ink++;
+          return [node.label, ink];
+        }));
+      })()`);
+      for (const title of requiredTitles) {
+        if (!(paintedTitles[title] >= 100)) throw new Error(`Game title was not painted: ${title}: ${JSON.stringify(paintedTitles)}`);
+      }
+      console.log(`Covers drew from ${served.pictures} small copies (${Object.values(library.pictures).reduce((sum, picture) => sum + picture.bytes, 0)} bytes, art ${library.bytes} bytes); colours ${colours}; title ink pixels ${JSON.stringify(paintedTitles)}`);
     }
-    const cover = button(await tree(), game);
-    if (!cover) throw new Error('Game cover missing');
-    await click(cover);
-    const download = (await tree()).findLast(node => node.kind === 'button' && node.label === 'Download');
-    if (!download) throw new Error('The cover did not offer its download');
-    await click(download);
-    await waitButton(game === 'Apfelwurm' ? 'Play' : 'Back');
-    const play = button(await tree(), 'Play');
-    if (play) await click(play);
-    const swipe = button(await tree(), 'Swipe');
-    if (swipe) await click(swipe);
-    if (game === 'Apfelwurm') await waitButton('Pause');
-    // Flush the actual control record before a cold restart.
-    await evaluate(`new Promise((resolve,reject) => FS.syncfs(false,error => error ? reject(error) : resolve(true)))`);
-    await command('Page.reload');
-    await pageReady();
-    const reloaded = await tree();
-    const installed = button(reloaded, game);
-    if (!installed) throw new Error('Installed cover missing after reload');
-    await click(installed);
-    await waitButton(game === 'Apfelwurm' ? 'Play' : 'Back');
-    console.log(game + ' downloaded, opened its game and reopened from its installed cover');
-    if (game === 'Apfelwurm') {
+    if (!libraryOnly) {
+      await command('Emulation.setDeviceMetricsOverride', { width: 1280, height: 800, deviceScaleFactor: 1, mobile: false });
+      await delay(500);
+      const cover = button(await tree(), game);
+      if (!cover) throw new Error('Game cover missing');
+      await click(cover);
+      const download = (await tree()).findLast(node => node.kind === 'button' && node.label === 'Download');
+      if (!download) throw new Error('The cover did not offer its download');
+      await click(download);
+      await waitButton(game === 'Apfelwurm' ? 'Play' : 'Back');
+      const play = button(await tree(), 'Play');
+      if (play) await click(play);
+      const swipe = button(await tree(), 'Swipe');
+      if (swipe) await click(swipe);
+      if (game === 'Apfelwurm') await waitButton('Pause');
+      // Flush the actual control record before a cold restart.
+      await evaluate(`new Promise((resolve,reject) => FS.syncfs(false,error => error ? reject(error) : resolve(true)))`);
       await command('Page.reload');
       await pageReady();
-      const installed = button(await tree(), game);
-      const saved = await evaluate(`(() => {
-        const root='/kryon-apps/arcade/games';
-        for (const name of FS.readdir(root)) {
-          const path=root+'/'+name+'/records/controls.dat';
-          if (FS.analyzePath(path).exists) return {path,text:FS.readFile(path,{encoding:'utf8'})};
-        }
-        return null;
-      })()`);
-      if (!saved) throw new Error('Playing did not retain the control choice');
-      await evaluate(`(() => {
-        const original=FS.open;
-        FS.open=function(path,...args) {
-          if (String(path).includes('/games/') && String(path).includes('/records/') && !String(path).endsWith('/.lock')) {
-            FS.open=original;
-            throw new FS.ErrnoError(29);
-          }
-          return original.call(this,path,...args);
-        };
-      })()`);
+      const reloaded = await tree();
+      const installed = button(reloaded, game);
+      if (!installed) throw new Error('Installed cover missing after reload');
       await click(installed);
-      // Depending on the game version it first reads records on its title
-      // or on Play. Either path must expose a usable recovery control.
-      if (!await evaluate('!!Module.arcadeFailed')) {
-        try {
-          const play=button(await tree(),'Play');
-          if (play) await click(play);
-        } catch (error) {
-          // The first game frame can fail between sampling the flag and
-          // asking for its tree. Require the runtime's failure signal.
-          let failed=false;
-          for (const end=Date.now()+1000; Date.now()<end;) {
-            failed=await evaluate('!!Module.arcadeFailed');
-            if (failed) break;
-            await delay(50);
+      await waitButton(game === 'Apfelwurm' ? 'Play' : 'Back');
+      console.log(game + ' downloaded, opened its game and reopened from its installed cover');
+      if (game === 'Apfelwurm') {
+        await command('Page.reload');
+        await pageReady();
+        const installed = button(await tree(), game);
+        const saved = await evaluate(`(() => {
+          const root='/kryon-apps/arcade/games';
+          for (const name of FS.readdir(root)) {
+            const path=root+'/'+name+'/records/controls.dat';
+            if (FS.analyzePath(path).exists) return {path,text:FS.readFile(path,{encoding:'utf8'})};
           }
-          if (!failed) throw error;
+          return null;
+        })()`);
+        if (!saved) throw new Error('Playing did not retain the control choice');
+        await evaluate(`(() => {
+          const original=FS.open;
+          FS.open=function(path,...args) {
+            if (String(path).includes('/games/') && String(path).includes('/records/') && !String(path).endsWith('/.lock')) {
+              FS.open=original;
+              throw new FS.ErrnoError(29);
+            }
+            return original.call(this,path,...args);
+          };
+        })()`);
+        await click(installed);
+        // Depending on the game version it first reads records on its title
+        // or on Play. Either path must expose a usable recovery control.
+        if (!await evaluate('!!Module.arcadeFailed')) {
+          try {
+            const play=button(await tree(),'Play');
+            if (play) await click(play);
+          } catch (error) {
+            // The first game frame can fail between sampling the flag and
+            // asking for its tree. Require the runtime's failure signal.
+            let failed=false;
+            for (const end=Date.now()+1000; Date.now()<end;) {
+              failed=await evaluate('!!Module.arcadeFailed');
+              if (failed) break;
+              await delay(50);
+            }
+            if (!failed) throw error;
+          }
         }
+        let recovered=false;
+        for (const end=Date.now()+15000; Date.now()<end;) {
+          recovered=await evaluate(`!!Module.arcadeFailed && document.getElementById('loading').classList.contains('error') && getComputedStyle(document.getElementById('loading')).opacity==='1'`);
+          if (recovered) break;
+          await delay(100);
+        }
+        if (!recovered) throw new Error('A failed game left the library frozen without recovery');
+        if (!console_lines.some(line=>/portable execution failed in ReadLevel/.test(line)))
+          throw new Error('The fixture did not reproduce the reported saved-record failure');
+        expectedDiagnostics=console_lines.length;
+        const retry=await evaluate(`(() => {const r=document.getElementById('retry').getBoundingClientRect();return {visible_x:r.x,visible_y:r.y,visible_width:r.width,visible_height:r.height};})()`);
+        await click(retry);
+        await pageReady();
+        if (await evaluate(`FS.readFile(${JSON.stringify(saved.path)},{encoding:'utf8'})`) !== saved.text)
+          throw new Error('Recovering from a failed game changed its saved record');
+        await click(button(await tree(),game));
+        await waitButton('Play');
+        console.log('The reported ReadLevel failure showed recovery; returning reopened the installed game and retained its saved record');
       }
-      let recovered=false;
-      for (const end=Date.now()+15000; Date.now()<end;) {
-        recovered=await evaluate(`!!Module.arcadeFailed && document.getElementById('loading').classList.contains('error') && getComputedStyle(document.getElementById('loading')).opacity==='1'`);
-        if (recovered) break;
-        await delay(100);
+      if (library) {
+        // Damaged copies are refused; the exact art from the site draws instead.
+        libraryMode = 'corrupt'; served.pictures = served.art = 0;
+        await command('Page.reload');
+        await pageReady();
+        const colours = await coversDrawn();
+        if (served.art !== 1 || refusedArt.length)
+          throw new Error('Damaged copies did not fall back to the site\'s exact art: ' + JSON.stringify({ served, refusedArt }));
+        console.log(`Damaged copies were refused and the site's exact art drew the covers; colours ${colours}`);
+        // Without the site's art the covers stay empty and Arcade asks the API.
+        libraryMode = 'missing';
+        await command('Page.reload');
+        await pageReady();
+        await delay(3000);
+        const empty = await coverColours();
+        if (!refusedArt.length || !empty.length || empty.some(count => count >= DRAWN))
+          throw new Error('The cover check did not tell empty covers apart: ' + JSON.stringify({ empty, refusedArt }));
+        console.log(`Without the site's art the covers stayed empty (colours ${empty}) and the API art request was refused`);
+        libraryMode = 'site';
       }
-      if (!recovered) throw new Error('A failed game left the library frozen without recovery');
-      if (!console_lines.some(line=>/portable execution failed in ReadLevel/.test(line)))
-        throw new Error('The fixture did not reproduce the reported saved-record failure');
-      expectedDiagnostics=console_lines.length;
-      const retry=await evaluate(`(() => {const r=document.getElementById('retry').getBoundingClientRect();return {visible_x:r.x,visible_y:r.y,visible_width:r.width,visible_height:r.height};})()`);
-      await click(retry);
-      await pageReady();
-      if (await evaluate(`FS.readFile(${JSON.stringify(saved.path)},{encoding:'utf8'})`) !== saved.text)
-        throw new Error('Recovering from a failed game changed its saved record');
-      await click(button(await tree(),game));
-      await waitButton('Play');
-      console.log('The reported ReadLevel failure showed recovery; returning reopened the installed game and retained its saved record');
-    }
-    if (library) {
-      // Damaged copies are refused; the exact art from the site draws instead.
-      libraryMode = 'corrupt'; served.pictures = served.art = 0;
-      await command('Page.reload');
-      await pageReady();
-      const colours = await coversDrawn();
-      if (served.art !== 1 || refusedArt.length)
-        throw new Error('Damaged copies did not fall back to the site\'s exact art: ' + JSON.stringify({ served, refusedArt }));
-      console.log(`Damaged copies were refused and the site's exact art drew the covers; colours ${colours}`);
-      // Without the site's art the covers stay empty and Arcade asks the API.
-      libraryMode = 'missing';
-      await command('Page.reload');
-      await pageReady();
-      await delay(3000);
-      const empty = await coverColours();
-      if (!refusedArt.length || !empty.length || empty.some(count => count >= DRAWN))
-        throw new Error('The cover check did not tell empty covers apart: ' + JSON.stringify({ empty, refusedArt }));
-      console.log(`Without the site's art the covers stayed empty (colours ${empty}) and the API art request was refused`);
-      libraryMode = 'site';
     }
   }
   const failed = console_lines.slice(expectedDiagnostics).find(line => /frame failed|portable execution failed/.test(line));
