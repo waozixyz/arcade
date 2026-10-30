@@ -84,8 +84,9 @@ jobs:
             --version '${{ steps.published.outputs.version }}'
           rm -f build/web-site/runtime.html
       - name: Wait for the published games the browser will download
-        run: python3 scripts/wait-published-games.py --deadline-seconds 900 --poll-seconds 30 \
-          build/published/arcade.zx build/published/arcade.games.tar
+        run: |
+          python3 scripts/wait-published-games.py --deadline-seconds 900 --poll-seconds 30 \
+            build/published/arcade.zx build/published/arcade.games.tar
       - name: Open Arcade in a private browser
         run: |
           export CHROMIUM="$(command -v google-chrome || command -v chromium)"
