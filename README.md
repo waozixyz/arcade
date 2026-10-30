@@ -59,6 +59,11 @@ actions it
 cannot perform. Inbe supplies its own account and package policy.
 Arcade's launcher icon is MingCute's `game_2` gamepad (Apache-2.0).
 
+An optional `artwork` mapping in `games.json` names a locked source-only
+dependency for a game's library pictures. Its paths still come from that
+game's declarations. This lets covers advance independently of playable
+code; the thumbnail source hashes remain checked when the catalog builds.
+
 ## One Chess game
 
 Chess remains an installable app in Inner Breeze, where it also fits thoughtful

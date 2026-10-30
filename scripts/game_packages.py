@@ -30,12 +30,19 @@ def relative_path(text):
 
 def declared_packages(root, ziran=None, lock_flags=()):
     """Arcade first, then each registered game package, with their apps."""
-    names = ['self', *json.loads((Path(root) / 'games.json').read_text())['packages']]
+    registration = json.loads((Path(root) / 'games.json').read_text())
+    names = ['self', *registration['packages']]
     if len(set(names)) != len(names):
         raise ValueError('Duplicate game package')
+    artwork = registration.get('artwork', {})
+    if not isinstance(artwork, dict) or any(name not in names[1:] or
+            not isinstance(alias, str) or not re.fullmatch(r'[A-Za-z_][A-Za-z0-9_]*', alias)
+            for name, alias in artwork.items()):
+        raise ValueError('Invalid artwork package')
     packages = []
     for name in names:
         source = package_root(root, name, ziran, lock_flags)
+        art_source = package_root(root, artwork[name], ziran, lock_flags) if name in artwork else source
         declaration = json.loads((source / 'apps.json').read_text())
         apps = []
         for app in declaration['apps']:
@@ -61,7 +68,7 @@ def declared_packages(root, ziran=None, lock_flags=()):
                         not re.fullmatch(r'[A-Za-z_][A-Za-z0-9_]*:[A-Za-z_][A-Za-z0-9_]*', item)
                         for item in library_entries) or len(set(library_entries)) != len(library_entries):
                 raise ValueError(f'{name}: invalid portable library entries')
-            apps.append(dict(package=name, source=source, manifest=manifest,
+            apps.append(dict(package=name, source=source, art_source=art_source, manifest=manifest,
                              descriptor=json.loads(manifest.read_text()),
                              cover=app.get('cover'), requires=requires, shared_code=shared_code,
                              shared_records=shared_records,

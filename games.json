@@ -1,3 +1,4 @@
 {
-  "packages": ["shovey", "wurm", "choano"]
+  "packages": ["shovey", "wurm", "choano"],
+  "artwork": {"wurm": "wurm_art"}
 }

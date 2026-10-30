@@ -42,6 +42,11 @@ def small_copy(data, key):
     """(bytes, suffix) of the library's copy of one picture."""
     image = Image.open(io.BytesIO(data))
     image.load()
+    # The shared library cards are 2:3. Keep the top of taller paintings,
+    # where their title lives, rather than letting the card centre-crop it.
+    # Originals remain untouched; this framing belongs to the thumbnail.
+    if key == 'portrait' and image.height > image.width * 1.5:
+        image = image.crop((0, 0, image.width, round(image.width * 1.5)))
     longest = PREVIEW_LONGEST if key == 'preview' else LOGO_LONGEST if key == 'logo' else COVER_LONGEST
     scale = min(1.0, longest / max(image.size))
     alpha = 'A' in image.getbands() or 'transparency' in image.info
@@ -72,10 +77,10 @@ def art(root=ROOT):
             if not app['enabled']:
                 continue
             name = app['descriptor']['name']
-            yield name, 'preview', (app['source'] / app['descriptor']['preview']).read_bytes()
+            yield name, 'preview', (app['art_source'] / app['descriptor']['preview']).read_bytes()
             for key in ('portrait', 'landscape', 'logo'):
                 if app['cover'] and key in app['cover']:
-                    yield name, key, (app['source'] / app['cover'][key]).read_bytes()
+                    yield name, key, (app['art_source'] / app['cover'][key]).read_bytes()
 
 
 def main():

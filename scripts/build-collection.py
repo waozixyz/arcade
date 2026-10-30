@@ -80,7 +80,8 @@ def stage(root, controller, expected_controller_digest, output):
             bundle_bytes, preview_bytes = bundle.read_bytes(), preview.read_bytes()
             if not bundle_bytes or not preview_bytes:
                 raise ValueError("Game bundles and previews must be built first")
-            preview_bytes, preview_suffix = library_art(root, name, "preview", preview_bytes)
+            preview_bytes, preview_suffix = library_art(root, name, "preview",
+                (app["art_source"] / game["preview"]).read_bytes())
             total += len(bundle_bytes) + len(preview_bytes)
             child = dict(
                 id=identifier, title=game["title"],
@@ -112,7 +113,7 @@ def stage(root, controller, expected_controller_digest, output):
                     relative = Path(cover[key])
                     if relative.is_absolute() or ".." in relative.parts or relative.suffix not in {".png", ".jpg"}:
                         raise ValueError("Invalid cover asset path")
-                    contents, suffix = library_art(root, name, key, (app["source"] / relative).read_bytes())
+                    contents, suffix = library_art(root, name, key, (app["art_source"] / relative).read_bytes())
                     destination = Path("arcade/covers") / f"{name}-{key}{suffix}"
                     packed_cover[key] = "assets/" + destination.as_posix()
                     copies.append((contents, destination))

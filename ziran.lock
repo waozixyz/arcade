@@ -193,6 +193,15 @@
       "url": "https://github.com/kryonlabs/game2d.git"
     },
     {
+      "commit": "2fa52f64eb0c29e8351b437176e896b938ece8e8",
+      "dependencies": {},
+      "id": "pef8c9ab30363ef38",
+      "name": "wurm_art",
+      "ref": "2fa52f64eb0c29e8351b437176e896b938ece8e8",
+      "source": true,
+      "url": "https://github.com/waozixyz/wurm.git"
+    },
+    {
       "commit": "cee04692f3461dcb098833472f071c434980debb",
       "dependencies": {"kryon": "p43481d12b77897ce"},
       "id": "pf2f54c7603f6e861",
@@ -202,7 +211,7 @@
     }
   ],
   "root": {
-    "dependencies": {"apps": "p6a59d2d6364debd6", "choano": "pba7b4d6a4dcf84ae", "entity": "pb6d17ac2aeb5844f", "game2d": "pe878ed78ee9f8300", "inbe": "p183b01bccc6424e7", "kryon": "p43481d12b77897ce", "mingcute": "pe1027b9d16704793", "shovey": "p1b5832789c5a5053", "wurm": "pb4256918f4b7855d"},
+    "dependencies": {"apps": "p6a59d2d6364debd6", "choano": "pba7b4d6a4dcf84ae", "entity": "pb6d17ac2aeb5844f", "game2d": "pe878ed78ee9f8300", "inbe": "p183b01bccc6424e7", "kryon": "p43481d12b77897ce", "mingcute": "pe1027b9d16704793", "shovey": "p1b5832789c5a5053", "wurm": "pb4256918f4b7855d", "wurm_art": "pef8c9ab30363ef38"},
     "name": "Arcade"
   },
   "toolchain": {

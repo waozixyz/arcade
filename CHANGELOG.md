@@ -1,5 +1,10 @@
 # Arcade changelog
 
+## 0.7.114
+
+- Apfelwurm Editor uses its painted logo cover in the library.
+- Tall library previews keep their titles visible in small, compressed cards.
+
 ## 0.7.113
 
 - Choano 0.1.3 loads its artwork and sound from the paths the game requests.

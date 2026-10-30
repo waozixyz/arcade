@@ -149,6 +149,10 @@ class CollectionTests(unittest.TestCase):
         (library / "sources.json").write_text(json.dumps(sources))
 
     def stage_four_leaf_wurm_fixture(self):
+        registration = self.root / 'games.json'
+        value = json.loads(registration.read_text())
+        value.pop('artwork', None)
+        registration.write_text(json.dumps(value))
         source = self.root / "fixture-packages/wurm"
         (source / "editor").mkdir(parents=True)
         (source / "assets").mkdir()
@@ -260,6 +264,26 @@ class CollectionTests(unittest.TestCase):
         with self.assertRaisesRegex(ValueError, "wurm-portrait art changed"):
             self.stage()
 
+    def test_artwork_input_changes_no_game_payload_or_version(self):
+        packages = builder.declared_packages(self.root)
+        game = next(app for package in packages for app in package['apps']
+                    if app['descriptor']['name'] == 'wurm-editor')
+        self.assertNotEqual(game['source'], game['art_source'])
+        self.assertEqual(hashlib.sha256((game['art_source'] / game['cover']['portrait']).read_bytes()).hexdigest(),
+                         '07ff2ff0142c262cdcba3643bbc4d7d3d71643b7f9f4e678a910fee2bfd3eba1')
+        catalog = self.stage()
+        child = next(item for item in catalog['children'] if item['expected_id'] == 'wurm-editor')
+        self.assertEqual(child['version'], '0.1.0')
+        self.assertEqual(child['sha256'], builder.digest(self.root / 'build/games/wurm-editor.zx'))
+
+    def test_artwork_override_must_name_a_registered_game(self):
+        path = self.root / 'games.json'
+        value = json.loads(path.read_text())
+        value['artwork'] = {'unknown-game': 'wurm_art'}
+        path.write_text(json.dumps(value))
+        with self.assertRaisesRegex(ValueError, 'Invalid artwork package'):
+            self.stage()
+
     def test_every_library_cover_uses_a_bounded_thumbnail(self):
         catalog, packages = builder.stage(self.root, self.controller, self.controller_digest, self.output)
         children = {child['id']: child for child in catalog['children']}
@@ -271,7 +295,7 @@ class CollectionTests(unittest.TestCase):
                 for key in ('portrait', 'landscape', 'logo'):
                     if key not in app['cover']:
                         continue
-                    original = (app['source'] / app['cover'][key]).read_bytes()
+                    original = (app['art_source'] / app['cover'][key]).read_bytes()
                     with self.subTest(app=child['id'], image=key):
                         with Image.open(io.BytesIO(original)) as source:
                             with Image.open(self.output / child['cover'][key]) as thumbnail:
@@ -279,8 +303,11 @@ class CollectionTests(unittest.TestCase):
                                 self.assertLessEqual(max(thumbnail.size), limit)
                                 self.assertLessEqual(thumbnail.width, source.width)
                                 self.assertLessEqual(thumbnail.height, source.height)
+                                expected_ratio = source.width / source.height
+                                if key == 'portrait':
+                                    expected_ratio = max(2 / 3, expected_ratio)
                                 self.assertAlmostEqual(thumbnail.width / thumbnail.height,
-                                                       source.width / source.height, delta=0.01)
+                                                       expected_ratio, delta=0.01)
                                 self.assertIn(thumbnail.mode, ('RGB', 'RGBA'))
                                 # Opaque cover art is a JPEG; transparency stays PNG.
                                 self.assertEqual(thumbnail.format, 'JPEG' if key != 'logo' and
@@ -431,6 +458,21 @@ class CollectionTests(unittest.TestCase):
 
 
 class LibraryThumbnailTests(unittest.TestCase):
+    def test_tall_portrait_keeps_title_inside_the_library_card(self):
+        source = Image.new('RGB', (800, 1600), (25, 50, 75))
+        source.paste((220, 180, 40), (80, 100, 720, 220))
+        data = io.BytesIO()
+        source.save(data, 'PNG')
+        contents, suffix = artist.small_copy(data.getvalue(), 'portrait')
+        self.assertEqual(suffix, '.jpg')
+        with Image.open(io.BytesIO(contents)) as thumbnail:
+            self.assertEqual(thumbnail.size, (427, 640))
+            # The real card's centred cover fit now leaves the title intact.
+            red, green, blue = thumbnail.getpixel((213, 85))
+            self.assertGreater(red, 200)
+            self.assertGreater(green, 160)
+            self.assertLess(blue, 60)
+
     def test_cover_keeps_full_colour_at_thumbnail_resolution(self):
         source = Image.new('RGB', (900, 1200))
         source.putdata([(x % 256, y % 256, (x + y) % 256)
