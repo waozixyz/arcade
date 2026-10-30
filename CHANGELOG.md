@@ -4,6 +4,7 @@
 
 - Arcade is available as an Android app that plays every game offline, in normal, F-Droid and Google Play editions.
 - On arcade.waozi.xyz the game covers appear sooner, as smaller WebP pictures from the site itself.
+- Editors can share level collections through Arcade's signed-in Entity account.
 
 ## 0.7.109
 

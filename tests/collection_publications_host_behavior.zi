@@ -1,0 +1,40 @@
+#import, file "../src/collection_host.zi";
+#import "entity/publications"
+#import "entity/publications_read"
+#import "std/bundle_host"
+#import "hosted_values"
+#import "std/byte_text_linux"
+
+using HostValueKind;
+
+CopyText :: (text: string, bytes: []u8) -> bool {
+    if text.count >= bytes.count { return false }
+    for byte, at: text { bytes[at] = byte }
+    bytes[text.count] = 0
+    return true
+}
+
+TextValue :: (text: string) -> HostValue {
+    return HostValue.{.kind = cast(s32)HostString, .type_name = HostTextData("string"),
+        .data = HostTextData(text), .length = cast(usize)text.count}
+}
+
+BorrowedText :: (value: HostValue) -> string {
+    return TextFromBytes(BytesFromPointer(value.data, cast(u64)value.length))
+}
+
+#program_export
+Check :: () -> s32 {
+    if !CollectionAllows(null, null, PUBLICATIONS_SERVICE) { return 1 }
+    if !CollectionAllows(null, null, PUBLICATIONS_READ_SERVICE) { return 2 }
+    function: [32]u8
+    if !CopyText("AppServiceHost", function[:]) { return 3 }
+    arguments: [2]HostValue
+    arguments[0] = TextValue(PUBLICATIONS_SERVICE)
+    arguments[1] = TextValue("{\"operation\":\"fetch\",\"id\":\"fixture\"}")
+    result: HostValue
+    if CollectionCall(null, null, null, *function[0], *arguments[0], 2, *result) != 1 { return 4 }
+    if result.kind != cast(s32)HostString { return 5 }
+    if BorrowedText(result) != "{\"status\":\"rejected\",\"error\":\"signed-out\"}" { return 6 }
+    return 42
+}

@@ -44,6 +44,7 @@ Codec :: #import "apps/node_codec";
 #import, file "game_contract.zi";
 #import "sound"
 #import "entity_host"
+#import "entity/publications"
 #import "entity/publications_read"
 #import "entity/entity_records"
 #import "entity/entity_dew"
@@ -148,7 +149,8 @@ CollectionAllows :: (context: *void, node: *AppNode, name: string) -> bool {
     name == "SmoothFramesHost" || name == "AppLocaleHost" || name == "AppSoundHost" ||
     name == "tile_map.sampling" || name == "arcade.controls" || name == "arcade.sound" || name == "arcade.navigation" ||
     name == "arcade.updates" ||
-    name == PUBLICATIONS_READ_SERVICE || name == ENTITY_RECORDS_SERVICE || name == ENTITY_DEW_SERVICE ||
+    name == PUBLICATIONS_SERVICE || name == PUBLICATIONS_READ_SERVICE ||
+    name == ENTITY_RECORDS_SERVICE || name == ENTITY_DEW_SERVICE ||
     name == "entity.profile" || name == "leaderboard" ||
     (name == COLLECTION_INPUT_DESKTOP && CollectionInputDesktop())
 }
@@ -200,6 +202,12 @@ CollectionCall :: (context: *void, node: *AppNode, module: *u8, function: *u8,
             return 1
         }
         // Public level collections, such as a game's live campaign.
+        if service == PUBLICATIONS_SERVICE {
+            // Publications sign as this device's native Entity account.
+            EntityPump()
+            result.* = AppHostText(PublicationsAnswer(request))
+            return 1
+        }
         if service == PUBLICATIONS_READ_SERVICE {
             result.* = AppHostText(PublicationsReadAnswer(request))
             return 1
