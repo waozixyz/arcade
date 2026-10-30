@@ -2,6 +2,7 @@
 
 ## 0.7.112
 
+- Choano appears in Arcade and launches from its own game package.
 - Apfelwurm and Apfelwurm Editor open correctly in standalone Arcade.
 
 ## 0.7.111

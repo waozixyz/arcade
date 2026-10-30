@@ -169,6 +169,22 @@
       "url": "https://github.com/kryonlabs/mingcute.git"
     },
     {
+      "commit": "b7cfb33ab6f6d5fc0bcf472282d507ada42d0702",
+      "dependencies": {"apps": "p9928fc15e7b93288", "entity": "pb6d17ac2aeb5844f", "game2d": "pf2f54c7603f6e861", "kryon": "p43481d12b77897ce", "mingcute": "pe1027b9d16704793"},
+      "id": "pe128e00fa98e0676",
+      "name": "Choano",
+      "ref": "b7cfb33ab6f6d5fc0bcf472282d507ada42d0702",
+      "url": "https://github.com/waozixyz/choano.git"
+    },
+    {
+      "commit": "d32e4b606ece83e8869c954f66c334f44f7b4838",
+      "dependencies": {"kryon": "p43481d12b77897ce"},
+      "id": "pe878ed78ee9f8300",
+      "name": "Game2D",
+      "ref": "d32e4b606ece83e8869c954f66c334f44f7b4838",
+      "url": "https://github.com/kryonlabs/game2d.git"
+    },
+    {
       "commit": "cee04692f3461dcb098833472f071c434980debb",
       "dependencies": {"kryon": "p43481d12b77897ce"},
       "id": "pf2f54c7603f6e861",
@@ -178,7 +194,7 @@
     }
   ],
   "root": {
-    "dependencies": {"apps": "p9928fc15e7b93288", "entity": "pb6d17ac2aeb5844f", "inbe": "p183b01bccc6424e7", "kryon": "p43481d12b77897ce", "mingcute": "pe1027b9d16704793", "shovey": "p1b5832789c5a5053", "wurm": "pb4256918f4b7855d"},
+    "dependencies": {"apps": "p9928fc15e7b93288", "choano": "pe128e00fa98e0676", "entity": "pb6d17ac2aeb5844f", "game2d": "pe878ed78ee9f8300", "inbe": "p183b01bccc6424e7", "kryon": "p43481d12b77897ce", "mingcute": "pe1027b9d16704793", "shovey": "p1b5832789c5a5053", "wurm": "pb4256918f4b7855d"},
     "name": "Arcade"
   },
   "toolchain": {

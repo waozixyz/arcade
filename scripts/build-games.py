@@ -37,6 +37,7 @@ def build(ziran, lock_flags):
             [ziran, "pkg", "path", name, *lock_flags], cwd=ROOT, text=True).strip())
 
     kryon = package("kryon")
+    game2d = package("game2d")
     toolchain = package("ziran")
     entity = package("entity")
     compiler = toolchain / "build/bin/ziran"
@@ -142,6 +143,7 @@ def build(ziran, lock_flags):
             "--module-path", str(kryon / "src/ui"),
             "--module-path", "kryon=" + str(kryon / "src/ui"),
             "--module-path", "kryon=" + str(kryon / "src/backend"),
+            "--module-path", "game2d=" + str(game2d / "src"),
             "--module-path", "std=" + str(toolchain / "std"),
             "--module-path", str(toolchain / "std"),
             "--module-path", "apps=" + str(package("apps") / "src"),

@@ -110,7 +110,7 @@ def stage(root, controller, expected_controller_digest, output):
                     if key not in cover:
                         continue
                     relative = Path(cover[key])
-                    if relative.is_absolute() or ".." in relative.parts or relative.suffix != ".png":
+                    if relative.is_absolute() or ".." in relative.parts or relative.suffix not in {".png", ".jpg"}:
                         raise ValueError("Invalid cover asset path")
                     contents, suffix = library_art(root, name, key, (app["source"] / relative).read_bytes())
                     destination = Path("arcade/covers") / f"{name}-{key}{suffix}"

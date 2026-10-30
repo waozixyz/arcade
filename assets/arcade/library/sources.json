@@ -1,4 +1,13 @@
 {
+  "choano-landscape": {
+    "source_sha256": "1ca6e31c1062a7cca41bace4cf1bb221291988aea4a1dd61271899c2f5f28307"
+  },
+  "choano-portrait": {
+    "source_sha256": "47b07722c474a67ee4a06b7644a3aff211503674391e363c17eb06a34ce60d6c"
+  },
+  "choano-preview": {
+    "source_sha256": "1ca6e31c1062a7cca41bace4cf1bb221291988aea4a1dd61271899c2f5f28307"
+  },
   "shovey-editor-landscape": {
     "source_sha256": "7b1eae4209ede14807806a4cbce1e2bf7a14d342e75c89042958a524cf60d67e"
   },

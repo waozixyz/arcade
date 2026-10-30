@@ -10,6 +10,13 @@
       "sequence": 6,
       "host_api": 41
     },
+    "choano": {
+      "id": "xyz.waozi.choano",
+      "title": "Choano",
+      "version": "0.1.2",
+      "sequence": 1,
+      "host_api": 41
+    },
     "shovey": {
       "id": "arcade.shovey",
       "title": "Shovey",
