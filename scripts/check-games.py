@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 """Check game ownership, shared interface versions, translations and update metadata."""
 import json
+import argparse
 from pathlib import Path
 import re
 from game_packages import declared_apps
@@ -8,7 +9,7 @@ from game_packages import declared_apps
 ROOT = Path(__file__).resolve().parents[1]
 
 
-def check():
+def check(ziran, lock_flags):
     standard = json.loads((ROOT / 'standards/game-v1.json').read_text())
     ledger = json.loads((ROOT / 'apps/versions.json').read_text())
     # Arcade's own players refuse games newer than GAME_HOST_API, so it moves
@@ -16,7 +17,7 @@ def check():
     player = re.search(r'^GAME_HOST_API :: (\d+)$', (ROOT / 'src/game_contract.zi').read_text(), re.M)
     assert player and int(player[1]) == standard['host_api'] == ledger['host_api'], \
         'src/game_contract.zi GAME_HOST_API, standards/game-v1.json and apps/versions.json must name the same host interface'
-    for app in declared_apps(ROOT):
+    for app in declared_apps(ROOT, ziran, lock_flags):
         source, manifest, game = app['source'], app['manifest'], app['descriptor']
         for field in ['contract_version', 'module_api', 'host_api']:
             assert game[field] == standard[field], f'{game["name"]}: incompatible {field}'
@@ -61,5 +62,9 @@ def check():
 
 
 if __name__ == '__main__':
-    check()
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument('--ziran', default=str(ROOT / 'scripts/ziran.sh'))
+    parser.add_argument('--locked', action='store_true')
+    arguments = parser.parse_args()
+    check(arguments.ziran, ['--locked'] if arguments.locked else [])
     print('Game contract, package sources, translated text and independent version ledger passed')

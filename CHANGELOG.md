@@ -1,5 +1,9 @@
 # Arcade changelog
 
+## 0.7.112
+
+- Apfelwurm and Apfelwurm Editor open correctly in standalone Arcade.
+
 ## 0.7.111
 
 - Apfelwurm 0.2.27: Earn coins for every level you clear and spend them on new skins.

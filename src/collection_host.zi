@@ -146,7 +146,7 @@ CollectionAllows :: (context: *void, node: *AppNode, name: string) -> bool {
     return name == "AppRecordHost" || name == "SaveAppRecordHost" ||
     name == "AppFriendHost" || name == "AppSharedHost" || name == "AppSharedItemHost" ||
     name == "AppInvitationHost" || name == "RefreshAppSharedHost" || name == "SendAppSharedHost" ||
-    name == "SmoothFramesHost" || name == "AppLocaleHost" || name == "AppSoundHost" ||
+    name == "SmoothFramesHost" || name == "AppLocaleHost" || name == "AppSoundHost" || name == "AppNowHost" ||
     name == "tile_map.sampling" || name == "arcade.controls" || name == "arcade.sound" || name == "arcade.navigation" ||
     name == "arcade.updates" ||
     name == PUBLICATIONS_SERVICE || name == PUBLICATIONS_READ_SERVICE ||
@@ -184,6 +184,12 @@ CollectionCall :: (context: *void, node: *AppNode, module: *u8, function: *u8,
     if name == "AppSoundHost" && count == 1 && HostScalarValid(arguments[0], "string", cast(s32)HostString) {
         asset := AppHostAsset(node, AppArgumentText(arguments[0]))
         result.* = HostScalar("bool", ifx asset.found && SoundPlay(asset.data) then 1 else 0)
+        return 1
+    }
+    // Seconds since 1970: Apfelwurm counts its daily rewards by them.
+    if name == "AppNowHost" && count == 0 {
+        result.* = HostValue.{.kind = cast(s32)HostReal, .type_name = HostTextData("float64"),
+            .real = cast(float64)UnixMilliseconds() / 1000.0}
         return 1
     }
     if name == "SmoothFramesHost" && count == 1 {

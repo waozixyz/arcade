@@ -20,7 +20,7 @@ DATA_DIR ?= $(if $(XDG_DATA_HOME),$(XDG_DATA_HOME),$(HOME)/.local/share)
 all: collection build/entity.zx build/arcade build/shovey
 
 games:
-	python3 scripts/check-games.py
+	python3 scripts/check-games.py --ziran '$(ZIRAN)' $(LOCK_FLAGS)
 	python3 scripts/build-games.py --ziran '$(ZIRAN)' $(LOCK_FLAGS)
 
 $(APPS_BUNDLE): ziran.lock apps-controller.sha256 scripts/build-apps.py Makefile
