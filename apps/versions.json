@@ -13,8 +13,8 @@
     "choano": {
       "id": "xyz.waozi.choano",
       "title": "Choano",
-      "version": "0.1.2",
-      "sequence": 1,
+      "version": "0.1.3",
+      "sequence": 2,
       "host_api": 41
     },
     "shovey": {
@@ -34,8 +34,8 @@
     "arcade": {
       "id": "inbe.arcade",
       "title": "Arcade",
-      "version": "0.7.112",
-      "sequence": 191,
+      "version": "0.7.113",
+      "sequence": 192,
       "host_api": 41
     },
     "wurm": {

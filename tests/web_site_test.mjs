@@ -4,9 +4,12 @@
 // and the covers must draw from the site's own copies or its exact art.
 // Usage: node tests/web_site_test.mjs SITE_DIR
 // ARCADE_TEST_LIBRARY_ONLY=1 checks painted library covers and titles without downloading games.
+// ARCADE_TEST_PACKAGES=DIR serves local packages by their verified SHA-256 for unpublished builds.
 import { spawn } from 'node:child_process';
+import { createHash } from 'node:crypto';
+import { createReadStream } from 'node:fs';
 import { createServer } from 'node:http';
-import { access, mkdtemp, readFile, rm } from 'node:fs/promises';
+import { access, mkdtemp, readFile, rm, stat } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { extname, join, normalize } from 'node:path';
 import { setTimeout as delay } from 'node:timers/promises';
@@ -15,6 +18,7 @@ const site = process.argv[2];
 const libraryOnly = process.env.ARCADE_TEST_LIBRARY_ONLY === '1';
 const requiredTitles = ['Apfelwurm', 'Apfelwurm Editor', 'Choano'];
 const game = process.env.ARCADE_TEST_GAME || 'Apfelwurm';
+const packages = process.env.ARCADE_TEST_PACKAGES;
 if (!site) throw new Error('Usage: node tests/web_site_test.mjs SITE_DIR');
 const types = { '.html': 'text/html', '.js': 'text/javascript', '.wasm': 'application/wasm', '.json': 'application/json',
   '.svg': 'image/svg+xml', '.png': 'image/png', '.jpg': 'image/jpeg', '.webp': 'image/webp',
@@ -28,6 +32,19 @@ const server = createServer(async (request, response) => {
   const url = new URL(request.url, 'http://x');
   const path = normalize(decodeURIComponent(url.pathname)).replace(/^\/+/, '') || 'index.html';
   try {
+    const fixture = packages && /^test-packages\/([a-f0-9]{64})\.zx$/.exec(path);
+    if (fixture) {
+      const file = join(packages, fixture[1] + '.zx');
+      const size = (await stat(file)).size;
+      if (size > 64 * 1024 * 1024) throw new Error('Oversized local package');
+      const hash = createHash('sha256');
+      for await (const chunk of createReadStream(file)) hash.update(chunk);
+      if (hash.digest('hex') !== fixture[1]) throw new Error('Local package does not match requested digest');
+      response.writeHead(200, { 'Content-Type': 'application/octet-stream', 'Content-Length': size,
+        'Access-Control-Allow-Origin': '*' });
+      createReadStream(file).pipe(response);
+      return;
+    }
     // Model the previous runtime still cached under its unversioned URL.
     // A new deployment must request its coherent runtime revision instead.
     if (path === 'runtime.js' && !url.searchParams.has('v')) {
@@ -93,6 +110,12 @@ try {
       const { requestId, request } = message.params;
       const refuse = library && request.url.includes(library.art);
       if (refuse) refusedArt.push(request.url);
+      const fixture = packages && /\/api\/v2\/packages\/inbe\.arcade\/([a-f0-9]{64})\.zx(?:\?|$)/.exec(request.url);
+      if (fixture && !refuse) {
+        socket.send(JSON.stringify({ id: ++sequence, method: 'Fetch.continueRequest', params: {
+          requestId, url: `http://127.0.0.1:${server.address().port}/test-packages/${fixture[1]}.zx` } }));
+        return;
+      }
       socket.send(JSON.stringify(refuse
         ? { id: ++sequence, method: 'Fetch.failRequest', params: { requestId, errorReason: 'BlockedByClient' } }
         : { id: ++sequence, method: 'Fetch.continueRequest', params: { requestId } }));
@@ -172,14 +195,15 @@ try {
     };
     const button = (nodes, label) => nodes.find(node => node.kind === 'button' && node.label === label && node.visible);
     const waitButton = async label => {
+      const labels = Array.isArray(label) ? label : [label];
       let nodes;
       for (const end = Date.now() + 60000; Date.now() < end;) {
         nodes = await tree();
-        const found = button(nodes, label);
+        const found = nodes.find(node => node.kind === 'button' && labels.includes(node.label) && node.visible);
         if (found) return found;
         await delay(150);
       }
-      throw new Error('Game did not show ' + label + ': ' + nodes.filter(node => node.kind === 'button').map(node => node.label).join(', '));
+      throw new Error('Game did not show ' + labels.join(' or ') + ': ' + nodes.filter(node => node.kind === 'button').map(node => node.label).join(', '));
     };
     const pageReady = async () => {
       for (const end = Date.now() + 60000; Date.now() < end;) {
@@ -255,12 +279,12 @@ try {
       const download = (await tree()).findLast(node => node.kind === 'button' && node.label === 'Download');
       if (!download) throw new Error('The cover did not offer its download');
       await click(download);
-      await waitButton(game === 'Apfelwurm' ? 'Play' : 'Back');
+      await waitButton(game === 'Apfelwurm' ? 'Play' : ['Play', 'Back']);
       const play = button(await tree(), 'Play');
       if (play) await click(play);
       const swipe = button(await tree(), 'Swipe');
       if (swipe) await click(swipe);
-      if (game === 'Apfelwurm') await waitButton('Pause');
+      if (play || game === 'Apfelwurm') await waitButton('Pause');
       // Flush the actual control record before a cold restart.
       await evaluate(`new Promise((resolve,reject) => FS.syncfs(false,error => error ? reject(error) : resolve(true)))`);
       await command('Page.reload');
@@ -269,7 +293,7 @@ try {
       const installed = button(reloaded, game);
       if (!installed) throw new Error('Installed cover missing after reload');
       await click(installed);
-      await waitButton(game === 'Apfelwurm' ? 'Play' : 'Back');
+      await waitButton(game === 'Apfelwurm' ? 'Play' : ['Play', 'Back']);
       console.log(game + ' downloaded, opened its game and reopened from its installed cover');
       if (game === 'Apfelwurm') {
         await command('Page.reload');
@@ -369,4 +393,4 @@ if (failure) {
   console.error(console_lines.slice(-20).join('\n'));
   throw new Error(failure);
 }
-console.log('Arcade opened its library in the browser');
+console.log('Arcade opened its library in the browser' + (packages ? ' using local packages verified by SHA-256' : ''));

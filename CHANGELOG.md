@@ -1,5 +1,9 @@
 # Arcade changelog
 
+## 0.7.113
+
+- Choano 0.1.3 loads its artwork and sound from the paths the game requests.
+
 ## 0.7.112
 
 - Every library cover shows its declared app title, including Apfelwurm Editor.

@@ -64,4 +64,4 @@ ref = "d32e4b606ece83e8869c954f66c334f44f7b4838"
 
 [dependencies.choano]
 git = "https://github.com/waozixyz/choano.git"
-ref = "b7cfb33ab6f6d5fc0bcf472282d507ada42d0702"
+ref = "528618898db605b0f2960759d49871cde2209086"

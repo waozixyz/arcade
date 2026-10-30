@@ -20,9 +20,51 @@ spec.loader.exec_module(builder)
 art_spec = importlib.util.spec_from_file_location("library_art", ROOT / "scripts/library-art.py")
 artist = importlib.util.module_from_spec(art_spec)
 art_spec.loader.exec_module(artist)
+spec = importlib.util.spec_from_file_location("published_games", ROOT / "scripts/wait-published-games.py")
+published_games = importlib.util.module_from_spec(spec)
+spec.loader.exec_module(published_games)
+
+
+def bundle_asset_paths(path):
+    """Read the actual bundle index without loading its images or executing it."""
+    with published_games.Reader(path) as reader:
+        if reader.take(8) != b"ZX\0\0\x1a\0\0\0":
+            raise ValueError("Unsupported game bundle")
+        reader.text()
+        reader.text()
+        for _ in range(reader.number()):
+            reader.text()
+            reader.text()
+        for _ in range(reader.number()):
+            for _ in range(7):
+                reader.text()
+            reader.take(8)
+            reader.text()
+            reader.take(4)
+        for _ in range(reader.number()):
+            for _ in range(3):
+                reader.text()
+        reader.skip(reader.number())
+        paths = set()
+        for _ in range(reader.number()):
+            name = reader.text().decode()
+            if name in paths:
+                raise ValueError("Duplicate game asset: " + name)
+            paths.add(name)
+            reader.skip(reader.number())
+        reader.finish()
+    return paths
 
 
 class CollectionTests(unittest.TestCase):
+    def test_choano_runtime_images_are_packed_at_their_runtime_paths(self):
+        # Fixed runtime references catch a doubled namespace in the real
+        # compiled payload, independently of the packaging declaration.
+        assets = bundle_asset_paths(ROOT / "build/games/choano.zx")
+        for path in ("assets/choano/background-inside.png", "assets/choano/organisms-hd.png",
+                     "assets/choano/title-landscape.jpg", "assets/choano/fish/sea.png"):
+            self.assertTrue(path in assets, "Choano runtime image missing from its bundle: " + path)
+
     def setUp(self):
         self.directory = tempfile.TemporaryDirectory(prefix="collection-", dir=ROOT / "build")
         self.addCleanup(self.directory.cleanup)
@@ -194,7 +236,7 @@ class CollectionTests(unittest.TestCase):
         self.assertEqual(wurm_package["children"], ["xyz.waozi.wurm", "xyz.waozi.wurm-editor"])
         children = {child["id"]: child for child in catalog["children"]}
         self.assertEqual(children["xyz.waozi.choano"]["title"], "Choano")
-        self.assertEqual(children["xyz.waozi.choano"]["version"], "0.1.2")
+        self.assertEqual(children["xyz.waozi.choano"]["version"], "0.1.3")
         self.assertEqual(children["xyz.waozi.choano"]["expected_id"], "choano")
         self.assertEqual(children["xyz.waozi.wurm"]["version"], wurm_version)
         self.assertEqual(children["xyz.waozi.wurm-editor"]["version"], "0.1.0")
