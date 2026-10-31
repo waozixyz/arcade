@@ -73,6 +73,7 @@ android {
         }
     }
 
+    sourceSets.main.java.srcDir new File(kryonDir, 'templates/droid/droid/app/src/main/java/org/kryonlabs/platform')
     sourceSets.main.assets.srcDir "${rootProject.projectDir}/../build/entity-assets"
     // The collection, its receipt and the launcher icon, staged by make android
     // (scripts/build-android.py).

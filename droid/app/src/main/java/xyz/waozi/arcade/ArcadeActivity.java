@@ -404,7 +404,7 @@ public class ArcadeActivity extends NativeActivity {
             try {
                 Intent intent = new Intent(Intent.ACTION_OPEN_DOCUMENT);
                 intent.addCategory(Intent.CATEGORY_OPENABLE);
-                intent.setType(mimeTypes == null || mimeTypes.isEmpty() ? "*/*" : mimeTypes);
+                org.kryonlabs.platform.DocumentTypes.apply(intent, mimeTypes);
                 startActivityForResult(intent, REQUEST_OPEN_DOCUMENT);
             } catch (Exception error) {
                 Log.e(TAG, "Could not open the document picker", error);

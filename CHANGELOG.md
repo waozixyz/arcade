@@ -1,5 +1,9 @@
 # Arcade changelog
 
+## [Unreleased]
+
+- Filter account-key imports to key files and related backup types on Android.
+
 ## 0.7.115
 
 - Arcade opens correctly on Android instead of closing during startup.
