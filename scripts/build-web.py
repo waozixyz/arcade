@@ -39,8 +39,8 @@ COVER_QUALITY = 80
 
 
 def bundle_assets(data):
-    """The files embedded in a ZX v26 bundle by path; never runs it."""
-    if data[:8] != b'ZX\0\0\x1a\0\0\0' or len(data) > ART_LIMIT:
+    """The files embedded in a ZX v26/v27 bundle by path; never runs it."""
+    if data[:8] not in (b'ZX\0\0\x1a\0\0\0', b'ZX\0\0\x1b\0\0\0') or len(data) > ART_LIMIT:
         raise ValueError('unsupported bundle')
     at = 8
 

@@ -43,6 +43,8 @@ ArcadeStart :: () -> bool {
         // Standalone Shovey opens on its covers, as Arcade opens on its library.
         opened = CollectionOpenShoveyBytes(bundle, metadata, data)
     } else {
+        // The reviewed shared Apps controller is a host asset, like Entity.
+        collection_controller = ReadAppAsset("apps.zx")
         opened = CollectionOpenBytes(bundle, metadata, data)
     }
     if !opened {

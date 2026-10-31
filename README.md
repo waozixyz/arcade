@@ -131,8 +131,13 @@ and desktop-menu entry for the current user; it does not publish a release.
 
 ## Android
 
-Arcade's APK opens the whole library offline: `make android` packs the
-collection with every game, its art and the Apps controller, and builds an
+Arcade's APK contains only the catalog, shared Apps controller, Entity host,
+font and launcher resources. Library thumbnails download when needed; games
+and their declared dependencies install after download consent. Installed
+games remain available offline, and updates preserve downloads and saves.
+Entity keeps ordinary profile pictures; optional game imagery falls back to
+the profile picture when absent.
+Standalone Shovey retains its complete offline collection. `make android` builds an
 unsigned release APK in `build/android/`. `make android-fdroid` and
 `make android-gplay` build the other editions; only `-gplay` carries a Google
 library (Play Billing). Builds need the Android SDK with NDK 28.2.13676358,

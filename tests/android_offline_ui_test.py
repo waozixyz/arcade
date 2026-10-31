@@ -1,10 +1,6 @@
-"""Check that the APK's collection opens Arcade's whole library offline.
-
-The collection make android packs (build/android-assets) is opened by the
-desktop host from a private folder, as the Android host opens it from the
-APK's assets: no controller beside it and no reachable download origin, so
-every game and the art must come from the collection itself."""
+"""Exercise APK assets through generic Apps install, open and offline cache."""
 import argparse
+import contextlib
 import hashlib
 import json
 import os
@@ -15,7 +11,10 @@ import sys
 import tempfile
 import time
 
-LEVEL_UPDATES = 'Download new levels when they come out?'
+root = Path(__file__).resolve().parents[1]
+sys.path.insert(0, str(root / 'scripts'))
+from android_catalog import verify_assets
+from collection_ui_test import package_server, answer_library_question, answer_level_updates
 
 parser = argparse.ArgumentParser(description=__doc__)
 parser.add_argument('--binary', type=Path, required=True)
@@ -23,75 +22,121 @@ parser.add_argument('--inbe-source', type=Path, required=True)
 args = parser.parse_args()
 assert int(os.environ['DISPLAY'].split(':')[-1].split('.')[0]) >= 400
 assert os.environ['YUE_DESKTOP_RECOVERY'] == '0'
-root = Path(__file__).resolve().parents[1]
 assets = root / 'build/android-assets'
-receipt = json.loads((assets / 'arcade.json').read_text())
-assert receipt['id'] == 'inbe.arcade' and receipt['games'] == 'packed' and 'art' not in receipt
-assert receipt['sha256'] == hashlib.sha256((assets / 'arcade.zx').read_bytes()).hexdigest()
+metadata = verify_assets({p.name: p.read_bytes() for p in assets.iterdir() if p.is_file()} |
+                         {'entity.zx': (root / 'build/entity.zx').read_bytes()})
+entries = {entry['expected_id']: entry for entry in metadata['children']}
 sys.path.insert(0, str(args.inbe_source / 'tests'))
 from ui_driver import UiDriver
-output = root / 'build/android-offline-ui-test'
+output = root / 'work/android-offline-ui-test'
 output.mkdir(parents=True, exist_ok=True)
 driver = UiDriver(output / 'driver')
 
-with tempfile.TemporaryDirectory(prefix='arcade-offline-') as temporary:
+with tempfile.TemporaryDirectory(prefix='host-', dir=output) as temporary, package_server(root) as (origin, server):
     install = Path(temporary) / 'app'
     install.mkdir()
     shutil.copy2(args.binary, install / 'arcade')
-    for name in ('arcade.zx', 'arcade.json'):
+    for name in ('arcade.zx', 'arcade.json', 'apps.zx'):
         shutil.copyfile(assets / name, install / name)
-    # The shared profile, which the APK also carries.
     shutil.copyfile(root / 'build/entity.zx', install / 'entity.zx')
     profile = Path(temporary) / 'profile'
-    log_path = output / 'arcade.log'
-    with log_path.open('w') as log:
-        # Port 9 (discard) refuses connections: any download would fail.
-        child = subprocess.Popen([str(install / 'arcade')], cwd=install,
-                                 env=os.environ | driver.environment() |
-                                 {'ARCADE_DATA': str(profile), 'ENTITY_DATA': str(profile / 'entity'),
-                                  'LANG': 'en_US.UTF-8', 'ARCADE_PACKAGE_ORIGIN': 'http://127.0.0.1:9'},
-                                 stdout=log, stderr=subprocess.STDOUT)
-        driver.attach(child, log_path)
-        try:
-            for title in ('Shovey', 'Shovey Editor', 'Apfelwurm'):
-                driver.wait(label=title, role='button', timeout=60)
-            covers = [node for node in driver.find(role='image', visible=True)
-                      if node['width'] >= 100 and node['height'] >= 140]
-            assert len(covers) >= 2, 'The packed library art must draw without a download'
-            if driver.find(label=LEVEL_UPDATES, role='text'):
-                driver.press(label='Not now', role='button')
-                driver.wait_gone(label=LEVEL_UPDATES, role='text')
-            driver.press(label='Shovey', role='button')
-            deadline = time.monotonic() + 30
-            while True:
-                assert not driver.find(label='Download', role='button'), 'A packed game must not ask to download'
-                assert not driver.find(label='Try again', role='button'), 'A packed game must not download'
-                if driver.find(label=LEVEL_UPDATES, role='text'):
-                    driver.press(label='Not now', role='button')
-                    driver.wait_gone(label=LEVEL_UPDATES, role='text')
-                if [node for node in driver.tree() if str(node.get('label', '')).startswith('Level 1 / ')]:
-                    break
-                assert not driver.find(label='Request rejected'), 'The packed host rejected its game'
-                assert time.monotonic() < deadline, 'Shovey did not start from the packed collection'
-                time.sleep(0.05)
-            if driver.find(label='How do you want to move?', role='text'):
-                driver.press(label='Swipe and tap')
-                driver.wait_gone(label='How do you want to move?', role='text')
-            driver.press(label='Back', role='button')
-            # Shared-code dependencies and the larger standalone game must
-            # also fit while the full offline collection remains resident.
-            for title, marker, role in [('Shovey Editor', 'New level', 'text'),
-                                        ('Apfelwurm', 'Play', 'button')]:
-                driver.wait(label=title, role='button')
-                driver.press(label=title, role='button')
-                driver.wait(label=marker, role=role, timeout=60)
-                assert not driver.find(label='Request rejected')
-                assert not driver.find(label='Download', role='button')
-                driver.key('escape')
-                driver.wait(label='Shovey', role='button')
-            assert not list((profile / 'resources').rglob('*.zx')), 'Nothing may be downloaded'
-        finally:
-            if child.poll() is None:
-                child.terminate()
-            child.wait(timeout=10)
-print('The Android collection draws its art and opens Shovey, its shared-code editor and Apfelwurm offline')
+    retained = profile / 'games/inbe.chess/records/computer'
+    retained.parent.mkdir(parents=True)
+    retained.write_bytes(b'existing private save')
+    record = profile / 'games/arcade.shovey/records/local.campaign'
+
+    @contextlib.contextmanager
+    def application(name):
+        log_path = output / (name + '.log')
+        with log_path.open('w') as log:
+            child = subprocess.Popen([str(install / 'arcade')], cwd=install,
+                env=os.environ | driver.environment() |
+                {'ARCADE_DATA': str(profile), 'ENTITY_DATA': str(profile / 'entity'),
+                 'LANG': 'en_US.UTF-8', 'ARCADE_PACKAGE_ORIGIN': origin},
+                stdout=log, stderr=subprocess.STDOUT)
+            driver.attach(child, log_path)
+            try:
+                yield child
+            finally:
+                if child.poll() is None:
+                    child.terminate()
+                child.wait(timeout=10)
+
+    def download(label='Download'):
+        driver.wait(label=label, role='button', timeout=60)
+        action = max(driver.find(label=label, role='button', visible=True), key=lambda node: node['width'])
+        driver.press(key=action['key'], role='button')
+
+    def play():
+        answer_level_updates(driver)
+        if driver.find(label='How do you want to move?', role='text'):
+            driver.press(label='Swipe and tap')
+        driver.wait(label='Restart', role='button', timeout=60)
+        assert not driver.find(label='Download', role='button')
+
+    with application('install'):
+        answer_library_question(driver)
+        games = {entry['sha256'] for entry in metadata['children']}
+        assert not games & set(server['requests']), 'No game before download consent'
+        driver.press(label='Shovey Editor', role='button')
+        driver.wait(label='Cancel', role='button')
+        driver.press(label='Cancel', role='button')
+        assert not games & set(server['requests']), 'Cancel must download nothing'
+        driver.press(label='Shovey Editor', role='button')
+        server['corrupt_shovey'] = True
+        download()
+        driver.wait(label='Try again', role='button', timeout=60)
+        assert not driver.find(label='New level', role='text'), 'Corrupt dependency must not open'
+        server['corrupt_shovey'] = False
+        download('Try again')
+        driver.wait(label='New level', role='text', timeout=60)
+        assert server['requests'].count(entries['shovey']['sha256']) == 2
+        assert server['requests'].count(entries['shovey-editor']['sha256']) == 1
+        driver.key('escape')
+        driver.wait(label='Shovey', role='button')
+        driver.press(label='Shovey', role='button')
+        play()
+        driver.key('right')
+        deadline = time.monotonic() + 20
+        while not record.exists() and time.monotonic() < deadline:
+            driver.wait_idle(frames=5)
+        assert record.exists(), 'Game must persist progress'
+        driver.press(label='Back', role='button')
+        driver.wait(label='Shovey', role='button')
+        driver.press(label='Apfelwurm', role='button')
+        download()
+        driver.wait(label='Play', role='button', timeout=60)
+        driver.key('escape')
+        driver.wait(label='Shovey', role='button')
+        driver.press(label='Profile', role='button')
+        driver.wait(label='Account', role='text')
+        driver.press(label='Leaderboard', role='button')
+        driver.wait(label='Apfelwurm', role='button')
+        driver.press(label='Apfelwurm', role='button')
+        # The profile stays usable with its optional game sheets omitted.
+        driver.wait(label='Back', role='button')
+        driver.press(label='Back', role='button')
+    saved = record.read_bytes()
+    for name in ('shovey', 'shovey-editor', 'wurm'):
+        entry = entries[name]
+        cached = profile / 'resources/downloads' / (entry['sha256'] + '.zx')
+        assert hashlib.sha256(cached.read_bytes()).hexdigest() == entry['sha256']
+    assert metadata['art']['sha256'] in server['requests'], 'Art must download separately'
+    requested = list(server['requests'])
+    server['offline'] = True
+    with application('offline'):
+        answer_library_question(driver)
+        driver.press(label='Shovey', role='button')
+        play()
+        driver.press(label='Back', role='button')
+        driver.wait(label='Shovey Editor', role='button')
+        driver.press(label='Shovey Editor', role='button')
+        driver.wait(label='New level', role='text', timeout=60)
+        driver.key('escape')
+        driver.wait(label='Apfelwurm', role='button')
+        driver.press(label='Apfelwurm', role='button')
+        driver.wait(label='Play', role='button', timeout=60)
+    assert server['requests'] == requested, 'Installed apps/art must reopen offline without requests'
+    assert record.read_bytes() == saved, 'Offline restart must preserve saved progress'
+    assert retained.read_bytes() == b'existing private save'
+print('Android catalog: consent, dependency verification/retry, install/open, cached offline and retained saves passed')

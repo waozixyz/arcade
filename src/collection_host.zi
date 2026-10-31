@@ -488,8 +488,8 @@ CollectionController :: (context: *void) -> HostedAsset {
     return controller
 }
 
-// packed: the collection carries every game and its art, as the Android APK
-// does, so nothing is downloaded.
+// Packed standalone collections carry their games and art. Thin Arcade
+// uses the ordinary generic Apps download, install and cached bundle path.
 CollectionOpen :: (bundle: string, digest: string, harness_digest: string,
     data: string, locale: string, packed: bool) -> bool {
     if collection_ready { return false }

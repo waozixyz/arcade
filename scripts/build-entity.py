@@ -14,6 +14,9 @@ flags = ['--locked'] if args.locked or not (ROOT / 'ziran.local.toml').exists() 
 def package(name):
     return Path(subprocess.check_output([ZIRAN, 'pkg', 'path', name, *flags], cwd=ROOT, text=True).strip())
 entity, kryon, toolchain, qrcode = map(package, ('entity', 'kryon', 'ziran', 'qrcode'))
+staged = ROOT / 'build/entity-profile-source'
+subprocess.run(['python3', str(entity / 'scripts/stage-assets.py'), '--group', 'profile',
+                '--output', str(staged)], cwd=ROOT, check=True)
 subprocess.run([ZIRAN, 'bundle', '--root', str(entity),
                 '--module-path', str(entity / 'src'),
                 '--module-path', str(kryon / 'src/ui'),
@@ -21,7 +24,7 @@ subprocess.run([ZIRAN, 'bundle', '--root', str(entity),
                 '--module-path', 'kryon=' + str(kryon / 'src/backend'),
                 '--module-path', 'qrcode=' + str(qrcode / 'src'),
                 '--module-path', str(toolchain / 'std'),
-                '--define', 'KRYON_HOSTED_UI', '--asset-dir', 'assets=' + str(entity / 'assets'),
+                '--define', 'KRYON_HOSTED_UI', '--asset-dir', 'assets=' + str(staged / 'assets'),
                 '--entry', 'entity:Main', '-o', str(ROOT / 'build/entity.zx'), str(entity / 'src/entity.zi')],
                cwd=entity, check=True)
 

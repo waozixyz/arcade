@@ -54,6 +54,7 @@ run: all
 	./build/arcade
 
 test: all
+	python3 tests/android_catalog_test.py
 	python3 tests/android_jni_contract_test.py
 	python3 tests/game_updates_test.py
 	$(ZIRAN) fmt --check src/*.zi apps/chess/*.zi tests/chess_engine_behavior.zi tests/chess_app_behavior.zi
@@ -135,7 +136,7 @@ install: all install-arcade
 	install -m 0644 build/shovey-icon.png '$(DATA_DIR)/icons/hicolor/256x256/apps/xyz.waozi.shovey.png'
 	install -m 0644 packaging/xyz.waozi.arcade.desktop packaging/xyz.waozi.shovey.desktop '$(DATA_DIR)/applications/'
 
-# Arcade's own APK opens its whole library offline. Each builds an unsigned
+# Arcade's APK is a thin catalog with on-demand games and art. Each builds an unsigned
 # release APK in build/android/; only -gplay carries a Google library.
 # scripts/android-release.py signs and checks them.
 .PHONY: android android-fdroid android-gplay
@@ -148,7 +149,7 @@ android-fdroid: collection
 android-gplay: collection
 	python3 scripts/build-android.py --product arcade --release --edition gplay
 
-# The collection make android packed opens every game offline (desktop host).
+# Test the Android catalog through the generic install/cache path privately.
 .PHONY: android-offline-ui-test
 android-offline-ui-test: build/arcade build/entity.zx
 	env -u DISPLAY -u WAYLAND_DISPLAY -u XAUTHORITY -u DBUS_SESSION_BUS_ADDRESS \

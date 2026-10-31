@@ -47,8 +47,27 @@ def build(root, output):
         controller_context(root, context)
         package = Path(subprocess.check_output(
             ['ziran', 'pkg', 'path', 'apps', '--locked'], cwd=context, text=True).strip())
-        subprocess.run([sys.executable, str(package / 'scripts/build-ui.py'),
-                        '--output', str(output.resolve())], cwd=root, check=True)
+        subprocess.run([sys.executable, str(package / 'scripts/generate-ui-locales.py'), '--check'],
+                       cwd=root, check=True)
+        toolchain = Path(subprocess.check_output(
+            ['ziran', 'pkg', 'path', 'ziran', '--locked'], cwd=context, text=True).strip())
+        compiler = toolchain / 'build/bin/ziran'
+        if not compiler.is_file():
+            compiler = root / 'build/toolchain/bin/ziran'
+            subprocess.run(['make', '-s', '-C', str(toolchain),
+                            'BUILD_DIR=' + str(root / 'build/toolchain'), 'all'], check=True)
+        output.mkdir(parents=True, exist_ok=True)
+        kryon = Path(subprocess.check_output(
+            ['ziran', 'pkg', 'path', 'kryon', '--locked'], cwd=context, text=True).strip())
+        # Keep Apps' supported source entry mode with this host's exact graph.
+        subprocess.run([str(compiler), 'bundle',
+                        '--module-path', str(package / 'src'),
+                        '--module-path', 'kryon=' + str(kryon / 'src/ui'),
+                        '--module-path', 'kryon=' + str(kryon / 'src/backend'),
+                        '--module-path', str(toolchain / 'std'),
+                        '--root', str(package / 'ui'), '--entry', 'apps:Main',
+                        '--define', 'KRYON_HOSTED_UI', '-o', str(output.resolve() / 'apps.zx'),
+                        str(package / 'ui/apps.zi')], cwd=context, check=True)
 
 
 def main():

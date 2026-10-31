@@ -18,10 +18,10 @@ spec.loader.exec_module(web)
 
 
 def bundle(files):
-    """A minimal ZX v26 bundle: empty program sections, then its files."""
+    """A minimal ZX v27 bundle: empty program sections, then its files."""
     def text(value):
         return struct.pack('<I', len(value)) + value
-    data = b'ZX\0\0\x1a\0\0\0' + text(b'art') + text(b'Main') + struct.pack('<IIII', 0, 0, 0, 0)
+    data = b'ZX\0\0\x1b\0\0\0' + text(b'art') + text(b'Main') + struct.pack('<IIII', 0, 0, 0, 0)
     data += struct.pack('<I', len(files))
     for path in sorted(files):
         data += text(path.encode()) + text(files[path])

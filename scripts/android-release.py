@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Sign and verify Arcade's Android APKs: the normal and F-Droid editions,
 which hold no Google library, and the Google Play edition, the only one with
-Play Billing. Each carries the whole library for offline play."""
+Play Billing. Arcade downloads games on demand."""
 import argparse
 import hashlib
 import json
@@ -75,16 +75,16 @@ def verify(apk, version, tools, edition='direct'):
         payload = archive.read('assets/arcade.zx')
         assert metadata['id'] == 'inbe.arcade' and metadata['version'] == version
         assert metadata['sha256'] == hashlib.sha256(payload).hexdigest(), 'Embedded collection differs from its receipt'
-        # Offline play: every game in the catalog is packed into the collection.
-        assert metadata.get('games') == 'packed' and 'art' not in metadata and metadata['children'], \
-            'The collection must pack its games and art'
-        for child in metadata['children']:
-            assert child['bundle'].encode() in payload, f"{child['id']} is not packed for offline play"
+        from android_catalog import verify_assets
+        verify_assets({name.removeprefix('assets/'): archive.read(name)
+                       for name in names if name.startswith('assets/') and not name.endswith('/')}, edition=edition)
         dex = b''.join(archive.read(name) for name in names if re.fullmatch(r'classes\d*\.dex', name))
         for marker in (b'Lorg/kryonlabs/play/PlayBilling;', b'Lcom/android/billingclient/'):
             assert (marker in dex) == google_play, 'Only the Google Play edition may include Play Billing'
+    with apk.open('rb') as source:
+        apk_digest = hashlib.file_digest(source, 'sha256').hexdigest()
     return dict(version=version, version_code=int(package[2]), package=package[1], abis=abis, edition=edition,
-                sha256=hashlib.sha256(apk.read_bytes()).hexdigest(), certificate_sha256=expected,
+                sha256=apk_digest, certificate_sha256=expected,
                 payload_sha256=metadata['sha256'], games=[child['id'] for child in metadata['children']],
                 bytes=apk.stat().st_size)
 
@@ -104,7 +104,7 @@ def main():
     apk = args.apk.resolve(strict=True)
     if args.action == 'verify':
         verify(apk, args.version, tools, args.edition)
-        print(f'Arcade {args.version} {args.edition}: APK identity, signer, alignment and offline games verified')
+        print(f'Arcade {args.version} {args.edition}: APK identity, signer, alignment and thin catalog verified')
         return
     suffix = '' if args.edition == 'direct' else '-' + args.edition
     output = (args.output or ROOT / f'build/android/arcade-{args.version}{suffix}.apk').resolve()
@@ -135,7 +135,7 @@ def main():
     records = ROOT / 'backup/android-release'
     records.mkdir(parents=True, exist_ok=True)
     (records / f'verification{suffix}.json').write_text(json.dumps(result, indent=2) + '\n')
-    print(f'Arcade {args.version} {args.edition}: signed {output}; identity, signer, alignment and offline games verified')
+    print(f'Arcade {args.version} {args.edition}: signed {output}; identity, signer, alignment and thin catalog verified')
 
 
 if __name__ == '__main__':

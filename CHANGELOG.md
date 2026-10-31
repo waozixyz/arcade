@@ -1,6 +1,8 @@
 # Arcade changelog
 
-## [Unreleased]
+## 0.7.116
+
+- Android Arcade downloads games and library thumbnails on demand instead of bundling the entire game library; installed games remain playable offline with saved progress.
 
 - Filter account-key imports to key files and related backup types on Android.
 

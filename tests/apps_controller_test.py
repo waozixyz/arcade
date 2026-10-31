@@ -14,7 +14,9 @@ spec.loader.exec_module(builder)
 
 class ControllerSourceTests(unittest.TestCase):
     def test_local_overrides_do_not_reach_locked_resolution(self):
-        with tempfile.TemporaryDirectory() as directory:
+        scratch = ROOT / 'work/apps-controller-test'
+        scratch.mkdir(parents=True, exist_ok=True)
+        with tempfile.TemporaryDirectory(dir=scratch) as directory:
             root = Path(directory)
             manifest = ('[package]\nname = "Arcade"\n'
                         '[toolchain]\ngit = "https://github.com/ziranlang/ziran.git"\nref = "master"\n'
@@ -30,10 +32,13 @@ class ControllerSourceTests(unittest.TestCase):
             (root / 'ziran.local.toml').write_text('unreviewed local dependency')
             package = root / 'cached-apps'
             output = root / 'output'
+            compiler = root / 'cached-ziran/build/bin/ziran'
+            compiler.parent.mkdir(parents=True)
+            compiler.write_text('fixture compiler path; subprocess calls are mocked')
             contexts = []
 
             def resolve(command, *, cwd, text):
-                self.assertEqual(command, ['ziran', 'pkg', 'path', 'apps', '--locked'])
+                self.assertIn(command, [['ziran', 'pkg', 'path', name, '--locked'] for name in ('apps', 'ziran', 'kryon')])
                 self.assertTrue(text)
                 self.assertNotIn('dependencies.wurm', (cwd / 'ziran.toml').read_text())
                 selected = json.loads((cwd / 'ziran.lock').read_text())
@@ -42,14 +47,18 @@ class ControllerSourceTests(unittest.TestCase):
                 self.assertEqual(selected['toolchain'], lock['toolchain'])
                 self.assertEqual({p.name for p in cwd.iterdir()}, {'ziran.toml', 'ziran.lock'})
                 contexts.append(cwd)
-                return str(package) + '\n'
+                return str(package if command[3] == 'apps' else root / ('cached-' + command[3])) + '\n'
 
             with patch.object(builder.subprocess, 'check_output', side_effect=resolve), \
                  patch.object(builder.subprocess, 'run') as run:
                 builder.build(root, output)
-            run.assert_called_once_with(
-                [builder.sys.executable, str(package / 'scripts/build-ui.py'),
-                 '--output', str(output)], cwd=root, check=True)
+            self.assertEqual(run.call_count, 2)
+            command = run.call_args.args[0]
+            self.assertEqual(command[0], str(compiler))
+            self.assertIn(str(package / 'ui/apps.zi'), command)
+            self.assertIn('kryon=' + str(root / 'cached-kryon/src/ui'), command)
+            self.assertIn(str(root / 'cached-ziran/std'), command)
+            self.assertNotIn('--project', command)
             self.assertFalse(contexts[0].exists())
             self.assertEqual((root / 'ziran.toml').read_text(), manifest)
             self.assertEqual(json.loads((root / 'ziran.lock').read_text()), lock)

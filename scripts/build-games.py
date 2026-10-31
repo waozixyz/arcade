@@ -43,11 +43,9 @@ def build(ziran, lock_flags):
     compiler = toolchain / "build/bin/ziran"
     if not compiler.is_file():
         compiler = ROOT / "build/toolchain/bin/ziran"
-    def dependency(name, project):
-        return Path(subprocess.check_output(
-            [str(compiler), "pkg", "path", name, *lock_flags], cwd=project, text=True).strip())
-    daochi_client = dependency("daochi_client", entity)
-    crypto = dependency("crypto", daochi_client)
+    # Resolve transitive packages from Arcade's lock, never their private graphs.
+    daochi_client = package("DaochiClient")
+    crypto = package("crypto")
     entries = []
     apps = dependency_order(declared_apps(ROOT, ziran, lock_flags))
     by_id = {app['descriptor']['id']: app for app in apps}

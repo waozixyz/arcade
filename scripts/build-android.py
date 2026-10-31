@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Package Arcade's native Android host: Arcade with its whole library offline,
+"""Package Arcade's native Android host: a thin on-demand launcher,
 or the older standalone Shovey collection."""
 import argparse
 import hashlib
@@ -32,8 +32,7 @@ def launcher_icon(source, resources):
         icon.resize((size, size), Image.Resampling.LANCZOS).save(folder / 'ic_launcher.png')
 
 def stage_arcade():
-    """Pack the staged collection with its games, art and Apps controller, so
-    the APK opens the whole library offline. Returns Arcade's release."""
+    """Stage the catalog and reviewed shared controller without game payloads. Returns Arcade's release."""
     collection = ROOT / 'build/collection'
     receipt = json.loads((collection / 'receipt.json').read_text())
     release = json.loads((ROOT / 'apps/versions.json').read_text())['node_apps']['arcade']
@@ -46,13 +45,14 @@ def stage_arcade():
     if assets.exists():
         shutil.rmtree(assets)
     assets.mkdir(parents=True)
-    ziran_bundle('--root', str(ROOT / 'src'), '--entry', 'collection:Main',
-                 '--asset-dir', 'assets=' + str(collection / 'assets'), '-o', str(assets / 'arcade.zx'),
-                 str(ROOT / 'src/collection.zi'))
-    # The library packs its games and art: the host downloads nothing.
-    offline = {key: value for key, value in receipt.items() if key != 'art'} | {'games': 'packed'}
-    offline['sha256'] = hashlib.sha256((assets / 'arcade.zx').read_bytes()).hexdigest()
-    (assets / 'arcade.json').write_text(json.dumps(offline, indent=2) + '\n')
+    # Reuse the standard thin catalog; standalone Shovey remains packed.
+    for name in ('arcade.zx', 'arcade.json'):
+        shutil.copyfile(ROOT / 'build' / name, assets / name)
+    shutil.copyfile(collection / 'assets/apps/apps.zx', assets / 'apps.zx')
+    from android_catalog import verify_assets
+    metadata = verify_assets({p.name: p.read_bytes() for p in assets.iterdir()}, essentials=False)
+    if metadata['version'] != release['version']:
+        raise ValueError('The thin catalog version changed; rebuild the collection first')
     # Android before 10 has no font lookup; the Windows build ships the same font.
     shutil.copyfile(package('kryon') / 'assets/fonts/LiberationSans-Regular.ttf', assets / 'kryon-font.ttf')
     launcher_icon(ROOT / 'site/android-launcher-512.png', ROOT / 'build/android-res')
@@ -80,7 +80,7 @@ def stage_shovey():
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('--product', choices=('shovey', 'arcade'), default='shovey',
-                        help='arcade: Arcade with its whole library; shovey: the standalone Shovey collection')
+                        help='arcade: thin Arcade launcher; shovey: the standalone Shovey collection')
     parser.add_argument('--release', action='store_true', help='Build an unsigned release APK for the release signer')
     parser.add_argument('--edition', choices=('direct', 'fdroid', 'gplay'), default='direct',
                         help='The APK edition; only gplay carries a Google library')
@@ -133,6 +133,7 @@ def main():
         output = ROOT / 'build/android' / (f'arcade{suffix}-unsigned.apk' if args.release else f'arcade{suffix}.apk')
         output.parent.mkdir(parents=True, exist_ok=True)
         shutil.copyfile(apk, output)
+        subprocess.run(['python3', str(ROOT / 'tests/android_catalog_test.py'), str(output), '--edition', edition], cwd=ROOT, check=True)
         print(f'Arcade APK: {output}')
         return
     output = ROOT / ('build/shovey-test-unsigned.apk' if args.application_id else

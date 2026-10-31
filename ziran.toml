@@ -7,7 +7,7 @@ bridge_modules = ["app"]
 
 [toolchain]
 git = "https://github.com/ziranlang/ziran.git"
-ref = "master"
+ref = "3f6234e9a181cdad20fac4fad1d1afb1b8ccf054"
 
 [install]
 bin = "arcade"
@@ -48,7 +48,7 @@ ref = "master"
 
 [dependencies.entity]
 git = "https://github.com/waozixyz/entity.git"
-ref = "master"
+ref = "78a79e8bf19d72f6afd1a941bc410b75d08854a3"
 
 [dependencies.mingcute]
 git = "https://github.com/kryonlabs/mingcute.git"

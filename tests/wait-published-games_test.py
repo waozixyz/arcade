@@ -22,7 +22,7 @@ def bundle(files):
     def text(value):
         return struct.pack("<I", len(value)) + value
 
-    data = b"ZX\0\0\x1a\0\0\0" + text(b"arcade") + text(b"Main")
+    data = b"ZX\0\0\x1b\0\0\0" + text(b"arcade") + text(b"Main")
     data += struct.pack("<IIII", 0, 0, 0, 0) + struct.pack("<I", len(files))
     for path in sorted(files):
         data += text(path.encode()) + text(files[path])
@@ -63,7 +63,7 @@ class Handler(http.server.BaseHTTPRequestHandler):
             self.end_headers()
             self.wfile.write(b"{}")
             return
-        body = response.get("body", b"ZX\0\0\x1a\0\0\0port")
+        body = response.get("body", b"ZX\0\0\x1b\0\0\0port")
         self.send_response(response.get("status", 200))
         self.send_header("Content-Type", response.get("type", "application/octet-stream"))
         if "etag" in response:

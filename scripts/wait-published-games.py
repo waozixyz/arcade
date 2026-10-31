@@ -72,7 +72,7 @@ class Reader:
 
 def catalog_from_bundle(path):
     with Reader(path) as reader:
-        if reader.take(8) != b"ZX\0\0\x1a\0\0\0":
+        if reader.take(8) not in (b"ZX\0\0\x1a\0\0\0", b"ZX\0\0\x1b\0\0\0"):
             raise ValueError("unsupported bundle")
         reader.text()
         reader.text()
