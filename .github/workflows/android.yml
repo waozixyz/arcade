@@ -169,6 +169,17 @@ jobs:
     timeout-minutes: 15
     steps:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with:
+          repository: ziranlang/ziran
+          ref: ${{ needs.release.outputs.toolchain }}
+          path: ziranlang/ziran
+      - name: Prepare the locked asset verifier dependencies
+        run: |
+          make -j2 -C ziranlang/ziran
+          echo "$GITHUB_WORKSPACE/ziranlang/ziran/build/bin" >> "$GITHUB_PATH"
+          printf '[overrides]\nziran = "ziranlang/ziran"\n' > ziran.local.toml
+          ziranlang/ziran/build/bin/ziran fetch
       - uses: actions/download-artifact@v4
         with:
           pattern: arcade-android-*
