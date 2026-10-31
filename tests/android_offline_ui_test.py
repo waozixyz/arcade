@@ -71,11 +71,27 @@ with tempfile.TemporaryDirectory(prefix='arcade-offline-') as temporary:
                     driver.wait_gone(label=LEVEL_UPDATES, role='text')
                 if [node for node in driver.tree() if str(node.get('label', '')).startswith('Level 1 / ')]:
                     break
+                assert not driver.find(label='Request rejected'), 'The packed host rejected its game'
                 assert time.monotonic() < deadline, 'Shovey did not start from the packed collection'
                 time.sleep(0.05)
+            if driver.find(label='How do you want to move?', role='text'):
+                driver.press(label='Swipe and tap')
+                driver.wait_gone(label='How do you want to move?', role='text')
+            driver.press(label='Back', role='button')
+            # Shared-code dependencies and the larger standalone game must
+            # also fit while the full offline collection remains resident.
+            for title, marker, role in [('Shovey Editor', 'New level', 'text'),
+                                        ('Apfelwurm', 'Play', 'button')]:
+                driver.wait(label=title, role='button')
+                driver.press(label=title, role='button')
+                driver.wait(label=marker, role=role, timeout=60)
+                assert not driver.find(label='Request rejected')
+                assert not driver.find(label='Download', role='button')
+                driver.key('escape')
+                driver.wait(label='Shovey', role='button')
             assert not list((profile / 'resources').rglob('*.zx')), 'Nothing may be downloaded'
         finally:
             if child.poll() is None:
                 child.terminate()
             child.wait(timeout=10)
-print('The Android collection opens every game and its art offline')
+print('The Android collection draws its art and opens Shovey, its shared-code editor and Apfelwurm offline')

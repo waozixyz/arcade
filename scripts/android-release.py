@@ -16,6 +16,27 @@ ROOT = Path(__file__).resolve().parents[1]
 ABIS = ['arm64-v8a', 'armeabi-v7a']
 
 
+def verify_launcher(apk, tools, names):
+    """Resolve compiled resource IDs, including shortened release paths."""
+    resources = subprocess.check_output(
+        [str(tools / 'aapt'), 'dump', '--values', 'resources', str(apk)], text=True)
+    entries = re.findall(r'resource (0x[0-9a-f]+) [^\n]+:(drawable/ic_launcher_\w+|mipmap/ic_launcher):[^\n]*\n\s*\(string8\) "([^"]+)"', resources)
+    paths = {path for _, _, path in entries}
+    assert paths <= set(names), 'A launcher resource is missing from the APK'
+    legacy = [path for _, name, path in entries if name == 'mipmap/ic_launcher' and path.endswith('.png')]
+    assert len(legacy) == 5, 'All five legacy icon densities must be present'
+    adaptive = [path for _, name, path in entries if name == 'mipmap/ic_launcher' and path.endswith('.xml')]
+    assert len(adaptive) == 1 and 'config anydpi-v26:' in resources, 'The Android adaptive icon is missing'
+    layers = {name: identifier for identifier, name, _ in entries if name.startswith('drawable/')}
+    tree = subprocess.check_output(
+        [str(tools / 'aapt'), 'dump', 'xmltree', str(apk), adaptive[0]], text=True)
+    assert 'E: adaptive-icon' in tree, 'The launcher XML is not adaptive'
+    for layer in ('background', 'foreground'):
+        identifier = layers.get('drawable/ic_launcher_' + layer)
+        assert identifier and re.search(r'E: ' + layer + r'[^\n]*\n[^\n]*@' + identifier, tree), \
+            f'The adaptive {layer} drawable is missing'
+
+
 def build_tools():
     sdk = Path(os.environ.get('ANDROID_SDK_ROOT') or os.environ.get('ANDROID_HOME') or Path.home() / 'Android/Sdk')
     folders = sorted((sdk / 'build-tools').glob('*'), key=lambda p: tuple(int(n) for n in re.findall(r'\d+', p.name)))
@@ -31,7 +52,7 @@ def verify(apk, version, tools, edition='direct'):
     assert package and package[1] == 'xyz.waozi.arcade' and package[3] == version, 'APK identity or version differs'
     assert "application-label:'Arcade'" in badging, 'The APK is not labelled Arcade'
     # Release builds shorten resource names; the manifest names the icon.
-    icon = re.search(r"^application: label='Arcade' icon='(res/[^']+\.png)'", badging, re.M)
+    icon = re.search(r"^application: label='Arcade' icon='(res/[^']+\.(?:png|xml))'", badging, re.M)
     assert icon, "Arcade's launcher icon is missing"
     assert 'application-debuggable' not in badging, 'A debug build cannot be published'
     google_play = edition == 'gplay'
@@ -48,6 +69,8 @@ def verify(apk, version, tools, edition='direct'):
         abis = sorted(p.split('/')[1] for p in names if re.fullmatch(r'lib/[^/]+/libmain\.so', p))
         assert abis == ABIS, 'Both supported ARM architectures must be present'
         assert icon[1] in names, "Arcade's launcher icon is missing"
+        if tuple(map(int, version.split('.'))) >= (0, 7, 115):
+            verify_launcher(apk, tools, names)
         metadata = json.loads(archive.read('assets/arcade.json'))
         payload = archive.read('assets/arcade.zx')
         assert metadata['id'] == 'inbe.arcade' and metadata['version'] == version

@@ -511,6 +511,13 @@ CollectionOpen :: (bundle: string, digest: string, harness_digest: string,
     }
     collection_ready = AppHostStart(*collection_host, bundle, "arcade.local", "inbe.arcade",
         "arcade", digest, "local", platform, harness_digest, locale)
+    // The offline collection already contains every game's payload. Keep the
+    // ordinary bounded game budget available in addition to that resident
+    // collection; otherwise its packed bytes consume the game's allowance
+    // before the first game opens. AppHostStart bounds the root to 64 MiB.
+    if collection_ready && packed {
+        collection_host.tree.byte_limit = APP_HOST_BYTE_LIMIT + bundle.count
+    }
     if !collection_ready { Report("Arcade: the shared Apps host refused the collection") }
     return collection_ready
 }

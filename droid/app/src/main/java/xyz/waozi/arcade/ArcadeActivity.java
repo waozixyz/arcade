@@ -52,6 +52,8 @@ public class ArcadeActivity extends NativeActivity {
     private native void nativeTextInputCommit(int codepoint);
     private native void nativeTextInputBackspace();
     private native void nativeTextInputEnter();
+    // Registered by the locked Kryon host even when using key-event input.
+    private native void nativeTextInputState(long target, long revision, byte[] value, int cursor, int anchor);
     private native int nativeSyncLifecycleState(boolean paused, boolean windowFocused);
     private native void nativeInvalidateGraphicsResources();
     // Kryon's android_picker: a picked file arrives as a private copy's path.

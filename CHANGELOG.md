@@ -1,5 +1,11 @@
 # Arcade changelog
 
+## 0.7.115
+
+- Arcade opens correctly on Android instead of closing during startup.
+- Bundled offline games open with the full library installed.
+- The Android launcher icon fills its launcher shape with a larger gamepad.
+
 ## 0.7.114
 
 - Apfelwurm Editor uses its painted logo cover in the library.

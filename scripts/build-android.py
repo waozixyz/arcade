@@ -55,7 +55,9 @@ def stage_arcade():
     (assets / 'arcade.json').write_text(json.dumps(offline, indent=2) + '\n')
     # Android before 10 has no font lookup; the Windows build ships the same font.
     shutil.copyfile(package('kryon') / 'assets/fonts/LiberationSans-Regular.ttf', assets / 'kryon-font.ttf')
-    launcher_icon(ROOT / 'site/icon-512.png', ROOT / 'build/android-res')
+    launcher_icon(ROOT / 'site/android-launcher-512.png', ROOT / 'build/android-res')
+    # Only Arcade gets this adaptive icon; standalone Shovey keeps its art.
+    shutil.copytree(ROOT / 'packaging/android/icon-res', ROOT / 'build/android-res', dirs_exist_ok=True)
     return release
 
 def stage_shovey():
@@ -88,6 +90,8 @@ def main():
     parser.add_argument('--abis', default='arm64-v8a,armeabi-v7a', help='Native ABIs to build')
     parser.add_argument('--build-dir', type=Path, help='Separate Gradle and CMake output for verification')
     args = parser.parse_args()
+    subprocess.run(['python3', str(ROOT / 'tests/android_jni_contract_test.py')],
+                   cwd=ROOT, check=True)
     arcade = args.product == 'arcade'
     if arcade and args.bundle:
         parser.error('Arcade builds APKs; the App Bundle is the standalone Shovey one')
