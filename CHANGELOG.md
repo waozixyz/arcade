@@ -1,5 +1,9 @@
 # Arcade changelog
 
+## [Unreleased]
+
+- Arcade and its games open again in Breeze builds that read the previous app bundle format.
+
 ## 0.7.117
 
 - Ask before connecting to the node for Arcade's signed app library and compressed previews, with an offline choice and a connection control.

@@ -77,14 +77,18 @@ class AndroidCatalogTests(unittest.TestCase):
             return struct.pack('<I', n)
         def text(data):
             return number(len(data)) + data
-        # Structurally valid ZX with a catalog and an extra embedded asset.
-        for path in (b'assets/arcade/games/test.zx', b'assets/arcade/covers/test.png'):
-            payload = b'ZX\0\0\x1b\0\0\0' + text(b'') * 2 + number(0) * 4
+        # Structurally valid ZX with a catalog and an extra embedded asset,
+        # in both bundle versions the toolchain writes (26 plain, 27 composed).
+        cases = [(version, path) for version in (26, 27)
+                 for path in (b'assets/arcade/games/test.zx', b'assets/arcade/covers/test.png')]
+        for version, path in cases:
+            payload = b'ZX\0\0' + number(version) + text(b'') * 2 + number(0) * 4
             payload += number(2) + text(b'assets/apps/catalog.json') + text(b'{}')
             payload += text(path) + text(b'payload')
             metadata = json.loads(self.assets['arcade.json'])
             metadata['sha256'] = hashlib.sha256(payload).hexdigest()
-            with self.subTest(path=path), self.assertRaisesRegex(AssertionError, 'Game payload or art'):
+            with self.subTest(version=version, path=path), \
+                    self.assertRaisesRegex(AssertionError, 'Game payload or art'):
                 verify_assets(self.assets | {'arcade.zx': payload, 'arcade.json': json.dumps(metadata).encode()})
 
     def test_reject_game_art_nested_in_entity(self):

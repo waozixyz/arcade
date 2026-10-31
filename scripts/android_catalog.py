@@ -45,7 +45,8 @@ def bundle_assets(payload, limit):
         return struct.unpack('<I', take(4))[0]
     def text():
         return take(number())
-    assert take(8) == b'ZX\0\0\x1b\0\0\0', 'Unsupported catalog bundle'
+    # ZX 26 and 27 share this layout; 27 only marks composed library modules.
+    assert take(8) in (b'ZX\0\0\x1a\0\0\0', b'ZX\0\0\x1b\0\0\0'), 'Unsupported catalog bundle'
     text(); text()
     for _ in range(number()):
         text(); text()

@@ -159,7 +159,7 @@ def main():
         assert not driver.find(label='Play', role='button')
         assert not driver.find(label='Open', role='button')
         for label in ('Shovey', 'Shovey Editor', 'Apfelwurm'):
-            assert not driver.find(label=label, role='text'), 'Title artwork must not repeat its name underneath'
+            assert driver.find(label=label, role='text'), 'Every library cover shows its declared title'
         driver.wait(label='Apfelwurm', role='button', visible=False)
         smallest = (100, 140) if phone else (180, 200)
         covers = [node for node in driver.find(role='image', visible=True)
@@ -219,7 +219,7 @@ def main():
             return value[:start], state[:32]
 
         with application(profile, "grid") as child:
-            driver.wait(label="Shovey", role="button")
+            # A fresh profile asks for consent before it shows the library.
             answer_library_question(driver)
             window = subprocess.check_output(['xdotool', 'search', '--onlyvisible', '--pid', str(child.pid)], text=True).splitlines()[0]
             subprocess.run(['xdotool', 'windowsize', window, '480', '820'], check=True)

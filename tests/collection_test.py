@@ -28,7 +28,7 @@ spec.loader.exec_module(published_games)
 def bundle_asset_paths(path):
     """Read the actual bundle index without loading its images or executing it."""
     with published_games.Reader(path) as reader:
-        if reader.take(8) != b"ZX\0\0\x1b\0\0\0":
+        if reader.take(8) not in (b"ZX\0\0\x1a\0\0\0", b"ZX\0\0\x1b\0\0\0"):
             raise ValueError("Unsupported game bundle")
         reader.text()
         reader.text()

@@ -7,7 +7,7 @@ bridge_modules = ["app"]
 
 [toolchain]
 git = "https://github.com/ziranlang/ziran.git"
-ref = "b8d0ac17eb1e2d2d9997729a769dbea681cc74ac"
+ref = "972dc244c4ae67e87b6089869dff5abc9d36c1f8"
 
 [install]
 bin = "arcade"

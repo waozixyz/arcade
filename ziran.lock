@@ -257,8 +257,8 @@
     "name": "Arcade"
   },
   "toolchain": {
-    "commit": "b8d0ac17eb1e2d2d9997729a769dbea681cc74ac",
-    "ref": "b8d0ac17eb1e2d2d9997729a769dbea681cc74ac",
+    "commit": "972dc244c4ae67e87b6089869dff5abc9d36c1f8",
+    "ref": "972dc244c4ae67e87b6089869dff5abc9d36c1f8",
     "url": "https://github.com/ziranlang/ziran.git"
   }
 }

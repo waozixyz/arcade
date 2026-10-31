@@ -82,7 +82,7 @@ def with_catalog(payload, catalog):
         return struct.unpack('<I', source.read(4))[0]
     def text():
         return source.read(number())
-    assert source.read(8) == b'ZX\0\0\x1b\0\0\0'
+    assert source.read(8) in (b'ZX\0\0\x1a\0\0\0', b'ZX\0\0\x1b\0\0\0')
     text(); text()
     for _ in range(number()):
         text(); text()
