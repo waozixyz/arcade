@@ -7,7 +7,7 @@ bridge_modules = ["app"]
 
 [toolchain]
 git = "https://github.com/ziranlang/ziran.git"
-ref = "3f6234e9a181cdad20fac4fad1d1afb1b8ccf054"
+ref = "b8d0ac17eb1e2d2d9997729a769dbea681cc74ac"
 
 [install]
 bin = "arcade"
@@ -29,17 +29,17 @@ abis = "arm64-v8a,x86_64"
 
 [dependencies.kryon]
 git = "https://github.com/kryonlabs/kryon.git"
-ref = "master"
+ref = "a02feeb703192f1481e72160b1ccff401d17ef9d"
 
 [dependencies.apps]
 git = "https://github.com/waozixyz/apps.git"
 # Use the shared controller reviewed with the supported collection host.
-ref = "94095a939e5fa5dee1d4d9af3a9af0e9a1cb630a"
+ref = "47ce0302664fe2f87f3cb05407eac7aa09066c96"
 
 # Shovey's editions and editor are available as separate downloads.
 [dependencies.shovey]
 git = "https://github.com/waozixyz/shovey.git"
-ref = "da1a7f9b7ed54abaa2ac7c08ecfaaa3b09b842fd"
+ref = "c152526893b92e75c82f55b0adf2c684e47fdbc2"
 
 # Compatibility tooling runs Inner Breeze's host checks; releases check its publisher pins.
 [dependencies.inbe]
@@ -48,7 +48,7 @@ ref = "master"
 
 [dependencies.entity]
 git = "https://github.com/waozixyz/entity.git"
-ref = "78a79e8bf19d72f6afd1a941bc410b75d08854a3"
+ref = "51f8cc62a9ab61d114d246897b7b2ba76c4e3766"
 
 [dependencies.mingcute]
 git = "https://github.com/kryonlabs/mingcute.git"
@@ -71,3 +71,7 @@ ref = "528618898db605b0f2960759d49871cde2209086"
 git = "https://github.com/waozixyz/wurm.git"
 ref = "2fa52f64eb0c29e8351b437176e896b938ece8e8"
 source = true
+
+[dependencies.daochi_client]
+git = "https://github.com/ziranlang/daochi-client.git"
+ref = "970d5e44b1702158cb16469892da6ff50f142427"

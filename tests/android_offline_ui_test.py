@@ -116,6 +116,14 @@ with tempfile.TemporaryDirectory(prefix='host-', dir=output) as temporary, packa
         # The profile stays usable with its optional game sheets omitted.
         driver.wait(label='Back', role='button')
         driver.press(label='Back', role='button')
+        driver.wait(label='Account', role='text')
+        driver.press(label='Back', role='button')
+        driver.key('escape')
+        driver.wait(label='Node connection', role='button')
+        driver.press(label='Node connection', role='button')
+        driver.wait(label='Stay offline', role='button')
+        driver.press(label='Stay offline', role='button')
+        driver.wait(label='Shovey', role='button')
     saved = record.read_bytes()
     for name in ('shovey', 'shovey-editor', 'wurm'):
         entry = entries[name]

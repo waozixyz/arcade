@@ -55,6 +55,14 @@ class AndroidCatalogTests(unittest.TestCase):
     def test_standard_catalog(self):
         verify_assets(self.assets)
 
+    def test_reject_changed_node_trust_binding(self):
+        for key, value in (('origin', 'https://example.org'), ('public_key', 'a' * 64),
+                           ('app_id', 'inbe.other'), ('minimum_sequence', 0)):
+            metadata = json.loads(self.assets['arcade.json'])
+            metadata['node'][key] = value
+            with self.subTest(field=key), self.assertRaisesRegex(AssertionError, 'publisher binding'):
+                verify_assets(self.assets | {'arcade.json': json.dumps(metadata).encode()})
+
     def test_reject_game_or_thumbnail_beside_catalog(self):
         for name in ('games/shovey.zx', 'covers/shovey.png'):
             with self.subTest(name=name), self.assertRaises(AssertionError):

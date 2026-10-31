@@ -6,6 +6,7 @@ import struct
 import subprocess
 from functools import lru_cache
 from pathlib import Path
+from node_config import node_source
 
 ROOT = Path(__file__).resolve().parents[1]
 ESSENTIALS = {'arcade.zx', 'arcade.json', 'apps.zx', 'entity.zx', 'kryon-font.ttf'}
@@ -78,6 +79,7 @@ def verify_assets(assets, essentials=True, edition='direct'):
     assert set(assets) == expected, 'Unexpected or missing Android asset: ' + str(set(assets) ^ expected)
     metadata = json.loads(assets['arcade.json'])
     assert metadata['id'] == 'inbe.arcade' and metadata.get('games') != 'packed'
+    assert metadata.get('node') == node_source(ROOT), 'Node publisher binding differs from the reviewed host configuration'
     assert hashlib.sha256(assets['arcade.zx']).hexdigest() == metadata['sha256']
     trusted = (ROOT / 'apps-controller.sha256').read_text().strip()
     assert hashlib.sha256(assets['apps.zx']).hexdigest() == metadata['apps_sha256'] == trusted

@@ -34,8 +34,8 @@
     "arcade": {
       "id": "inbe.arcade",
       "title": "Arcade",
-      "version": "0.7.116",
-      "sequence": 195,
+      "version": "0.7.117",
+      "sequence": 196,
       "host_api": 41
     },
     "wurm": {

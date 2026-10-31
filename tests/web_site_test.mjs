@@ -240,6 +240,11 @@ try {
     };
     const libraryFetched = async () => evaluate(`performance.getEntriesByType('resource').map(entry => entry.name)
       .filter(name => /\\/library\\//.test(new URL(name).pathname) || name.includes(${JSON.stringify(library?.art || '-')}))`);
+    // This private page chooses the public node connection explicitly. A
+    // returning visit reuses its saved origin-specific answer.
+    const initial = await waitButton(['Connect', 'Shovey']);
+    if (initial.label === 'Connect') await click(initial);
+    await waitButton('Shovey');
     if (library) {
       // The first visit draws every cover from the small copies alone.
       const colours = await coversDrawn();

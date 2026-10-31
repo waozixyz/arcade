@@ -18,7 +18,15 @@ from PIL import Image
 LEVEL_UPDATES = 'Download new levels when they come out?'
 
 def answer_library_question(driver):
-    """Keep the test's bundled levels when the library asks about updates."""
+    """Consent to the loopback library, keeping bundled game levels."""
+    deadline = time.monotonic() + 60
+    while time.monotonic() < deadline:
+        if driver.find(label='Connect', role='button', visible=True):
+            driver.press(label='Connect', role='button')
+            break
+        if driver.find(label='Shovey', role='button', visible=True):
+            break
+        driver.wait_idle(frames=3)
     driver.wait(label='Shovey', role='button', timeout=60)
     if driver.find(label=LEVEL_UPDATES, role='text'):
         driver.press(label='Not now', role='button')

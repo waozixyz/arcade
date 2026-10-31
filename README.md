@@ -15,7 +15,7 @@ their whole board; locked puzzles keep their lock until earned.
 
 The published Arcade carries only its catalog, well under one megabyte. Its host supplies the shared Apps controller (Inner Breeze its own, standalone Arcade the `apps.zx` installed beside it), and the covers and previews download once as one separate art bundle. Library covers use thumbnails up to 640 pixels on their longest side, and logos up to 512 pixels, preserving full colours and transparency. Games keep their original artwork. The verified art bundle stays cached across restarts and is replaced when its content changes. The art lives in `assets/arcade/library/` (`python3 scripts/library-art.py` refreshes it when a game's art changes; the build stops until it does). Inner Breeze needs host interface 35 for it. Each game
 downloads when opened, with its existing identity and saved progress. This
-catalog requires Inner Breeze host API 34. Downloaded games work offline;
+catalog requires Inner Breeze host API 41. Downloaded games work offline;
 standalone Shovey keeps its complete offline collection. Apfelwurm comes from
 its own package, with the same game identity and private editor records.
 
@@ -46,17 +46,19 @@ review are not implemented.
 
 ## Shared Apps library
 
-Arcade embeds the shared `apps.zx` controller and artwork in a verified
-catalog. The catalog fixes the digest of every separately downloaded game. Each game package lists its apps in its own `apps.json`:
+Arcade includes the reviewed shared `apps.zx` controller and a small seed
+catalog. It asks before connecting to its node for the signed app library
+and compressed previews. The connection control can switch back to offline;
+verified cached apps, previews and saved progress remain available.
+The catalog fixes the digest of every separately downloaded game. Each game package lists its apps in its own `apps.json`:
 the app's `catalog.json`, and for an app the library opens from a cover, the
 cover's portrait art, landscape art, logo, caption and action. `games.json`
 names the game packages, and Arcade's own `apps.json` its own apps. Arcade
 presents every declared leaf directly, without a second chooser, and a cover
 opens its app straight into play or editing. Shovey’s separate standalone
 collection uses the same leaves and saves. Kryon’s shared `Carousel` handles
-navigation and painting. The local player does not offer node updates or OS
-actions it
-cannot perform. Inbe supplies its own account and package policy.
+navigation and painting. Library refreshes use the reusable Apps signed catalog
+loader and do not update the native host. Inbe supplies its own account and package policy.
 Arcade's launcher icon is MingCute's `game_2` gamepad (Apache-2.0).
 
 An optional `artwork` mapping in `games.json` names a locked source-only

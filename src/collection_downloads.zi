@@ -28,6 +28,10 @@ collection_package_files: *AppFiles;
 // Packages the platform already holds, read-only and verified like a
 // download: the website's own copy of the library art. "" for none.
 collection_package_folder: string;
+// Set by the host's origin-specific connection choice. Cached bytes do not
+// need a connection; no new transfer is permitted while it is off.
+collection_package_allowed: bool;
+collection_package_origin: string;
 package_c :: #system_library "c";
 PackageFree :: (memory: *void) #foreign package_c "free";
 CollectionDownloadsOpen :: (files: *AppFiles) { collection_package_files = files }
@@ -120,11 +124,12 @@ CollectionFetch :: (context: *void, account: string, parent: *AppNode,
     if operation != APPS_INSTALL { return false }
     // Cached installs and removals use the host's ordinary saved state.
     if package.bytes != "" { return false }
+    if !collection_package_allowed { reply.status = APPS_REJECTED; return true }
     if package.transfer.status != .Downloading {
         FileDownloadRelease(*package.transfer)
         package.failed = false
-        base := EnvironmentText("ARCADE_PACKAGE_ORIGIN")
-        if base == "" { base = "https://api.waozi.xyz" }
+        base := collection_package_origin
+        if base == "" { return false }
         url: Vec(u8)
         BuilderPrint(*url, "%/api/v2/packages/inbe.arcade/%.zx", base, TextUntilNul(package.digest[:]))
         address := BuilderFinish(url)
@@ -134,6 +139,28 @@ CollectionFetch :: (context: *void, account: string, parent: *AppNode,
     }
     reply.status = ifx package.failed then APPS_REJECTED else APPS_APPLIED
     return true
+}
+
+CollectionDownloadsBusy :: () -> bool {
+    package := collection_packages
+    while package != null {
+        if package.transfer.status == .Downloading { return true }
+        package = package.next
+    }
+    return false
+}
+
+CollectionDownloadsAllow :: (allowed: bool) {
+    collection_package_allowed = allowed
+    if allowed { return }
+    package := collection_packages
+    while package != null {
+        if package.transfer.status == .Downloading {
+            FileDownloadRelease(*package.transfer)
+            package.failed = true
+        }
+        package = package.next
+    }
 }
 
 CollectionDownloadsPump :: () {

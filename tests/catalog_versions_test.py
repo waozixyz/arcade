@@ -26,6 +26,7 @@ def load(name, script):
 
 builder = load('collection_versions', 'build-collection.py')
 release = load('android_release_versions', 'android-release.py')
+native_builder = load('android_native_versions', 'build-android.py')
 
 
 class Fixture(unittest.TestCase):
@@ -37,6 +38,8 @@ class Fixture(unittest.TestCase):
         self.root = Path(temporary.name)
         for directory in ('scripts', 'apps', 'catalog'):
             (self.root / directory).mkdir()
+        (self.root / 'packaging').mkdir()
+        shutil.copyfile(ROOT / 'packaging/node.json', self.root / 'packaging/node.json')
 
 
 class SynchronizerTests(Fixture):
@@ -50,8 +53,12 @@ class SynchronizerTests(Fixture):
             "                 manifest=Path('apps/catalog.json'))]\n")
         (self.root / 'CHANGELOG.md').write_text('## [Unreleased]\n\n- Later host.\n\n## 0.7.117\n')
         (self.root / 'VERSION').write_text('0.7.116\n')
+        (self.root / 'packaging/android').mkdir(parents=True)
+        (self.root / 'packaging/android/version-code').write_text('195\n')
         (self.root / 'catalog/CHANGELOG.md').write_text('## 0.7.118\n\n- New games.\n')
         (self.root / 'catalog/VERSION').write_text('0.7.116\n')
+        (self.root / 'packaging').mkdir(exist_ok=True)
+        shutil.copyfile(ROOT / 'packaging/node.json', self.root / 'packaging/node.json')
         (self.root / 'apps/CHANGELOG.md').write_text('## [1.0.0] - 2026-10-31\n')
         self.original = {'node_apps': {
             'arcade': {'id': 'inbe.arcade', 'version': '0.7.116', 'sequence': 120},
@@ -70,6 +77,7 @@ class SynchronizerTests(Fixture):
     def test_catalog_release_never_bumps_host_and_is_idempotent(self):
         ledger = self.sync('--catalog')
         self.assertEqual((self.root / 'VERSION').read_text(), '0.7.116\n')
+        self.assertEqual((self.root / 'packaging/android/version-code').read_text(), '195\n')
         self.assertEqual((self.root / 'catalog/VERSION').read_text(), '0.7.118\n')
         self.assertEqual((ledger['arcade']['version'], ledger['arcade']['sequence']), ('0.7.118', 121))
         self.assertEqual(ledger['game'], self.original['node_apps']['game'])
@@ -79,8 +87,25 @@ class SynchronizerTests(Fixture):
         (self.root / 'catalog/CHANGELOG.md').write_text('## 0.7.116\n')
         ledger = self.sync()
         self.assertEqual((self.root / 'VERSION').read_text(), '0.7.117\n')
+        self.assertEqual((self.root / 'packaging/android/version-code').read_text(), '196\n')
         self.assertEqual(ledger, self.original['node_apps'])
         self.assertEqual(builder.catalog_version(self.root), '0.7.116')
+        self.assertEqual(self.sync(), ledger)
+        self.assertEqual((self.root / 'packaging/android/version-code').read_text(), '196\n')
+
+    def test_native_apk_identity_ignores_catalog_sequence(self):
+        with patch.object(native_builder, 'ROOT', self.root):
+            self.assertEqual(native_builder.native_release(), {'version': '0.7.116', 'sequence': 195})
+        self.sync('--catalog')
+        with patch.object(native_builder, 'ROOT', self.root):
+            self.assertEqual(native_builder.native_release(), {'version': '0.7.116', 'sequence': 195})
+
+    def test_invalid_native_code_preserves_all_versions(self):
+        (self.root / 'packaging/android/version-code').write_text('0\n')
+        self.sync(success=False)
+        self.assertEqual((self.root / 'VERSION').read_text(), '0.7.116\n')
+        self.assertEqual((self.root / 'catalog/VERSION').read_text(), '0.7.116\n')
+        self.assertEqual(json.loads((self.root / 'apps/versions.json').read_text()), self.original)
 
     def test_catalog_release_updates_game_ledger_from_its_own_changelog(self):
         (self.root / 'apps/CHANGELOG.md').write_text('## [1.0.1] - 2026-10-31\n')
@@ -128,6 +153,9 @@ class AndroidVerifierTests(Fixture):
         self.metadata = {'id': 'inbe.arcade', 'version': '0.7.116',
                          'sha256': hashlib.sha256(payload).hexdigest(),
                          'apps_sha256': self.controller_digest, 'children': [], 'art': catalog['art']}
+        ledger = {'node_apps': {'arcade': {'sequence': 195}}}
+        (self.root / 'apps/versions.json').write_text(json.dumps(ledger))
+        self.metadata['node'] = builder.node_source(self.root)
         self.assets = {'assets/arcade.zx': payload, 'assets/apps.zx': controller,
                        'assets/entity.zx': bundle({}), 'assets/kryon-font.ttf': b'font',
                        'res/icon.png': b'icon', 'lib/arm64-v8a/libmain.so': b'arm64',

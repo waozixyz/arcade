@@ -218,10 +218,11 @@ def main():
         args.controller_sha256 = receipt['apps_sha256']
         args.version = receipt['version']
     else:
+        from node_config import node_source
         bundle = args.bundle.resolve()
         receipt = dict(id='inbe.arcade', version=args.version,
                        sha256=hashlib.sha256(bundle.read_bytes()).hexdigest(),
-                       apps_sha256=args.controller_sha256)
+                       apps_sha256=args.controller_sha256, node=node_source(ROOT))
     # The host reads the receipt into a 4 KiB buffer.
     text = json.dumps(receipt, separators=(',', ':')) if args.shovey else json.dumps(receipt, indent=2) + '\n'
     if len(text.encode()) >= 4096:

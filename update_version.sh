@@ -20,6 +20,19 @@ def release(path):
 
 catalog_version = release(Path('catalog/CHANGELOG.md'))
 host_version = None if catalog_only else release(Path('CHANGELOG.md'))
+host_code = None
+host_code_path = Path('packaging/android/version-code')
+if not catalog_only:
+    host_code = int(host_code_path.read_text().strip())
+    if not 0 < host_code <= 2100000000:
+        raise SystemExit('Invalid native Android versionCode')
+    previous = Path('VERSION').read_text().strip()
+    if previous != host_version:
+        if tuple(map(int, host_version.split('.'))) <= tuple(map(int, previous.split('.'))):
+            raise SystemExit('Native host version must increase')
+        host_code += 1
+        if host_code > 2100000000:
+            raise SystemExit('Native Android versionCode is exhausted')
 # Validate all versions before writing either version source or the ledger.
 ledger_path = Path('apps/versions.json')
 if ledger_path.exists():
@@ -59,4 +72,5 @@ if ledger_path.exists():
 Path('catalog/VERSION').write_text(catalog_version + '\n')
 if not catalog_only:
     Path('VERSION').write_text(host_version + '\n')
+    host_code_path.write_text(str(host_code) + '\n')
 PY

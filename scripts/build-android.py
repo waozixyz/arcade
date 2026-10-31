@@ -5,12 +5,20 @@ import argparse
 import hashlib
 import json
 import os
+import re
 from pathlib import Path
 import shutil
 import subprocess
 from PIL import Image
 
 ROOT = Path(__file__).resolve().parents[1]
+
+def native_release():
+    version = (ROOT / 'VERSION').read_text().strip()
+    code = int((ROOT / 'packaging/android/version-code').read_text().strip())
+    if not re.fullmatch(r'(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)', version) or not 0 < code <= 2100000000:
+        raise ValueError('Invalid native Android version or versionCode')
+    return dict(version=version, sequence=code)
 
 def package(name):
     return Path(subprocess.check_output([str(ROOT / 'scripts/ziran.sh'), 'pkg', 'path', name], cwd=ROOT, text=True).strip())
@@ -36,7 +44,7 @@ def stage_arcade():
     collection = ROOT / 'build/collection'
     receipt = json.loads((collection / 'receipt.json').read_text())
     release = json.loads((ROOT / 'apps/versions.json').read_text())['node_apps']['arcade']
-    if receipt['version'] != release['version'] or receipt['version'] != (ROOT / 'VERSION').read_text().strip():
+    if receipt['version'] != release['version'] or receipt['version'] != (ROOT / 'catalog/VERSION').read_text().strip():
         raise ValueError('The Arcade version changed; rebuild the collection first')
     controller = (collection / 'assets/apps/apps.zx').read_bytes()
     if hashlib.sha256(controller).hexdigest() != receipt['apps_sha256']:
@@ -58,7 +66,7 @@ def stage_arcade():
     launcher_icon(ROOT / 'site/android-launcher-512.png', ROOT / 'build/android-res')
     # Only Arcade gets this adaptive icon; standalone Shovey keeps its art.
     shutil.copytree(ROOT / 'packaging/android/icon-res', ROOT / 'build/android-res', dirs_exist_ok=True)
-    return release
+    return native_release()
 
 def stage_shovey():
     """Shovey's standalone collection from Arcade's staging. Returns its release."""

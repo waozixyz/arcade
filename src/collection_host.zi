@@ -53,6 +53,9 @@ Codec :: #import "apps/node_codec";
 #import "kryon/image_raster"
 #import "kryon/loading_indicator"
 #import, file "collection_loading.zi";
+#import "apps/connection"
+#import "apps/remote_catalog"
+Labels :: #import "apps/words";
 #import "shovey/shovey_theme"
 ProfileIcon :: #import "mingcute/mingcute_regular_user_4";
 DewIcon :: #import "mingcute/mingcute_filled_drop";
@@ -499,6 +502,12 @@ CollectionOpen :: (bundle: string, digest: string, harness_digest: string,
     opened := AppFilesOpen(*collection_resources, collection_resource_root)
     if !opened { Report("Arcade: cannot open the private resources folder"); return false }
     CollectionDownloadsOpen(*collection_resources)
+    return CollectionStart(bundle, digest, harness_digest, locale, packed)
+}
+
+// Replacing a verified catalog reuses the host services and per-game saves.
+CollectionStart :: (bundle: string, digest: string, harness_digest: string,
+    locale: string, packed: bool) -> bool {
     platform := AppPlatform.{.allows = CollectionAllows, .call = CollectionCall,
         .widgets = CollectionWidgets, .save = CollectionSave, .state = CollectionState,
         .effect = CollectionEffect, .host_api = GAME_HOST_API,
@@ -555,7 +564,23 @@ CollectionOpenBytes :: (bytes: string, metadata: string, data: string) -> bool {
     locale := EnvironmentText("LANG")
     language := ifx locale.count >= 2 then locale[:2] else "en"
     packed := AppsReadText(metadata, 0, "games", games[:]) && TextUntilNul(games[:]) == "packed"
-    return CollectionOpen(bytes, TextUntilNul(digest[:]), TextUntilNul(harness[:]), data, language, packed)
+    selected := bytes
+    selected_digest := TextUntilNul(digest[:])
+    if !packed {
+        if !CollectionNodeOpen(metadata, data, bytes, selected_digest, TextUntilNul(harness[:]), language) { return false }
+        if collection_node.ready {
+            selected = collection_node.bytes
+            selected_digest = TextUntilNul(collection_node.release.artifacts[0].sha256[:])
+        }
+    }
+    opened := CollectionOpen(selected, selected_digest, TextUntilNul(harness[:]), data, language, packed)
+    if !opened && !packed && collection_node_remote {
+        collection_node_remote = false
+        collection_node.failed = true
+        opened = CollectionStart(collection_seed, TextUntilNul(collection_seed_digest[:]),
+            TextUntilNul(collection_harness_digest[:]), language, false)
+    }
+    return opened
 }
 
 // The standalone player needs only Shovey's own payload and metadata. Its
@@ -613,6 +638,7 @@ CollectionCollect :: () {
     if entity_ready { EntityPump() }
     PublicationsReadPump()
     AppHostCollect(*collection_host)
+    CollectionNodePump()
     for path: collection_frame_paths { AppFileFree(path) }
     while collection_frame_paths.count > 0 { unused VecPop(collection_frame_paths) }
     collection_widget_node = null
@@ -622,6 +648,7 @@ CollectionClose :: () -> bool {
     if !EntityClose() { return false }
     if collection_ready && !AppHostStop(*collection_host) { return false }
     collection_ready = false
+    CollectionNodeClose()
     collection_loading = .{}
     CollectionDownloadsClose()
     CollectionCollect()
@@ -761,6 +788,7 @@ CollectionUpdatesQuestion :: (session: Session, viewport: Rectangle) {
 CollectionFrame :: (session: Session, viewport: Rectangle, key: s32, modifiers: s32) -> bool {
     collection_toolbar_visible = true
     defer { CollectionToolbar(session, viewport) }
+    if CollectionNodeScreen(session, viewport) { collection_toolbar_visible = false; return true }
     if entity_visible { return EntityFrame(session, viewport, key, modifiers) }
     runtime := AppHostActiveRuntime(*collection_host)
     if runtime == null { Report("Arcade: no app is running\n"); return false }
@@ -778,6 +806,7 @@ CollectionFrame :: (session: Session, viewport: Rectangle, key: s32, modifiers: 
     asking := runtime.node.collection && !collection_host.platform.presentation.cover_grid && CollectionUpdates() == 2
     if asking { key = 0 }
     top: s32 = ifx !covered && !runtime.node.collection && (entity_ready || nested) then 56 else 0
+    if runtime.node.collection && collection_node.files != null { top = 88 }
     now := cast(float64)MonotonicMilliseconds() / 1000.0
     runtime.app.session = session
     runtime.app.bounds = Rectangle.{viewport.x, viewport.y + cast(float32)top, viewport.width, viewport.height - cast(float32)top}
@@ -836,6 +865,7 @@ CollectionFrame :: (session: Session, viewport: Rectangle, key: s32, modifiers: 
         }
     } else if runtime.node.collection {
         collection_loading = .{}
+        CollectionNodeToolbar(session, viewport)
     }
     if asking {
         unused WidgetPaletteUse(session, ifx entity_shovey then ShoveyPalette() else AppCoversPalette())
@@ -886,3 +916,185 @@ CollectionToolbar :: (session: Session, viewport: Rectangle) {
 
 c :: #system_library "c";
 CollectionFree :: (memory: *void) #foreign c "free";
+
+// The native host composes the shared Apps connection and signed catalog.
+// Replacing a root uses the same services and saved-game namespaces.
+collection_node: AppRemoteCatalog;
+collection_node_files: AppFiles;
+collection_node_root: string;
+collection_node_choice: s32;
+collection_node_notice: bool;
+collection_node_initial: bool;
+collection_node_apply: bool;
+collection_node_remote: bool;
+collection_seed: string;
+collection_seed_digest: [65]u8;
+collection_harness_digest: [65]u8;
+collection_node_locale: [16]u8;
+
+collection_signature :: #system_library "c";
+CollectionCheckSignature :: (signature: *u8, public_key: *u8, message: *u8,
+    length: usize) -> s32 #foreign collection_signature "crypto_ed25519_check";
+CollectionVerifyRelease :: (signature: *u8, public_key: *u8, message: *u8,
+    length: usize) -> bool { return CollectionCheckSignature(signature, public_key, message, length) == 0 }
+
+CollectionNodeOpen :: (metadata: string, data: string, seed: string,
+    digest: string, harness: string, locale: string) -> bool {
+    source: AppRemoteSource
+    source.oldest_host_api = 1
+    source.host_api = GAME_HOST_API
+    source.module_api = 2
+    at := FieldAt(metadata, 0, "node")
+    if at < 0 || !AppRemoteSourceRead(metadata, at, *source) || TextUntilNul(source.app_id[:]) != "inbe.arcade" { return false }
+    // Private loopback fixtures can exercise the real transport. A production
+    // environment variable cannot silently redirect a publisher's requests.
+    test_origin := EnvironmentText("ARCADE_PACKAGE_ORIGIN")
+    if test_origin.count > 17 && test_origin[:17] == "http://127.0.0.1:" && AppRemoteOriginValid(test_origin) {
+        unused CopyCString(test_origin, source.origin[:])
+    }
+    collection_node_root = Join(data, "node")
+    if !AppFilesOpen(*collection_node_files, collection_node_root) { return false }
+    if !AppRemoteCatalogOpen(*collection_node, source, *collection_node_files, CollectionVerifyRelease) { return false }
+    collection_seed = AppRemoteCopy(seed)
+    unused CopyCString(digest, collection_seed_digest[:])
+    unused CopyCString(harness, collection_harness_digest[:])
+    unused CopyCString(locale, collection_node_locale[:])
+    collection_package_origin = AppRemoteCopy(TextUntilNul(collection_node.source.origin[:]))
+    collection_node_choice = AppConnectionRead(*collection_node_files, collection_package_origin)
+    collection_node_notice = collection_node_choice == APP_CONNECTION_UNDECIDED
+    allowed := collection_node_choice == APP_CONNECTION_ALLOWED
+    CollectionDownloadsAllow(allowed)
+    AppRemoteCatalogAllow(*collection_node, allowed)
+    collection_node_remote = collection_node.ready
+    if allowed { unused AppRemoteCatalogRefresh(*collection_node) }
+    return true
+}
+
+CollectionNodeChoose :: (choice: s32) -> bool {
+    if !AppConnectionRemember(*collection_node_files, collection_package_origin, choice) { return false }
+    collection_node_choice = choice
+    collection_node_notice = false
+    allowed := choice == APP_CONNECTION_ALLOWED
+    CollectionDownloadsAllow(allowed)
+    AppRemoteCatalogAllow(*collection_node, allowed)
+    if allowed {
+        collection_node_initial = !collection_node_remote
+        collection_node_apply = true
+        unused AppRemoteCatalogRefresh(*collection_node)
+    }
+    return true
+}
+
+CollectionNodeActivate :: () -> bool {
+    if !collection_node.changed || CollectionDownloadsBusy() { return false }
+    runtime := AppHostActiveRuntime(*collection_host)
+    if runtime == null || !runtime.node.collection { return false }
+    if !AppHostStop(*collection_host) { return false }
+    collection_ready = false
+    {
+        bytes := collection_node.bytes
+        digest := TextUntilNul(collection_node.release.artifacts[0].sha256[:])
+        collection_ready = CollectionStart(bytes, digest, TextUntilNul(collection_harness_digest[:]),
+            TextUntilNul(collection_node_locale[:]), false)
+    }
+    if collection_ready {
+        collection_node_remote = true
+        AppRemoteCatalogCollect(*collection_node)
+    } else {
+        // Keep the former library and every game's separate save namespace.
+        if collection_node.previous_bytes != "" {
+            unused AppRemoteCatalogRestore(*collection_node)
+        } else {
+            unused AppFileWrite(*collection_node_files, "current.json", "")
+            collection_node_remote = false
+            collection_node.changed = false
+            collection_node.failed = true
+        }
+        old_bytes := ifx collection_node_remote then collection_node.bytes else collection_seed
+        old_digest := ifx collection_node_remote then TextUntilNul(collection_node.release.artifacts[0].sha256[:]) else TextUntilNul(collection_seed_digest[:])
+        collection_ready = CollectionStart(old_bytes, old_digest, TextUntilNul(collection_harness_digest[:]),
+            TextUntilNul(collection_node_locale[:]), false)
+    }
+    collection_loading = .{}
+    return collection_ready
+}
+
+CollectionNodePump :: () {
+    if collection_node.files == null { return }
+    AppRemoteCatalogPump(*collection_node)
+    if collection_node_apply && collection_node.stage == 0 {
+        if collection_node.changed && !CollectionNodeActivate() { return }
+        collection_node_apply = false
+        collection_node_initial = false
+    }
+}
+
+// Returns true when the notice/loading screen owns this frame's input.
+CollectionNodeScreen :: (session: Session, viewport: Rectangle) -> bool {
+    if collection_node.files == null { return false }
+    if collection_node_notice {
+        choice := AppConnectionNotice(session, viewport, TextUntilNul(collection_node_locale[:]),
+            collection_package_origin, cast(u64)49500)
+        if choice != APP_CONNECTION_UNDECIDED { unused CollectionNodeChoose(choice) }
+        return true
+    }
+    if collection_node_initial && collection_node.stage != 0 {
+        Box(session, BoxProps.{.key = cast(u64)49510, .bounds = viewport, .fill = Color.{17, 18, 35, 255}})
+        Text(session, TextProps.{.key = cast(u64)49511, .text = Labels.AppsLabel(TextUntilNul(collection_node_locale[:]), "loading_library"),
+            .font = 20, .bounds = Rectangle.{viewport.x + 24.0, viewport.y + viewport.height / 2.0, viewport.width - 48.0, 64.0}})
+        if Button(session, ButtonProps.{.key = cast(u64)49512, .id = 49512,
+            .label = Labels.AppsLabel(TextUntilNul(collection_node_locale[:]), "stay_offline"),
+            .bounds = Rectangle.{viewport.x + 24.0, viewport.y + viewport.height / 2.0 + 72.0, viewport.width - 48.0, 44.0},
+            .tone = ButtonTone.ButtonToneNeutral, .emphasis = ButtonEmphasis.ButtonEmphasisSoft}) != 0 {
+            unused CollectionNodeChoose(APP_CONNECTION_OFFLINE)
+        }
+        return true
+    }
+    return false
+}
+
+CollectionNodeToolbar :: (session: Session, viewport: Rectangle) {
+    if collection_node.files == null { return }
+    unused WidgetPaletteUse(session, AppCoversPalette())
+    defer { unused WidgetPaletteRestore(session) }
+    Box(session, BoxProps.{.key = cast(u64)49519,
+        .bounds = Rectangle.{viewport.x, viewport.y, viewport.width, 88.0},
+        .fill = Color.{17, 18, 35, 255}})
+    locale := TextUntilNul(collection_node_locale[:])
+    allowed := collection_node_choice == APP_CONNECTION_ALLOWED
+    status := ifx !allowed then "offline_library" else ifx collection_node.stage != 0 then "loading_library" else ifx collection_node.failed then "library_unavailable" else "saved_library"
+    width := ifx viewport.width - 180.0 < 320.0 then viewport.width - 180.0 else 320.0
+    if Button(session, ButtonProps.{.key = cast(u64)49520, .id = 49520,
+        .label = Labels.AppsLabel(locale, ifx allowed then "refresh_library" else "connect_node"),
+        .bounds = Rectangle.{viewport.x + 8.0, viewport.y + 6.0, width, 44.0},
+        .tone = ButtonTone.ButtonToneNeutral, .emphasis = ButtonEmphasis.ButtonEmphasisSoft}) != 0 {
+        if !allowed { collection_node_notice = true }
+        else if collection_node.changed { collection_node_apply = true }
+        else { collection_node_apply = true; unused AppRemoteCatalogRefresh(*collection_node) }
+    }
+    // A separate connection control keeps revocation available after consent.
+    if Button(session, ButtonProps.{.key = cast(u64)49521, .id = 49521,
+        .label = Labels.AppsLabel(locale, "node_connection"),
+        .bounds = Rectangle.{viewport.x + viewport.width - 170.0, viewport.y + 52.0, 158.0, 28.0},
+        .tone = ButtonTone.ButtonToneNeutral, .emphasis = ButtonEmphasis.ButtonEmphasisSoft}) != 0 {
+        collection_node_notice = true
+    }
+    Text(session, TextProps.{.key = cast(u64)49522, .text = Labels.AppsLabel(locale, status), .font = 12, .wrap = TextWrap.TextWrapAuto,
+        .bounds = Rectangle.{viewport.x + 16.0, viewport.y + 58.0, viewport.width - 196.0, 26.0}})
+}
+
+CollectionNodeClose :: () {
+    CollectionDownloadsAllow(false)
+    AppFileFree(collection_package_origin)
+    collection_package_origin = ""
+    AppRemoteCatalogClose(*collection_node)
+    AppFilesClose(*collection_node_files)
+    AppFileFree(collection_node_root)
+    AppFileFree(collection_seed)
+    collection_node_root = ""
+    collection_seed = ""
+    collection_node_notice = false
+    collection_node_initial = false
+    collection_node_apply = false
+    collection_node_remote = false
+}

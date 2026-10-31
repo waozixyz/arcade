@@ -1,5 +1,11 @@
 # Arcade changelog
 
+## 0.7.117
+
+- Ask before connecting to the node for Arcade's signed app library and compressed previews, with an offline choice and a connection control.
+- Refresh library membership and game versions independently of the APK, keeping downloaded apps and saved progress available offline.
+- Recover library thumbnails after failed requests and keep the native host release version separate from catalog releases.
+
 ## 0.7.116
 
 - Android Arcade downloads games and library thumbnails on demand instead of bundling the entire game library; installed games remain playable offline with saved progress.

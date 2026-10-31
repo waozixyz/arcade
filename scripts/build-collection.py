@@ -11,6 +11,7 @@ import shutil
 import subprocess
 import tarfile
 from game_packages import declared_packages
+from node_config import node_source
 
 ROOT = Path(__file__).resolve().parents[1]
 MAX_PAYLOAD_BYTES = 64 * 1024 * 1024
@@ -280,7 +281,7 @@ def main():
     receipt = dict(id=catalog["id"], version=version,
                    sha256=digest(ROOT / "build/arcade.zx"),
                    apps_sha256=args.apps_sha256, children=catalog["children"], art=art,
-                   source_mode="project")
+                   source_mode="project", node=node_source(ROOT))
     (output / "receipt.json").write_text(json.dumps(receipt, indent=2) + "\n")
     (ROOT / "build/arcade.json").write_text(json.dumps(receipt, indent=2) + "\n")
     node_receipt = receipt | {"sha256": digest(node_apps / "arcade.zx")}
