@@ -13,8 +13,9 @@ ESSENTIALS = {'arcade.zx', 'arcade.json', 'apps.zx', 'entity.zx', 'kryon-font.tt
 
 @lru_cache(maxsize=1)
 def profile_asset_hashes():
+    flags = [] if (ROOT / 'ziran.local.toml').is_file() else ['--locked']
     package = Path(subprocess.check_output(
-        [str(ROOT / 'scripts/ziran.sh'), 'pkg', 'path', 'entity', '--locked'],
+        [str(ROOT / 'scripts/ziran.sh'), 'pkg', 'path', 'entity', *flags],
         cwd=ROOT, text=True).strip())
     paths = json.loads((package / 'asset-groups.json').read_text())['profile']
     result = {}

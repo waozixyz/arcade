@@ -6,11 +6,37 @@ import sys
 import struct
 import hashlib
 import unittest
+from unittest.mock import patch
+import tempfile
 import zipfile
 
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT / 'scripts'))
 from android_catalog import verify_assets
+import android_catalog
+
+
+class ProfileAssetResolutionTests(unittest.TestCase):
+    def test_dependency_resolution_matches_build_mode(self):
+        (ROOT / 'work').mkdir(exist_ok=True)
+        with tempfile.TemporaryDirectory(dir=ROOT / 'work') as temporary:
+            root = Path(temporary)
+            package = root / 'entity'
+            package.mkdir()
+            (package / 'asset-groups.json').write_text('{"profile": []}')
+            try:
+                for local in (False, True):
+                    if local:
+                        (root / 'ziran.local.toml').write_text('[overrides]\n')
+                    android_catalog.profile_asset_hashes.cache_clear()
+                    with self.subTest(local=local), patch.object(android_catalog, 'ROOT', root), \
+                            patch.object(android_catalog.subprocess, 'check_output', return_value=str(package)) as resolve:
+                        self.assertEqual(android_catalog.profile_asset_hashes(), {})
+                        resolve.assert_called_once_with(
+                            [str(root / 'scripts/ziran.sh'), 'pkg', 'path', 'entity',
+                             *([] if local else ['--locked'])], cwd=root, text=True)
+            finally:
+                android_catalog.profile_asset_hashes.cache_clear()
 
 
 class AndroidCatalogTests(unittest.TestCase):
