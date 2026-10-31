@@ -9,7 +9,6 @@ import re
 from pathlib import Path
 import shutil
 import subprocess
-from PIL import Image
 
 ROOT = Path(__file__).resolve().parents[1]
 
@@ -31,6 +30,7 @@ def ziran_bundle(*arguments):
 
 def launcher_icon(source, resources):
     """Density variants are mechanical packaging of the original logo."""
+    from PIL import Image
     icon = Image.open(source).convert('RGBA')
     if resources.exists():
         shutil.rmtree(resources)
