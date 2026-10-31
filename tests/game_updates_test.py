@@ -111,14 +111,17 @@ class GameUpdates(unittest.TestCase):
             game.mkdir()
             (game / 'apps.json').write_text(json.dumps({'title': 'Apfelwurm', 'apps': [{'manifest': 'catalog.json'}]}))
             (game / 'CHANGELOG.md').write_text('## [Unreleased]\n\n- Later.\n\n## [0.2.1] - 2026-10-29\n\n- Faster.\n')
-            (root / 'CHANGELOG.md').write_text('# Arcade changelog\n\n## [Unreleased]\n\n- Keyboard first.\n\n'
+            (root / 'catalog').mkdir()
+            (root / 'CHANGELOG.md').write_text('## 9.0.0\n\n- Host changes stay here.\n')
+            (root / 'catalog/CHANGELOG.md').write_text('# Arcade changelog\n\n## [Unreleased]\n\n- Keyboard first.\n\n'
                                                '## 0.7.1\n\n- Older.\n')
             updates = root / 'updates.json'
             updates.write_text(json.dumps([{'name': 'wurm'}]))
             with patch.object(follower, 'ROOT', root), patch.object(follower, 'UPDATES', updates), \
                     patch.object(follower.subprocess, 'check_output', return_value=str(game) + '\n'):
                 follower.changelog('ziran')
-            self.assertEqual((root / 'CHANGELOG.md').read_text(),
+            self.assertEqual((root / 'CHANGELOG.md').read_text(), '## 9.0.0\n\n- Host changes stay here.\n')
+            self.assertEqual((root / 'catalog/CHANGELOG.md').read_text(),
                              '# Arcade changelog\n\n## 0.7.2\n\n- Keyboard first.\n'
                              '- Apfelwurm 0.2.1: Faster.\n\n## 0.7.1\n\n- Older.\n')
 

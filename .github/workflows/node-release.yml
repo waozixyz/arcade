@@ -27,6 +27,8 @@ jobs:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
         with:
           path: waozixyz/arcade
+      - name: Check version and release boundaries
+        run: python3 tests/catalog_versions_test.py
       - name: Read the fixed dependency revisions
         id: dependencies
         env:
@@ -93,7 +95,7 @@ jobs:
           GH_TOKEN: ${{ github.token }}
         run: |
           set -eu
-          version=$(cat VERSION)
+          version=$(cat catalog/VERSION)
           tag="node-arcade-$version"
           if gh release view "$tag" >/dev/null 2>&1; then
             mkdir -p build/prior-node-release
@@ -105,6 +107,4 @@ jobs:
             gh release create "$tag" build/node-apps/arcade.zx build/node-apps/arcade.games.tar build/games/wurm.zx \
               --target "$GITHUB_SHA" --title "Arcade $version" \
               --notes 'Arcade downloads the selected game separately and preserves earned progress.'
-            # Arcade's own APKs build from the release's tag and join its release.
-            gh workflow run android.yml -R "$GITHUB_REPOSITORY" --ref "$tag" -f version="$version"
           fi

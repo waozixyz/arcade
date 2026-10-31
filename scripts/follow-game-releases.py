@@ -7,7 +7,7 @@ game and its transitive dependencies. New game imports must reach the lock;
 unrelated packages and the compiler stay pinned. The updates are recorded in
 build/game-updates.json.
 
-`changelog` adds an Arcade release entry naming each updated game with the
+`changelog` adds an Arcade catalog release entry naming each updated game with the
 notes of its newest release, for update_version.sh to synchronize.
 
 `art` remakes the library's small copies of game art (scripts/library-art.py)
@@ -127,12 +127,12 @@ def changelog(ziran):
         version, notes = newest_notes(manifest.with_name('CHANGELOG.md'))
         title = declaration['title']
         lines += [f'- {title} {version}: {note}' for note in notes] or [f'- {title} {version}.']
-    path = ROOT / 'CHANGELOG.md'
+    path = ROOT / 'catalog/CHANGELOG.md'
     text = path.read_text()
     current = re.search(r'^## (\d+)\.(\d+)\.(\d+)\s*$', text, re.M)
     if current is None:
-        raise SystemExit('CHANGELOG.md needs a numeric release entry')
-    # Arcade's own changes wait under Unreleased; this release ships them.
+        raise SystemExit('catalog/CHANGELOG.md needs a numeric release entry')
+    # Pending catalog changes ship with the next catalog release.
     pending = re.search(r'^## \[Unreleased\]\s*$', text[:current.start()], re.M)
     if pending is not None:
         lines = [line for line in text[pending.end():current.start()].splitlines() if line.startswith('- ')] + lines
@@ -141,7 +141,7 @@ def changelog(ziran):
     version = f'{current[1]}.{current[2]}.{int(current[3]) + 1}'
     entry = f'## {version}\n\n' + '\n'.join(lines) + '\n\n'
     path.write_text(text[:current.start()] + entry + text[current.start():])
-    print(f'Arcade {version}')
+    print(f'Arcade catalog {version}')
 
 
 def art():

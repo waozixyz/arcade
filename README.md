@@ -153,8 +153,19 @@ The release key is `backup/android-signing/arcade-release.p12` (ignored) and
 the GitHub secrets `ARCADE_ANDROID_KEYSTORE` and
 `ARCADE_ANDROID_KEYSTORE_PASSWORD`; `packaging/android/certificate.pem` is its
 public certificate. The Android workflow attaches `arcade-VERSION.apk`,
-`arcade-VERSION-fdroid.apk` and `arcade-VERSION-gplay.apk` to each
-`node-arcade-VERSION` release; Game updates starts it for every new release.
+`arcade-VERSION-fdroid.apk` and `arcade-VERSION-gplay.apk` to a native
+`arcade-VERSION` release after verifying all three editions. Existing APKs
+on older `node-arcade-VERSION` releases keep their original URLs.
+
+The native host uses root `CHANGELOG.md` and `VERSION`; synchronize a native
+release with `sh update_version.sh`. The signed game catalog uses
+`catalog/CHANGELOG.md` and `catalog/VERSION`; synchronize its release with
+`sh update_version.sh --catalog`. Both use numeric changelog entries and keep
+each game's own version ledger. Catalog publication keeps the existing
+`node-arcade-VERSION` tags and never starts Android builds. Game updates
+advance the catalog only, leaving pending native changes for the next host
+release. An APK's embedded seed catalog may have a different version from
+its native host.
 
 Game packages are registered in `games.json`; each declares its apps in its
 `apps.json`. `scripts/build-games.py` generates the catalog and bundles

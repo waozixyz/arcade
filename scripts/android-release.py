@@ -73,7 +73,10 @@ def verify(apk, version, tools, edition='direct'):
             verify_launcher(apk, tools, names)
         metadata = json.loads(archive.read('assets/arcade.json'))
         payload = archive.read('assets/arcade.zx')
-        assert metadata['id'] == 'inbe.arcade' and metadata['version'] == version
+        assert metadata['id'] == 'inbe.arcade', 'Embedded catalog identity differs'
+        catalog_version = (ROOT / 'catalog/VERSION').read_text().strip()
+        assert re.fullmatch(r'\d+\.\d+\.\d+', catalog_version), 'A numeric catalog version is required'
+        assert metadata['version'] == catalog_version, 'Embedded catalog version differs from its source'
         assert metadata['sha256'] == hashlib.sha256(payload).hexdigest(), 'Embedded collection differs from its receipt'
         from android_catalog import verify_assets
         verify_assets({name.removeprefix('assets/'): archive.read(name)
@@ -85,7 +88,7 @@ def verify(apk, version, tools, edition='direct'):
         apk_digest = hashlib.file_digest(source, 'sha256').hexdigest()
     return dict(version=version, version_code=int(package[2]), package=package[1], abis=abis, edition=edition,
                 sha256=apk_digest, certificate_sha256=expected,
-                payload_sha256=metadata['sha256'], games=[child['id'] for child in metadata['children']],
+                catalog_version=metadata['version'], payload_sha256=metadata['sha256'], games=[child['id'] for child in metadata['children']],
                 bytes=apk.stat().st_size)
 
 

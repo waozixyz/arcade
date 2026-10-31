@@ -1,16 +1,14 @@
 name: Android
 
-# Arcade's own Android APKs, with the whole library for offline play, for an
-# Arcade release (node-arcade-VERSION). Game updates starts this on the new
-# release's tag; started by hand on master, it fills in the APKs of the
-# release master is at. Three signed editions are attached: arcade-VERSION.apk
-# and arcade-VERSION-fdroid.apk hold no Google library, arcade-VERSION-gplay.apk
-# is the only one with Play Billing.
+# Native host releases have their own VERSION and arcade-VERSION release.
+# Catalog/game publication never starts this workflow. All three signed
+# editions are verified before this workflow creates the native release tag.
+# Existing node-arcade-VERSION releases and their APK URLs remain unchanged.
 on:
   workflow_dispatch:
     inputs:
       version:
-        description: Arcade release version; empty uses VERSION at the chosen ref
+        description: Native host release version; empty uses VERSION at the chosen ref
         required: false
         type: string
 
@@ -32,6 +30,8 @@ jobs:
       shovey: ${{ steps.release.outputs.shovey }}
     steps:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+      - name: Check version and release boundaries
+        run: python3 tests/catalog_versions_test.py
       - name: Find the release and its locked dependencies
         id: release
         env:
@@ -44,13 +44,14 @@ jobs:
             echo "::error::$GITHUB_REF is at Arcade $version, not $REQUESTED"
             exit 1
           fi
-          # The APKs carry exactly the release's catalog and games.
-          gh release view "node-arcade-$version" --json name > /dev/null
-          assets=$(gh release view "node-arcade-$version" --json assets --jq '.assets[].name')
-          due=false
-          for name in "arcade-$version.apk" "arcade-$version-fdroid.apk" "arcade-$version-gplay.apk"; do
-            printf '%s\n' "$assets" | grep -qxF "$name" || due=true
-          done
+          # A new native release needs no matching node catalog release.
+          due=true
+          if assets=$(gh release view "arcade-$version" --json assets --jq '.assets[].name'); then
+            due=false
+            for name in "arcade-$version.apk" "arcade-$version-fdroid.apk" "arcade-$version-gplay.apk"; do
+              printf '%s\n' "$assets" | grep -qxF "$name" || due=true
+            done
+          fi
           if [ "$due" = false ]; then
             echo "::notice title=Android::Arcade $version already has its APKs"
           fi
@@ -185,7 +186,7 @@ jobs:
           pattern: arcade-android-*
           path: build/downloads
           merge-multiple: true
-      - name: Check and attach the APKs to the release
+      - name: Verify all editions and publish the native host release
         env:
           GH_TOKEN: ${{ github.token }}
           VERSION: ${{ needs.release.outputs.version }}
@@ -196,5 +197,16 @@ jobs:
             python3 scripts/android-release.py verify "build/downloads/arcade-$VERSION$suffix.apk" \
               --edition "$edition" --version "$VERSION"
           done
-          gh release upload "node-arcade-$VERSION" "build/downloads/arcade-$VERSION.apk" \
-            "build/downloads/arcade-$VERSION-fdroid.apk" "build/downloads/arcade-$VERSION-gplay.apk" --clobber
+          tag="arcade-$VERSION"
+          if gh release view "$tag" >/dev/null 2>&1; then
+            # Retry only the same verified source, preserving past release URLs.
+            target=$(gh api "repos/$GITHUB_REPOSITORY/commits/$tag" --jq '.sha')
+            test "$target" = "$GITHUB_SHA"
+            gh release upload "$tag" "build/downloads/arcade-$VERSION.apk" \
+              "build/downloads/arcade-$VERSION-fdroid.apk" "build/downloads/arcade-$VERSION-gplay.apk" --clobber
+          else
+            gh release create "$tag" "build/downloads/arcade-$VERSION.apk" \
+              "build/downloads/arcade-$VERSION-fdroid.apk" "build/downloads/arcade-$VERSION-gplay.apk" \
+              --target "$GITHUB_SHA" --title "Arcade $VERSION" \
+              --notes 'Native Arcade for Android: normal, F-Droid and Google Play editions. Games and library updates arrive separately.'
+          fi

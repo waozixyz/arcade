@@ -21,6 +21,16 @@ def digest(path):
     return hashlib.sha256(path.read_bytes()).hexdigest()
 
 
+def catalog_version(root):
+    """The node receipt must name the synchronized catalog release."""
+    version = (root / "catalog/VERSION").read_text().strip()
+    component = json.loads((root / "apps/versions.json").read_text())["node_apps"]["arcade"]
+    if (not re.fullmatch(r"\d+\.\d+\.\d+", version)
+            or component["id"] != "inbe.arcade" or component["version"] != version):
+        raise ValueError("Catalog version differs from its signed release ledger; run update_version.sh --catalog")
+    return version
+
+
 def library_art(root, name, key, source):
     """Arcade's committed library thumbnail (scripts/library-art.py), as
     (bytes, suffix): a PNG, or a JPEG for opaque cover art. Never pack a copy
@@ -210,6 +220,7 @@ def main():
     parser.add_argument("--apps-bundle", type=Path, required=True)
     parser.add_argument("--apps-sha256", required=True)
     args = parser.parse_args()
+    version = catalog_version(ROOT)
     output = ROOT / "build/collection"
     catalog, packages = stage(ROOT, args.apps_bundle, args.apps_sha256, output)
     command = [args.ziran, "bundle", "--project", *(["--locked"] if args.locked else [])]
@@ -266,7 +277,7 @@ def main():
     shutil.copyfile(node_apps / "arcade.zx", ROOT / "build/arcade.zx")
     # The desktop host supplies its controller from beside the collection.
     shutil.copyfile(args.apps_bundle, ROOT / "build/apps.zx")
-    receipt = dict(id=catalog["id"], version=(ROOT / "VERSION").read_text().strip(),
+    receipt = dict(id=catalog["id"], version=version,
                    sha256=digest(ROOT / "build/arcade.zx"),
                    apps_sha256=args.apps_sha256, children=catalog["children"], art=art,
                    source_mode="project")
