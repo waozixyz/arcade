@@ -60,7 +60,7 @@ def main():
             "-DCMAKE_BUILD_TYPE=MinSizeRel", "-DBUILD_SHARED_LIBS=OFF",
             "-DOQS_BUILD_ONLY_LIB=ON", "-DOQS_USE_OPENSSL=OFF",
             "-DOQS_DIST_BUILD=OFF", "-DOQS_OPT_TARGET=generic",
-            "-DOQS_MINIMAL_BUILD=SIG_ml_dsa_44")
+            "-DOQS_MINIMAL_BUILD=SIG_ml_dsa_44;KEM_ml_kem_768")
         run("cmake", "--build", str(oqs), "--target", "oqs", "--", "-j1")
     libraries = subprocess.check_output(
         ["pkg-config", "--libs", "sdl2", "cairo", "freetype2", "fontconfig",

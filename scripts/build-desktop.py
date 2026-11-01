@@ -54,7 +54,7 @@ def main():
         subprocess.run(['cmake', '-S', str(oqs_source), '-B', str(oqs),
                         '-DCMAKE_BUILD_TYPE=MinSizeRel', '-DBUILD_SHARED_LIBS=OFF',
                         '-DOQS_BUILD_ONLY_LIB=ON', '-DOQS_USE_OPENSSL=OFF', '-DOQS_DIST_BUILD=OFF',
-                        '-DOQS_OPT_TARGET=generic', '-DOQS_MINIMAL_BUILD=SIG_ml_dsa_44'], check=True)
+                        '-DOQS_OPT_TARGET=generic', '-DOQS_MINIMAL_BUILD=SIG_ml_dsa_44;KEM_ml_kem_768'], check=True)
         subprocess.run(['cmake', '--build', str(oqs), '--target', 'oqs', '-j2'], check=True)
     temporary = output.with_suffix('.new')
     output.parent.mkdir(parents=True, exist_ok=True)

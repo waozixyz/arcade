@@ -119,7 +119,7 @@ def main():
     oqs = BUILD / 'oqs/lib/liboqs.a'
     if not built(oqs, oqs_source):
         cmake(oqs_source, BUILD / 'oqs', tools, '-DCMAKE_BUILD_TYPE=MinSizeRel', '-DOQS_BUILD_ONLY_LIB=ON',
-              '-DOQS_USE_OPENSSL=OFF', '-DOQS_DIST_BUILD=OFF', '-DOQS_OPT_TARGET=generic', '-DOQS_MINIMAL_BUILD=SIG_ml_dsa_44')
+              '-DOQS_USE_OPENSSL=OFF', '-DOQS_DIST_BUILD=OFF', '-DOQS_OPT_TARGET=generic', '-DOQS_MINIMAL_BUILD=SIG_ml_dsa_44;KEM_ml_kem_768')
         subprocess.run(['cmake', '--build', str(BUILD / 'oqs'), '--target', 'oqs', '-j4'], check=True)
         record(oqs, oqs_source)
 
