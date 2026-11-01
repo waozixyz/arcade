@@ -1,5 +1,6 @@
 #import "android_device"
 #import "android_jni"
+Handoff :: #import "entity/account_handoff";
 #import "android_picker"
 #import "c_string"
 
@@ -23,6 +24,7 @@ JNI_OnLoad :: (vm: *JniVm, reserved: *void) -> s32 {
     unused reserved
     version := AndroidJniOnLoad(vm, "xyz/waozi/arcade/ArcadeActivity")
     if version != JniVersion { return version }
+    Handoff.AccountHandoffJniOnLoad(vm)
     env: *JniEnv
     if vm.functions.GetEnv(vm, *env, JniVersion) != 0 || env == null { return -1 }
     class_name: [64]u8

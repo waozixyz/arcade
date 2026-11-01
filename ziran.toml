@@ -29,7 +29,7 @@ abis = "arm64-v8a,x86_64"
 
 [dependencies.kryon]
 git = "https://github.com/kryonlabs/kryon.git"
-ref = "a02feeb703192f1481e72160b1ccff401d17ef9d"
+ref = "e373b8a7f8821256b86de12dd5ee05a32d373e87"
 
 [dependencies.apps]
 git = "https://github.com/waozixyz/apps.git"
@@ -48,7 +48,7 @@ ref = "master"
 
 [dependencies.entity]
 git = "https://github.com/waozixyz/entity.git"
-ref = "51f8cc62a9ab61d114d246897b7b2ba76c4e3766"
+ref = "92a033e048b920b1b43940040771fc51e7d1f9f7"
 
 [dependencies.mingcute]
 git = "https://github.com/kryonlabs/mingcute.git"

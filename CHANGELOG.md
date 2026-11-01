@@ -2,6 +2,7 @@
 
 ## [Unreleased]
 
+- On Android, Continue as can use the account from another signed-in Waozi app, once you approve it there.
 - Arcade and its games open again in Breeze builds that read the previous app bundle format.
 
 ## 0.7.117

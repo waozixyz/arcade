@@ -103,3 +103,6 @@ tasks.register('prepareEntity', Exec) {
     commandLine 'python3', 'scripts/build-entity.py'
 }
 tasks.named('preBuild').configure { dependsOn 'prepareEntity' }
+
+// "Continue as @name" between waozi apps, in every edition.
+apply from: new File(kryonDir, 'templates/android-account-handoff.gradle')
