@@ -12,7 +12,7 @@
 #import "kryon/button_props"
 #import "kryon/button_widget"
 #import "platform"
-#import "shovey/shovey_theme"
+#import "profile_palette"
 #import "kryon/widget_palette"
 #import "apps/appearance"
 #import "kryon/drawing_props"
@@ -85,7 +85,7 @@ EntityBack :: () -> bool {
 }
 
 EntityFrame :: (session: Session, viewport: Rectangle, key: s32, modifiers: s32) -> bool {
-    unused WidgetPaletteUse(session, ifx entity_shovey then ShoveyPalette() else AppCoversPalette())
+    unused WidgetPaletteUse(session, ifx entity_shovey then ShoveyHostPalette() else AppCoversPalette())
     defer { unused WidgetPaletteRestore(session) }
     Box(session, BoxProps.{.key = cast(u64)49010, .bounds = viewport,
             .fill = StyleTokenColorOr("canvas", Color.{239, 246, 244, 255})})

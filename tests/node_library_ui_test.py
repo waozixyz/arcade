@@ -210,7 +210,17 @@ def main():
                     time.sleep(0.05)
                 driver.wait_idle(frames=20)
 
-            with application('consent-refresh') as child:
+            consent = profile / 'node/node-connection'
+
+            def assert_plain_library():
+                # Players never see node or refresh controls; the library loads by itself.
+                forbidden = ('refresh library', 'node connection', 'saved library', 'connect node', 'offline_library')
+                for node in driver.tree():
+                    text = ' '.join(str(node.get(key) or '') for key in ('label', 'text')).lower()
+                    assert not any(word in text for word in forbidden), \
+                        'Node language must not reach players: ' + text
+
+            with application('consent-offline') as child:
                 driver.wait(label='Connect', role='button')
                 driver.wait_idle(frames=20)
                 assert not state['requests'], 'No node traffic before consent'
@@ -222,7 +232,9 @@ def main():
                 driver.wait(label='Shovey', role='button')
                 driver.wait_idle(frames=20)
                 assert not state['requests'], 'Offline choice must prevent preview downloads'
-                driver.press(label='Node connection', role='button')
+                assert_plain_library()
+            consent.unlink()
+            with application('consent-refresh') as child:
                 driver.wait(label='Connect', role='button')
                 driver.press(label='Connect', role='button')
                 driver.wait(label='Node Shovey', role='button', timeout=60)
@@ -231,41 +243,40 @@ def main():
                 assert any(path.endswith(catalog['art']['sha256'] + '.zx') for path in state['requests']), 'Node previews must be fetched'
                 assert driver.find(role='image', visible=True), 'Verified previews must draw'
                 card = driver.wait(label='Node Shovey', role='button')
-                assert card['y'] >= 88, 'The library must leave room for its connection controls'
+                assert card['y'] < 88, 'The library must not reserve room for removed controls'
+                assert_plain_library()
                 with Image.open(capture(child, 'node-library')) as image:
                     crop = image.crop((card['x'], card['y'], card['x'] + card['width'], card['y'] + card['height']))
                     assert len(crop.convert('RGB').getcolors(1000000) or []) > 500, 'The preview must paint actual image pixels'
                 game_hashes = {entry['sha256'] for entry in catalog['children']}
                 assert not any(any(digest in path for digest in game_hashes) for path in state['requests']), 'No game payload before Download'
-                state['revision'] = 1
-                driver.press(label='Refresh library', role='button')
+            state['revision'] = 1
+            with application('automatic-refresh') as child:
+                # A newer signed library appears without any refresh control.
                 driver.wait(label='Choano', role='button', timeout=60)
                 driver.wait(label='Apfelwurm Editor', role='button')
                 driver.wait_idle(frames=20)
+                assert_plain_library()
                 capture(child, 'refreshed-library')
                 resize(child, 360, 740)
                 capture(child, 'phone-library')
                 resize(child, 1000, 820)
                 assert save.read_bytes() == b'prior saved game'
-                driver.press(label='Node connection', role='button')
-                driver.wait(label='Stay offline', role='button')
-                driver.press(label='Stay offline', role='button')
-                driver.wait(label='Choano', role='button')
-                driver.wait_idle(frames=10)
-                count = len(state['requests'])
-                driver.wait_idle(frames=40)
-                assert len(state['requests']) == count, 'Revocation must stop node traffic'
+            consent.write_text('off\n' + origin)
             with application('cached-offline'):
                 driver.wait(label='Choano', role='button', timeout=60)
                 driver.wait(label='Apfelwurm Editor', role='button')
                 driver.wait_idle(frames=40)
-                assert len(state['requests']) == count, 'Saved offline choice and signed catalog must survive restart'
+                count = len(state['requests'])
+                driver.wait_idle(frames=40)
+                assert len(state['requests']) == count, 'Saved offline choice must stop node traffic'
+                assert_plain_library()
                 assert save.read_bytes() == b'prior saved game'
     finally:
         server.shutdown()
         server.server_close()
         thread.join()
-    print('Arcade node consent, signed membership refresh, preview rendering, game download consent and offline restart passed')
+    print('Arcade node consent, automatic signed membership refresh, preview rendering, game download consent and offline restart passed')
 
 
 if __name__ == '__main__':

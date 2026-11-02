@@ -19,14 +19,12 @@ LEVEL_UPDATES = 'Download new levels when they come out?'
 
 def answer_library_question(driver):
     """Consent to the loopback library, keeping bundled game levels."""
-    deadline = time.monotonic() + 60
-    while time.monotonic() < deadline:
-        if driver.find(label='Connect', role='button', visible=True):
-            driver.press(label='Connect', role='button')
-            break
-        if driver.find(label='Shovey', role='button', visible=True):
-            break
-        driver.wait_idle(frames=3)
+    question = 'Allow fetching content and automatic app updates?'
+    driver.wait(label=question, role='text')
+    driver.wait(label='The app library, previews and the apps you’ve downloaded stay up to date automatically.', role='text')
+    driver.wait(label='Stay offline', role='button')
+    driver.press(label='Allow', role='button')
+    driver.wait_gone(label=question, role='text')
     driver.wait(label='Shovey', role='button', timeout=60)
     if driver.find(label=LEVEL_UPDATES, role='text'):
         driver.press(label='Not now', role='button')
@@ -98,7 +96,7 @@ def main():
     def size_text(size):
         return f"{(size * 10 + 500000) // 1000000 / 10:.1f} MB"
     sizes = {name: size_text(entry['bytes']) for name, entry in by_name.items()}
-    output = root / "build/collection-ui-test"
+    output = root / "work/collection-ui-test"
     # The Classic heading counts its levels, which Shovey's level file lists.
     shovey = Path(subprocess.check_output([str(root / "scripts/ziran.sh"), "pkg", "path", "shovey"], text=True).strip())
     classic = len(json.loads((shovey / "levels/approved.json").read_text())["levels"])
@@ -114,12 +112,20 @@ def main():
             child = subprocess.Popen([str(args.binary.resolve()), *arguments], cwd=root,
                                      env=os.environ | driver.environment() |
                                      {"ARCADE_DATA": str(profile), "ENTITY_DATA": str(profile / "entity"),
+                                      "XDG_DATA_HOME": str(profile / "share"),
+                                      "XDG_CONFIG_HOME": str(profile / "config"),
+                                      "XDG_CACHE_HOME": str(profile / "cache"),
                                       "LANG": "en_US.UTF-8", "ARCADE_PACKAGE_ORIGIN": origin},
                                      stdout=log, stderr=subprocess.STDOUT)
             driver.attach(child, log_path)
             try:
                 driver.tree()
                 yield child
+            except Exception:
+                driver.tree()
+                (output / (name + '-failure-tree.json')).write_text(json.dumps(driver.last, indent=2) + '\n')
+                capture(child, name + '-failure')
+                raise
             finally:
                 if child.poll() is None:
                     child.terminate()
@@ -155,13 +161,14 @@ def main():
             assert wurm_card['y'] == classic_card['y'], 'A phone row holds all three covers'
             assert 100 <= classic_card['width'] < 200, 'Phone covers must be small cards'
         else:
-            assert classic_card['width'] >= 200 and classic_card['height'] >= 350
+            # Short landscape windows use wide artwork above the title.
+            assert classic_card['width'] >= 200 and classic_card['height'] >= 156
         assert not driver.find(label='Play', role='button')
         assert not driver.find(label='Open', role='button')
         for label in ('Shovey', 'Shovey Editor', 'Apfelwurm'):
             assert driver.find(label=label, role='text'), 'Every library cover shows its declared title'
         driver.wait(label='Apfelwurm', role='button', visible=False)
-        smallest = (100, 140) if phone else (180, 200)
+        smallest = (100, 140) if phone else (180, 120)
         covers = [node for node in driver.find(role='image', visible=True)
                   if node['width'] >= smallest[0] and node['height'] >= smallest[1]]
         assert len(covers) >= 2, "Apps must use large title-screen artwork"
@@ -233,8 +240,12 @@ def main():
             driver.wait(label='Account', role='text')
             capture(child, 'arcade-profile')
             driver.press(label='Leaderboard', role='button')
-            driver.wait(label='Leaderboard', role='text')
-            driver.wait(label='No leaderboard data yet.', role='text')
+            driver.wait_idle(frames=3)
+            # Entity uses the native host's navigation. With no installed
+            # boards its page contains no duplicate heading or empty rows.
+            assert not driver.find(role='scroll', visible=True), 'An undownloaded game has a board'
+            assert not driver.find(label='Account', role='text', visible=True)
+            driver.wait(label='Back', role='button')
             capture(child, 'leaderboard-empty')
             driver.press(label='Back', role='button')
             driver.wait(label='Account', role='text')
@@ -249,9 +260,12 @@ def main():
             primary_download()
             driver.wait(label=f"Level 1 / {classic}")
             answer_level_updates(driver)
-            driver.wait(label="How do you want to move?", role="text")
-            driver.press(label="Swipe and tap")
-            driver.wait_gone(label="How do you want to move?", role="text")
+            # Desktop input already chooses keyboard controls; touch hosts
+            # still ask before the first level.
+            if driver.find(label="How do you want to move?", role="text"):
+                driver.press(label="Swipe and tap")
+                driver.wait_gone(label="How do you want to move?", role="text")
+            driver.wait(label='Restart', role='button')
             assert not driver.find(label="Play", role="button"), "Arcade must skip the second title screen"
             assert len(driver.find(label="Back", role="button", visible=True)) == 1
             driver.press(label="Levels", role="button")
@@ -277,17 +291,22 @@ def main():
             driver.wait(label="Shovey Editor", role="button")
             driver.press(label='Profile', role='button')
             driver.press(label='Leaderboard', role='button')
-            driver.wait(label='Shovey', role='button')
+            # A single installed board needs no app selector. Its metric and
+            # local row still appear, and disappear when that game is removed.
+            driver.wait(label='Levels solved', role='text')
+            driver.wait(label='local', role='text')
             assert not driver.find(label='Apfelwurm', role='button'), 'An undownloaded game has a board'
             assert not driver.find(label='Shovey Editor', role='button'), 'An unranked editor has a board'
             capture(child, 'leaderboard-installed')
             state = profile / 'resources/state/arcade.shovey.json'
             state.parent.mkdir(parents=True, exist_ok=True)
             state.write_text('{"v":1,"installed":0,"favorite":0}')
-            driver.wait(label='No leaderboard data yet.', role='text')
+            driver.wait_gone(label='Levels solved', role='text')
+            assert not driver.find(role='scroll', visible=True), 'An uninstalled board kept its rows'
             assert not driver.find(label='Shovey', role='button'), 'A retained score kept an uninstalled board visible'
             state.write_text('{"v":1,"installed":1,"favorite":0}')
-            driver.wait(label='Shovey', role='button')
+            driver.wait(label='Levels solved', role='text')
+            driver.wait(label='local', role='text')
             driver.press(label='Back', role='button')
             driver.wait(label='Account', role='text')
             driver.press(label='Back', role='button')
@@ -321,8 +340,10 @@ def main():
             # The hosted player opens its title before its first steering choice.
             driver.wait(label='Play', role='button', timeout=60)
             driver.press(label='Play', role='button')
-            driver.wait(label='How do you want to move?', role='text')
-            driver.press(label='Swipe', role='button')
+            wait(lambda: driver.find(label='How do you want to move?', role='text') or
+                 driver.find(label='Pause', role='button'), 'Apfelwurm did not open play or its controls choice')
+            if driver.find(label='How do you want to move?', role='text'):
+                driver.press(label='Swipe', role='button')
             driver.wait(label='Pause', role='button')
             capture(child, 'wurm-playing')
             driver.press(label='Pause', role='button')
@@ -332,7 +353,11 @@ def main():
             capture(child, 'wurm-title')
             driver.key('escape')
             driver.wait(label='Shovey', role='button')
-            for entry in json.loads((root / 'build/arcade.json').read_text())['children']:
+            exercised = [by_name[name] for name in ('shovey', 'shovey-editor', 'wurm')]
+            expected_downloads = {entry['sha256'] for entry in exercised}
+            actual_downloads = {path.stem for path in (profile / 'resources/downloads').glob('*.zx') if path.stem in games}
+            assert actual_downloads == expected_downloads, 'Only the games opened with consent may download'
+            for entry in exercised:
                 path = profile / 'resources/downloads' / (entry['sha256'] + '.zx')
                 assert hashlib.sha256(path.read_bytes()).hexdigest() == entry['sha256']
             requested = list(server['requests'])
@@ -340,7 +365,10 @@ def main():
         with application(profile, "restore", "--app", "arcade.shovey"):
             driver.wait(label=f"Level 1 / {classic}")
             assert progress(record.read_bytes()) == progress(saved), "Classic progress changed on restart"
-        assert server['requests'] == requested, 'A cached game must reopen offline without downloading'
+        # Allowed automatic library refresh may retry its metadata while
+        # offline. Cached game/art bytes must never be requested again.
+        cached_payloads = games | {json.loads((root / 'build/arcade.json').read_text())['art']['sha256']}
+        assert not cached_payloads & set(server['requests'][len(requested):]), 'A cached game must reopen offline without downloading'
         assert chess.read_bytes() == b"existing private Chess save"
         assert not (profile / "inbe.db").exists()
         refused = subprocess.run([str(args.binary.resolve()), "--app", "chess"], env=os.environ | {"ARCADE_DATA": str(profile)}, capture_output=True, timeout=10)

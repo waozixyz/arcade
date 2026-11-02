@@ -7,7 +7,7 @@ bridge_modules = ["app"]
 
 [toolchain]
 git = "https://github.com/ziranlang/ziran.git"
-ref = "c47f927ca316a0494dff4f2389de3333bc8e08b4"
+ref = "93af347a2a7af4a5a6a88906dbf7808189438b9b"
 
 [install]
 bin = "arcade"
@@ -29,12 +29,12 @@ abis = "arm64-v8a,x86_64"
 
 [dependencies.kryon]
 git = "https://github.com/kryonlabs/kryon.git"
-ref = "e373b8a7f8821256b86de12dd5ee05a32d373e87"
+ref = "f7ff3e546657a0f90de16802fc9fc4a700412481"
 
 [dependencies.apps]
 git = "https://github.com/waozixyz/apps.git"
 # Use the shared controller reviewed with the supported collection host.
-ref = "f39508361f79a10a57643e97b613b34e434b9834"
+ref = "5157b63b703981c1e637c78c71b4c475d9699932"
 
 # Shovey's editions and editor are available as separate downloads.
 [dependencies.shovey]
@@ -48,7 +48,7 @@ ref = "master"
 
 [dependencies.entity]
 git = "https://github.com/waozixyz/entity.git"
-ref = "908884c669ec05421373f3077d4bf5517af21bcd"
+ref = "43701aaf0da1e114df7793bf9876a044b96572e1"
 
 [dependencies.mingcute]
 git = "https://github.com/kryonlabs/mingcute.git"
@@ -56,11 +56,11 @@ ref = "master"
 
 [dependencies.wurm]
 git = "https://github.com/waozixyz/wurm.git"
-ref = "2fa52f64eb0c29e8351b437176e896b938ece8e8"
+ref = "a9e6431c8c4d688e9395f7f68d30a6ee726528f9"
 
 [dependencies.game2d]
 git = "https://github.com/kryonlabs/game2d.git"
-ref = "d32e4b606ece83e8869c954f66c334f44f7b4838"
+ref = "42db0b20e0fd431f254ea8a06e553accda7d2e84"
 
 [dependencies.choano]
 git = "https://github.com/waozixyz/choano.git"
@@ -78,4 +78,4 @@ ref = "970d5e44b1702158cb16469892da6ff50f142427"
 
 [dependencies.kss]
 git = "https://github.com/kryonlabs/kss.git"
-ref = "1cb9df183089a77c8a16448a556186f30b261a98"
+ref = "d208dc030fe068ff8a40ed49444536736b4b45d6"

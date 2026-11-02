@@ -36,6 +36,11 @@ collection: games $(APPS_BUNDLE)
 collection-test:
 	python3 tests/collection_test.py
 
+.PHONY: collection-notifications-test
+collection-notifications-test:
+	python3 tests/game_host_compatibility_test.py
+	python3 tests/collection_notifications_test.py
+
 src/catalog.zi: games
 
 build/entity.zx: ziran.lock $(wildcard $(ENTITY_DIR)/src/*.zi)
@@ -54,6 +59,8 @@ run: all
 	./build/arcade
 
 test: all
+	python3 tests/game_host_compatibility_test.py
+	python3 tests/collection_notifications_test.py
 	python3 tests/game_module_paths_test.py
 	python3 tests/game_resource_packing_test.py
 	python3 tests/game_translation_keys_test.py

@@ -26,6 +26,8 @@
 #import "kryon/app_files"
 #import "kryon/app_protocol"
 #import "kryon/app_context_host"
+#import "kryon/notification_schedule_host"
+#import "collection_notification_platform"
 #if !#defined(PLATFORM_DESKTOP) && !#defined(ANDROID_BUILD) && !#defined(PLATFORM_WEB) {
     CollectionHost :: #import "kryon/app_context";
 }
@@ -56,7 +58,7 @@ Codec :: #import "apps/node_codec";
 #import "apps/connection"
 #import "apps/remote_catalog"
 Labels :: #import "apps/words";
-#import "shovey/shovey_theme"
+#import "profile_palette"
 ProfileIcon :: #import "mingcute/mingcute_regular_user_4";
 DewIcon :: #import "mingcute/mingcute_filled_drop";
 collection_dew_text: [32]u8;
@@ -98,6 +100,24 @@ collection_leave_to_library: bool;
 // covers and passed to the games as arcade.updates. -1 unread, 0 off, 1 on,
 // 2 not answered yet.
 collection_updates: s32 = -1;
+collection_notification_node: *AppNode;
+collection_notification_requested: bool;
+
+// Called by Apps only after its verified identity/frame checks. Native focus
+// alone is insufficient: Profile, library and other games own no opened marker.
+CollectionNotificationFocused :: (context: *void, node: *AppNode) -> bool {
+    return node != null && node == collection_notification_node && !node.collection &&
+    !entity_visible && AppTreeNode(*collection_host.tree, collection_host.tree.active) == node &&
+    CollectionNotificationsForeground()
+}
+
+CollectionRunFrame :: () -> bool {
+    runtime := AppHostActiveRuntime(*collection_host)
+    if runtime == null { return false }
+    collection_notification_node = runtime.node
+    defer { collection_notification_node = null }
+    return AppHostRun(*collection_host, APP_FRAME)
+}
 
 // Whether the device's main input is a keyboard and mouse. A native build
 // knows its platform; the collection running as a bundle inside Breeze asks
@@ -146,6 +166,16 @@ CollectionRecordsFor :: (id: string) -> *CollectionRecords {
 }
 
 CollectionAllows :: (context: *void, node: *AppNode, name: string) -> bool {
+    if name == KRYON_NOTIFICATION_SCHEDULE {
+        if node == null || node.collection { return false }
+        // Ask only when a game actually uses reminders in its native focused
+        // frame. Loading an older game or opening the library never prompts.
+        if CollectionNotificationFocused(context, node) && !collection_notification_requested {
+            collection_notification_requested = true
+            if !CollectionNotificationsAllowed() { CollectionNotificationsRequest() }
+        }
+        return CollectionNotificationsAllowed()
+    }
     return name == "AppRecordHost" || name == "SaveAppRecordHost" ||
     name == "AppFriendHost" || name == "AppSharedHost" || name == "AppSharedItemHost" ||
     name == "AppInvitationHost" || name == "RefreshAppSharedHost" || name == "SendAppSharedHost" ||
@@ -509,6 +539,7 @@ CollectionOpen :: (bundle: string, digest: string, harness_digest: string,
 CollectionStart :: (bundle: string, digest: string, harness_digest: string,
     locale: string, packed: bool) -> bool {
     platform := AppPlatform.{.allows = CollectionAllows, .call = CollectionCall,
+        .focused = CollectionNotificationFocused,
         .widgets = CollectionWidgets, .save = CollectionSave, .state = CollectionState,
         .effect = CollectionEffect, .host_api = GAME_HOST_API,
         // Covers show only the art; the download dialog names the size.
@@ -619,6 +650,7 @@ CollectionOpenShoveyBytes :: (bytes: string, metadata: string, data: string) -> 
     locale := EnvironmentText("LANG")
     language := ifx locale.count >= 2 then locale[:2] else "en"
     platform := AppPlatform.{.allows = CollectionAllows, .call = CollectionCall,
+        .focused = CollectionNotificationFocused,
         .widgets = CollectionWidgets, .save = CollectionSave, .state = CollectionState,
         .effect = CollectionEffect, .host_api = GAME_HOST_API}
     collection_ready = AppHostStart(*collection_host, bytes, "arcade.local", "arcade.shovey-player",
@@ -834,7 +866,7 @@ CollectionFrame :: (session: Session, viewport: Rectangle, key: s32, modifiers: 
     }
     WidgetHostBegin(session, CollectionAssetAllowed, CollectionAssetPath)
     collection_pictures_missing = false
-    drawn := AppHostRun(*collection_host, APP_FRAME)
+    drawn := CollectionRunFrame()
     WidgetHostEnd()
     if !drawn {
         Report("collection frame failed\n")
@@ -856,7 +888,7 @@ CollectionFrame :: (session: Session, viewport: Rectangle, key: s32, modifiers: 
             collection_host.tree.active.generation, pictures_ready) {
             collection_toolbar_visible = false
             Box(session, BoxProps.{.key = cast(u64)49400, .bounds = viewport,
-                    .fill = ColorFromPacked(ifx entity_shovey then ShoveyPalette().background else AppCoversPalette().background)})
+                    .fill = ColorFromPacked(ifx entity_shovey then ShoveyHostPalette().background else AppCoversPalette().background)})
             unused Button(session, ButtonProps.{.key = cast(u64)49401, .id = 49401,
                     .bounds = viewport, .invisible = true})
             LoadingIndicator(session, LoadingIndicatorProps.{.key = cast(u64)49402,
@@ -865,10 +897,9 @@ CollectionFrame :: (session: Session, viewport: Rectangle, key: s32, modifiers: 
         }
     } else if runtime.node.collection {
         collection_loading = .{}
-        CollectionNodeToolbar(session, viewport)
     }
     if asking {
-        unused WidgetPaletteUse(session, ifx entity_shovey then ShoveyPalette() else AppCoversPalette())
+        unused WidgetPaletteUse(session, ifx entity_shovey then ShoveyHostPalette() else AppCoversPalette())
         CollectionUpdatesQuestion(session, viewport)
         unused WidgetPaletteRestore(session)
         return true
@@ -894,7 +925,7 @@ CollectionFrame :: (session: Session, viewport: Rectangle, key: s32, modifiers: 
 
 CollectionToolbar :: (session: Session, viewport: Rectangle) {
     if !entity_ready || !collection_toolbar_visible { return }
-    unused WidgetPaletteUse(session, ifx entity_shovey then ShoveyPalette() else AppCoversPalette())
+    unused WidgetPaletteUse(session, ifx entity_shovey then ShoveyHostPalette() else AppCoversPalette())
     defer { unused WidgetPaletteRestore(session) }
     // The account's Dew beside the Profile: a drop and the number, 0 until an
     // account is connected; it opens the Profile too.
@@ -941,7 +972,7 @@ CollectionVerifyRelease :: (signature: *u8, public_key: *u8, message: *u8,
 CollectionNodeOpen :: (metadata: string, data: string, seed: string,
     digest: string, harness: string, locale: string) -> bool {
     source: AppRemoteSource
-    source.oldest_host_api = 1
+    source.oldest_host_api = GAME_OLDEST_HOST_API
     source.host_api = GAME_HOST_API
     source.module_api = 2
     at := FieldAt(metadata, 0, "node")
@@ -1022,7 +1053,8 @@ CollectionNodeActivate :: () -> bool {
 CollectionNodePump :: () {
     if collection_node.files == null { return }
     AppRemoteCatalogPump(*collection_node)
-    if collection_node_apply && collection_node.stage == 0 {
+    // A newer library applies on its own once the background fetch finishes.
+    if (collection_node_apply || collection_node_choice == APP_CONNECTION_ALLOWED) && collection_node.stage == 0 {
         if collection_node.changed && !CollectionNodeActivate() { return }
         collection_node_apply = false
         collection_node_initial = false
@@ -1051,36 +1083,6 @@ CollectionNodeScreen :: (session: Session, viewport: Rectangle) -> bool {
         return true
     }
     return false
-}
-
-CollectionNodeToolbar :: (session: Session, viewport: Rectangle) {
-    if collection_node.files == null { return }
-    unused WidgetPaletteUse(session, AppCoversPalette())
-    defer { unused WidgetPaletteRestore(session) }
-    Box(session, BoxProps.{.key = cast(u64)49519,
-            .bounds = Rectangle.{viewport.x, viewport.y, viewport.width, 88.0},
-            .fill = Color.{17, 18, 35, 255}})
-    locale := TextUntilNul(collection_node_locale[:])
-    allowed := collection_node_choice == APP_CONNECTION_ALLOWED
-    status := ifx !allowed then "offline_library" else ifx collection_node.stage != 0 then "loading_library" else ifx collection_node.failed then "library_unavailable" else "saved_library"
-    width := ifx viewport.width - 180.0 < 320.0 then viewport.width - 180.0 else 320.0
-    if Button(session, ButtonProps.{.key = cast(u64)49520, .id = 49520,
-            .label = Labels.AppsLabel(locale, ifx allowed then "refresh_library" else "connect_node"),
-            .bounds = Rectangle.{viewport.x + 8.0, viewport.y + 6.0, width, 44.0},
-            .tone = ButtonTone.ButtonToneNeutral, .emphasis = ButtonEmphasis.ButtonEmphasisSoft}) != 0 {
-        if !allowed { collection_node_notice = true }
-        else if collection_node.changed { collection_node_apply = true }
-        else { collection_node_apply = true; unused AppRemoteCatalogRefresh(*collection_node) }
-    }
-    // A separate connection control keeps revocation available after consent.
-    if Button(session, ButtonProps.{.key = cast(u64)49521, .id = 49521,
-            .label = Labels.AppsLabel(locale, "node_connection"),
-            .bounds = Rectangle.{viewport.x + viewport.width - 170.0, viewport.y + 52.0, 158.0, 28.0},
-            .tone = ButtonTone.ButtonToneNeutral, .emphasis = ButtonEmphasis.ButtonEmphasisSoft}) != 0 {
-        collection_node_notice = true
-    }
-    Text(session, TextProps.{.key = cast(u64)49522, .text = Labels.AppsLabel(locale, status), .font = 12, .wrap = TextWrap.TextWrapAuto,
-            .bounds = Rectangle.{viewport.x + 16.0, viewport.y + 58.0, viewport.width - 196.0, 26.0}})
 }
 
 CollectionNodeClose :: () {

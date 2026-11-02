@@ -1,0 +1,13 @@
+GameTheme :: #import "shovey/shovey_theme";
+HostPalette :: #import "kryon/widget_palette";
+
+// A separately pinned game owns its colours; the native host owns the
+// widget types used to draw them.
+ShoveyHostPalette :: () -> HostPalette.WidgetPalette {
+    game := GameTheme.ShoveyPalette()
+    return HostPalette.WidgetPalette.{
+        .background = game.background, .base = game.base, .text = game.text,
+        .selected = game.selected, .selected_text = game.selected_text,
+        .border = game.border, .danger = game.danger, .warning = game.warning,
+        .success = game.success, .material = game.material}
+}

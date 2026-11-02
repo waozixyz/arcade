@@ -119,11 +119,9 @@ with tempfile.TemporaryDirectory(prefix='host-', dir=output) as temporary, packa
         driver.wait(label='Account', role='text')
         driver.press(label='Back', role='button')
         driver.key('escape')
-        driver.wait(label='Node connection', role='button')
-        driver.press(label='Node connection', role='button')
-        driver.wait(label='Stay offline', role='button')
-        driver.press(label='Stay offline', role='button')
         driver.wait(label='Shovey', role='button')
+        assert not driver.find(label='Node connection', role='button'), 'The library has no node controls'
+        assert not driver.find(label='Refresh library', role='button'), 'The library refreshes by itself'
     saved = record.read_bytes()
     for name in ('shovey', 'shovey-editor', 'wurm'):
         entry = entries[name]

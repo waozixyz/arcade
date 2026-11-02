@@ -1,5 +1,5 @@
 {
-  "host_api": 41,
+  "host_api": 42,
   "oldest_host_api": 41,
   "module_api": 2,
   "node_apps": {
@@ -41,9 +41,9 @@
     "wurm": {
       "id": "xyz.waozi.wurm",
       "title": "Apfelwurm",
-      "version": "0.2.28",
-      "sequence": 23,
-      "host_api": 41
+      "version": "0.2.29",
+      "sequence": 24,
+      "host_api": 42
     },
     "wurm-editor": {
       "id": "xyz.waozi.wurm-editor",

@@ -1,0 +1,7 @@
+// Recording OS boundary only; CollectionAllows/Focused/RunFrame stay production.
+allowed: bool = true;
+foreground: bool;
+requests: s32;
+CollectionNotificationsAllowed :: () -> bool { return allowed }
+CollectionNotificationsForeground :: () -> bool { return foreground }
+CollectionNotificationsRequest :: () { requests += 1 }

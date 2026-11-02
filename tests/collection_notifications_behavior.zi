@@ -1,0 +1,185 @@
+#import, file "../src/collection_host.zi";
+#import "kryon/Frame"
+#import "kryon/tree"
+#import "kryon/session"
+#import "kryon/geometry"
+#import "kryon/widget_host"
+#import "kryon/hosted_values"
+#import "kryon/app_files"
+#import "kryon/app_protocol"
+#import "apps/host"
+#import "apps/tree"
+#import "apps/protocol"
+#import "kryon/notification_schedule_host"
+#import "std/file"
+#import "std/bundle_host"
+#import "std/c_string"
+#import "std/vec"
+#import "std/text_buffer"
+#import "game_contract"
+#import "entity_host"
+Node :: #import "apps/node_types";
+using HostValueKind;
+Provider :: #import "kryon/notification_schedule";
+OS :: #import "collection_notification_platform";
+
+test_session: Session;
+
+Open :: (game: string, protocol: s32, wrong: bool = false, api: s32 = GAME_HOST_API) -> bool {
+    path: Vec(u8); hash: Vec(u8)
+    BuilderPrint(*path, "work/notification-api42/%-%.zx", game, protocol)
+    BuilderPrint(*hash, "work/notification-api42/%-%.sha256", game, protocol)
+    key := BuilderFinish(path); hash_key := BuilderFinish(hash)
+    bytes, found := ReadEntireFile(key); digest, hash_found := ReadEntireFile(hash_key)
+    AppFileFree(key); AppFileFree(hash_key)
+    if !found || !hash_found { return false }
+    defer { AppFileFree(bytes); AppFileFree(digest) }
+    id := ifx game == "wurm" then "xyz.waozi.wurm" else "arcade.shovey"
+    if wrong { id = "other.game" }
+    platform := AppPlatform.{.host_api = api, .allows = CollectionAllows,
+        .call = CollectionCall, .focused = CollectionNotificationFocused}
+    return AppHostStart(*collection_host, bytes, "fixture.arcade", id, "notification", digest,
+        "account-a", platform, "", "en", protocol)
+}
+
+Draw :: (scenario: s32) -> bool {
+    runtime := AppHostActiveRuntime(*collection_host)
+    runtime.app.session = test_session
+    runtime.app.bounds = Rectangle.{0.0, 0.0, cast(float32)(100 + scenario), 100.0}
+    runtime.legacy.frame.session = test_session
+    runtime.legacy.frame.width = 100 + scenario
+    runtime.legacy.frame.height = 100
+    runtime.legacy.message.screen = scenario
+    BeginFrame(test_session, cast(u64)1, runtime.app.bounds)
+    WidgetHostBegin(test_session, CollectionAssetAllowed)
+    ran := CollectionRunFrame()
+    WidgetHostEnd()
+    return EndFrame(test_session) == FrameStatus.FrameOk && ran && collection_notification_node == null
+}
+
+Denied :: (runtime: *AppRuntime) -> bool {
+    answer: HostValue
+    unused AppHostNotifications(cast(*void)runtime, HostTextData("notification_schedule"),
+        HostTextData("DailyNotificationsSupportedHost"), null, 0, *answer)
+    return answer.kind == cast(s32)HostInteger && answer.integer == 0
+}
+
+Boundaries :: () -> bool {
+    runtime := AppHostActiveRuntime(*collection_host)
+    if !Denied(runtime) { return false } // out of run
+    if !AppTreeBegin(*collection_host.tree, collection_host.tree.active) { return false }
+    runtime.busy = true
+    runtime.app.mode = APP_FRAME
+    runtime.legacy.message.action = Node.APP_FRAME
+    forged: AppRuntime
+    forged.host = *collection_host; forged.node = runtime.node; forged.busy = true
+    if !Denied(*forged) { return false }
+    runtime.controller = true
+    if !Denied(runtime) { return false }
+    runtime.controller = false; runtime.retired = true
+    if !Denied(runtime) { return false }
+    runtime.retired = false
+    if runtime.protocol == APPS_NODE_PROTOCOL {
+        saved := runtime.legacy.id
+        unused CopyCString("forged.game", runtime.legacy.id[:])
+        refused := Denied(runtime)
+        runtime.legacy.id = saved
+        if !refused { return false }
+    } else {
+        saved := runtime.app.expected_id
+        runtime.app.expected_id = "forged.game"
+        refused := Denied(runtime)
+        runtime.app.expected_id = saved
+        if !refused { return false }
+    }
+    runtime.app.mode = APP_BACK; runtime.legacy.message.action = Node.APP_BACK
+    if !Denied(runtime) { return false }
+    runtime.app.mode = APP_FRAME; runtime.legacy.message.action = Node.APP_FRAME
+    active := collection_host.tree.active; collection_host.tree.active = AppHandle.{}
+    refused := Denied(runtime)
+    collection_host.tree.active = active
+    if !refused { return false }
+    runtime.busy = false
+    return AppTreeEnd(*collection_host.tree, collection_host.tree.active)
+}
+
+#if #defined(ARCADE_API41_GAMES) {
+    OldGame :: (name: string, id: string) -> bool {
+        path: Vec(u8); hash: Vec(u8)
+        BuilderPrint(*path, "build/games/%.zx", name)
+        BuilderPrint(*hash, "work/notification-api42/%-41.sha256", name)
+        key := BuilderFinish(path); hash_key := BuilderFinish(hash)
+        bytes, found := ReadEntireFile(key); digest, hash_found := ReadEntireFile(hash_key)
+        AppFileFree(key); AppFileFree(hash_key)
+        if !found || !hash_found { return false }
+        defer { AppFileFree(bytes); AppFileFree(digest) }
+        platform := AppPlatform.{.host_api = GAME_HOST_API, .allows = CollectionAllows,
+            .call = CollectionCall, .focused = CollectionNotificationFocused}
+        opened := AppHostStart(*collection_host, bytes, "fixture.arcade", id, name, digest,
+            "account-a", platform, "", "en", APPS_NODE_PROTOCOL)
+        AppHostStop(*collection_host); AppHostCollect(*collection_host)
+        return opened
+    }
+}
+
+#program_export
+Check :: () -> s32 {
+    test_session = SessionOpen()
+    if !SessionValid(test_session) { return 1 }
+    for protocol: cast(s32)1..2 {
+        for game: cast(s32)0..1 {
+            key := ifx game == 0 then "wurm" else "shovey"
+            OS.allowed = true; OS.foreground = false
+            if !Open(key, protocol) { return 10 + protocol }
+            runtime := AppHostActiveRuntime(*collection_host)
+            Provider.expected_tag = ifx game == 0 then "hosted:xyz.waozi.wurm:wurm.daily_chest" else "hosted:arcade.shovey:shovey.daily-chest"
+            if !Boundaries() { return 20 + protocol }
+            collection_notification_requested = false
+            OS.allowed = false
+            requests := OS.requests
+            if !Draw(1) || OS.requests != requests { return 25 + protocol }
+            OS.foreground = true
+            if !Draw(1) || !Draw(1) || OS.requests != requests + 1 { return 27 + protocol }
+            OS.allowed = true; OS.foreground = false
+            // Real production frame grants permission and forwards typed schedules.
+            if !Draw(0) { return 30 + protocol }
+            before := Provider.opened
+            if !Draw(3) || Provider.opened != before { return 40 + protocol }
+            OS.foreground = true
+            if !Draw(2) || Provider.opened != before + 1 { return 50 + protocol }
+            // Native focus alone, or another selected node, cannot mark opened.
+            collection_notification_node = runtime.node
+            other: AppNode
+            if CollectionNotificationFocused(null, *other) { return 60 + protocol }
+            entity_visible = true
+            if CollectionNotificationFocused(null, runtime.node) { return 70 + protocol }
+            entity_visible = false; collection_notification_node = null
+            if CollectionNotificationFocused(null, runtime.node) { return 80 + protocol }
+            no_focus: AppPlatform
+            collection_host.platform.focused = no_focus.focused
+            if !Draw(3) || Provider.opened != before + 1 { return 90 + protocol }
+            collection_host.platform.focused = CollectionNotificationFocused
+            OS.allowed = false
+            if !Draw(1) || !Draw(3) || !Draw(4) { return 100 + protocol }
+            Provider.expected_tag = ifx game == 0 then "hosted:xyz.waozi.wurm:hosted:arcade.shovey:shovey.daily-chest" else "hosted:arcade.shovey:hosted:arcade.shovey:shovey.daily-chest"
+            if !Draw(5) { return 110 + protocol }
+            AppHostStop(*collection_host); AppHostCollect(*collection_host)
+            if protocol == APPS_NODE_PROTOCOL {
+                if Open(key, protocol, true) { return 120 }
+                AppHostStop(*collection_host); AppHostCollect(*collection_host)
+                if Open(key, protocol, false, 41) { return 121 }
+                AppHostStop(*collection_host); AppHostCollect(*collection_host)
+            }
+        }
+    }
+    if CollectionAllows(null, null, KRYON_NOTIFICATION_SCHEDULE) { return 122 }
+    controller: AppNode; controller.collection = true; OS.allowed = true
+    if CollectionAllows(null, *controller, KRYON_NOTIFICATION_SCHEDULE) { return 123 }
+    #if #defined(ARCADE_API41_GAMES) {
+        if !OldGame("chess", "inbe.chess") || !OldGame("shovey", "arcade.shovey") { return 125 }
+    }
+    unused SessionClose(test_session)
+    if Provider.failures != 0 || Provider.daily != 4 || Provider.dated != 4 || Provider.queued != 4 ||
+    Provider.cancelled != 8 || Provider.opened != 4 { return 124 }
+    return 0
+}

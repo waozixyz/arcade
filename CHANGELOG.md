@@ -2,6 +2,10 @@
 
 ## [Unreleased]
 
+- Support evening chest reminders from compatible games on Android, with the device's notification permission and only the selected game counted as opened.
+
+- Password fields start empty and show one star per character, including long passwords.
+
 - Use Entity's reviewed account authorization and shared Apps controller.
 - Keep the full game collection within the host payload limit by packing opaque pictures without redundant alpha data; decoded pixels stay identical.
 - On Android, Continue as can use the account from another signed-in Waozi app, once you approve it there.

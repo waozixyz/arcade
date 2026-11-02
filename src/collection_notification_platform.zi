@@ -1,0 +1,26 @@
+// Native facts only. Portable games never request OS permission themselves.
+// Persistent alarms currently have an Android provider; other hosts fail closed.
+#if #defined(ANDROID_BUILD) {
+    #import "kryon/notification_android"
+}
+
+CollectionNotificationsAllowed :: () -> bool {
+    #if #defined(ANDROID_BUILD) {
+        return AndroidNotificationAllowedHost()
+    }
+    return false
+}
+
+CollectionNotificationsForeground :: () -> bool {
+    #if #defined(ANDROID_BUILD) {
+        return AndroidNotificationWindowFocusedHost()
+    }
+    return false
+}
+
+CollectionNotificationsRequest :: () {
+    #if #defined(ANDROID_BUILD) {
+        // Kryon's native permission flow remembers refusal across launches.
+        unused AndroidNotificationRequestHost()
+    }
+}

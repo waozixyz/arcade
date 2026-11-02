@@ -288,6 +288,8 @@ class CollectionTests(unittest.TestCase):
         (library / "sources.json").write_text(json.dumps(sources))
 
     def stage_four_leaf_wurm_fixture(self):
+        ledger_path = self.root / "apps/versions.json"
+        ledger = json.loads(ledger_path.read_text())
         registration = self.root / 'games.json'
         value = json.loads(registration.read_text())
         value.pop('artwork', None)
@@ -303,7 +305,8 @@ class CollectionTests(unittest.TestCase):
 
         (source / "catalog.json").write_text(json.dumps({
             "id": "xyz.waozi.wurm", "name": "wurm", "title": "Apfelwurm",
-            "kind": "game", "contract_version": 1, "module_api": 2, "host_api": 41,
+            "kind": "game", "contract_version": 1, "module_api": 2,
+            "host_api": ledger["node_apps"]["wurm"]["host_api"],
             "harnesses": ["arcade"], "preview": "assets/wurm-preview.png",
         }))
         (source / "editor/catalog.json").write_text(json.dumps({
@@ -340,8 +343,6 @@ class CollectionTests(unittest.TestCase):
         for name, key in (("wurm", "preview"), ("wurm", "portrait"),
                           ("wurm-editor", "preview"), ("wurm-editor", "portrait")):
             self.add_library_copy(name, key, images[f"{name}-{key}"])
-        ledger_path = self.root / "apps/versions.json"
-        ledger = json.loads(ledger_path.read_text())
         ledger["node_apps"]["wurm-editor"] = {
             "id": "xyz.waozi.wurm-editor", "title": "Apfelwurm Editor", "version": "0.1.0",
             "sequence": 1, "host_api": 41,
