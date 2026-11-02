@@ -48,7 +48,7 @@ ref = "master"
 
 [dependencies.entity]
 git = "https://github.com/waozixyz/entity.git"
-ref = "298a5413faf4d8bbcf0af38de1c0e3755876b18c"
+ref = "132d002e6a974bb2b3b27f4b97c8f0ed6d7a6d3d"
 
 [dependencies.mingcute]
 git = "https://github.com/kryonlabs/mingcute.git"
