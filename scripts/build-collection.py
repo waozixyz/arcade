@@ -70,14 +70,14 @@ def catalog_version(root):
 
 def library_art(root, name, key, source):
     """Arcade's committed library thumbnail (scripts/library-art.py), as
-    (bytes, suffix): a PNG, or a JPEG for opaque cover art. Never pack a copy
+    (bytes, suffix): a bounded WebP image. Never pack a copy
     of outdated art."""
     library = Path(root) / "assets/arcade/library"
     sources = json.loads((library / "sources.json").read_text())
     copy = f"{name}-{key}"
     if sources.get(copy, {}).get("source_sha256") != hashlib.sha256(source).hexdigest():
         raise ValueError(f"{copy} art changed; run scripts/library-art.py")
-    for suffix in (".png", ".jpg"):
+    for suffix in (".webp",):
         if (library / (copy + suffix)).is_file():
             return (library / (copy + suffix)).read_bytes(), suffix
     raise ValueError(f"{copy} has no library copy; run scripts/library-art.py")

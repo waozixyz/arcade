@@ -2,9 +2,8 @@
 """Stage bounded thumbnails for every game's library covers and previews.
 
 Library covers retain full colour and transparency at thumbnail resolution:
-opaque cover art is a JPEG, a sixth of its PNG size, while logos keep their
-transparency and previews their pixel art as PNG. Games keep their own
-original title artwork. Arcade downloads this small art
+opaque art uses quality-80 WebP, while transparent art uses lossless WebP.
+Games keep their own original title artwork. Arcade downloads this small art
 bundle separately from its launcher and caches it by its content digest.
 
 The copies and sources.json, which records the SHA-256 of the art each copy
@@ -21,13 +20,16 @@ from game_packages import declared_packages
 
 ROOT = Path(__file__).resolve().parents[1]
 LIBRARY = ROOT / 'assets/arcade/library'
-PREVIEW_LONGEST = 480
-COVER_LONGEST = 640
-LOGO_LONGEST = 512
+# The shared cover grid starts at 104 logical pixels wide on phones
+# (156 high), and 200 wide on desktop. These deliberately small thumbnails
+# cover the phone cards without carrying the original full-screen artwork.
+PREVIEW_LONGEST = 256
+COVER_LONGEST = 256
+LOGO_LONGEST = 256
 
 
-COVER_QUALITY = 85
-SUFFIXES = ('.png', '.jpg')
+COVER_QUALITY = 80
+SUFFIXES = ('.webp', '.png', '.jpg')
 
 
 def copy_path(name):
@@ -50,24 +52,14 @@ def small_copy(data, key):
     longest = PREVIEW_LONGEST if key == 'preview' else LOGO_LONGEST if key == 'logo' else COVER_LONGEST
     scale = min(1.0, longest / max(image.size))
     alpha = 'A' in image.getbands() or 'transparency' in image.info
-    photo = key in ('portrait', 'landscape') and not alpha
-    if scale == 1.0 and key != 'preview' and not photo:
-        return data, '.png'
     image = image.convert('RGBA' if alpha else 'RGB')
     if scale < 1.0:
         size = (max(1, round(image.width * scale)), max(1, round(image.height * scale)))
         image = image.resize(size, Image.Resampling.LANCZOS)
-    if key == 'preview':
-        if alpha:
-            image = image.quantize(256, method=Image.Quantize.FASTOCTREE, dither=Image.Dither.FLOYDSTEINBERG)
-        else:
-            image = image.quantize(256, dither=Image.Dither.FLOYDSTEINBERG)
     output = io.BytesIO()
-    if photo:
-        image.save(output, 'JPEG', quality=COVER_QUALITY, optimize=True, progressive=True)
-        return output.getvalue(), '.jpg'
-    image.save(output, 'PNG', optimize=True)
-    return output.getvalue(), '.png'
+    # Lossless WebP preserves every resized alpha value and logo colour.
+    image.save(output, 'WEBP', quality=COVER_QUALITY, lossless=alpha, method=6, exact=True)
+    return output.getvalue(), '.webp'
 
 
 def art(root=ROOT):
