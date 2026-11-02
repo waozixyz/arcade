@@ -10,12 +10,48 @@ import re
 import shutil
 import subprocess
 import tarfile
+import tempfile
 from game_packages import declared_packages
 from node_config import node_source
 
 ROOT = Path(__file__).resolve().parents[1]
 MAX_PAYLOAD_BYTES = 64 * 1024 * 1024
 MAX_GAMES = 16
+
+
+def payload_limit(size, label):
+    if size > MAX_PAYLOAD_BYTES:
+        raise ValueError(f"{label} exceeds the host's payload limit")
+
+
+def catalog_bytes(catalog):
+    return (json.dumps(catalog, indent=2) + "\n").encode()
+
+
+def child_paths(child):
+    return [child["bundle"], child["preview"], *(
+        value for key, value in child.get("cover", {}).items()
+        if key in ("portrait", "landscape", "logo"))]
+
+
+def package_catalog(package, children):
+    return dict(schema=1, id=package["id"], title=package["title"],
+                harness="assets/apps/apps.zx", children=children)
+
+
+def bundle(command, root, source, entry, assets, target, env):
+    """Check the complete ZX (including code/index overhead) before promotion."""
+    work = root / "work"
+    subprocess.run(["git", "check-ignore", "-q", "work/"], cwd=root, check=True)
+    work.mkdir(exist_ok=True)
+    with tempfile.TemporaryDirectory(prefix="collection-bundle-", dir=work) as directory:
+        candidate = Path(directory) / target.name
+        subprocess.run([*command, "--root", str(root / "src"), "--entry", entry,
+            "--asset-dir", "assets=" + str(assets), "-o", str(candidate),
+            str(root / "src" / source)], cwd=root, env=env, check=True)
+        payload_limit(candidate.stat().st_size, target.name)
+        target.parent.mkdir(parents=True, exist_ok=True)
+        candidate.replace(target)
 
 
 def digest(path):
@@ -52,18 +88,20 @@ def stage(root, controller, expected_controller_digest, output):
     catalog and each game package with the IDs of its packed apps."""
     if not re.fullmatch(r"[0-9a-f]{64}", expected_controller_digest):
         raise ValueError("An exact trusted Apps controller SHA-256 is required")
+    payload_limit(controller.stat().st_size, "Apps controller")
     controller_bytes = controller.read_bytes()
     controller_digest = hashlib.sha256(controller_bytes).hexdigest()
     if controller_digest != expected_controller_digest:
         raise ValueError(f"Apps controller differs from the trusted SHA-256: {controller_digest} != {expected_controller_digest}")
-    packages = declared_packages(root)
+    payload_limit(len(controller_bytes), "Apps controller")
+    lock_flags = () if (root / "ziran.local.toml").is_file() else ("--locked",)
+    packages = declared_packages(root, lock_flags=lock_flags)
     arcade = packages[0]
     if not 1 <= sum(len(package["apps"]) for package in packages) <= MAX_GAMES:
         raise ValueError("Arcade needs 1 to 16 games")
     ledger = json.loads((root / "apps/versions.json").read_text())["node_apps"]
     children, copies, identities = [], [], set()
     collection_ids = {package["id"] for package in packages}
-    total = len(controller_bytes)
     for package in packages:
         package["children"] = []
         for app in package["apps"]:
@@ -88,12 +126,13 @@ def stage(root, controller, expected_controller_digest, output):
             preview = root / "build/games" / (name + "-preview.png")
             # The game build embeds this exact legacy descriptor. Its verified
             # name binds node/2's legacy handshake to the stable signed app ID.
+            payload_limit(bundle.stat().st_size, f"Game {name}")
             bundle_bytes, preview_bytes = bundle.read_bytes(), preview.read_bytes()
             if not bundle_bytes or not preview_bytes:
                 raise ValueError("Game bundles and previews must be built first")
+            payload_limit(len(bundle_bytes), f"Game {name}")
             preview_bytes, preview_suffix = library_art(root, name, "preview",
                 (app["art_source"] / game["preview"]).read_bytes())
-            total += len(bundle_bytes) + len(preview_bytes)
             child = dict(
                 id=identifier, title=game["title"],
                 bundle=f"assets/arcade/games/{name}.zx", protocol="node/2",
@@ -128,16 +167,31 @@ def stage(root, controller, expected_controller_digest, output):
                     destination = Path("arcade/covers") / f"{name}-{key}{suffix}"
                     packed_cover[key] = "assets/" + destination.as_posix()
                     copies.append((contents, destination))
-                    total += len(contents)
                 child["cover"] = packed_cover
             children.append(child)
             package["children"].append(identifier)
             copies += [(bundle_bytes, Path("arcade/games") / (name + ".zx")),
                        (preview_bytes, Path("arcade/previews") / (name + preview_suffix))]
-    if total > MAX_PAYLOAD_BYTES:
-        raise ValueError("Arcade collection exceeds the host's payload limit")
     catalog = dict(schema=1, id=arcade["id"], title=arcade["title"],
                    harness="assets/apps/apps.zx", presentation={"mode": "covers"}, children=children)
+    sidebar = (root / "assets/arcade/sidebar.shape").read_bytes()
+    # The stage is a source for several independently loaded roots, not one
+    # root containing the whole library. Bound their input bytes separately;
+    # bundle() also checks the final compiled sizes, including ZX overhead.
+    payloads = {"assets/" + path.as_posix(): data for data, path in copies}
+    art_paths = {path for child in children for path in child_paths(child)[1:]}
+    payload_limit(sum(len(payloads[path]) for path in art_paths), "Library art")
+    payload_limit(len(catalog_bytes(catalog)) + len(sidebar), "Arcade catalog")
+    for package in packages[1:]:
+        if not (root / "src" / f"{package['name']}_collection.zi").is_file():
+            continue
+        leaves = [child for child in children if child["id"] in package["children"]]
+        if not leaves:
+            raise ValueError(f"{package['name']} declares no enabled apps")
+        paths = {path for child in leaves for path in child_paths(child)}
+        size = (len(controller_bytes) + len(catalog_bytes(package_catalog(package, leaves)))
+                + sum(len(payloads[path]) for path in paths))
+        payload_limit(size, f"Standalone {package['name']}")
     # This stable directory contains disposable build output only. Clear it
     # after all inputs validate so removed registrations cannot linger.
     if output.exists():
@@ -145,14 +199,14 @@ def stage(root, controller, expected_controller_digest, output):
     assets = output / "assets"
     (assets / "apps").mkdir(parents=True)
     (assets / "apps/apps.zx").write_bytes(controller_bytes)
-    (assets / "apps/catalog.json").write_text(json.dumps(catalog, indent=2) + "\n")
+    (assets / "apps/catalog.json").write_bytes(catalog_bytes(catalog))
     for contents, relative in copies:
         destination = assets / relative
         destination.parent.mkdir(parents=True, exist_ok=True)
         destination.write_bytes(contents)
     # Inbe draws Arcade's launcher icon from assets/arcade/sidebar.shape.
     (assets / "arcade").mkdir(exist_ok=True)
-    (assets / "arcade/sidebar.shape").write_bytes((root / "assets/arcade/sidebar.shape").read_bytes())
+    (assets / "arcade/sidebar.shape").write_bytes(sidebar)
     return catalog, packages[1:]
 
 
@@ -170,6 +224,7 @@ def stage_downloads(catalog, source, output, games, art):
         data = (source / child["bundle"]).read_bytes()
         if hashlib.sha256(data).hexdigest() != child["sha256"]:
             raise ValueError("Game differs from the collection's declared digest")
+        payload_limit(len(data), f"Game {child['id']}")
         payloads[child["sha256"]] = data
     for directory in (output, games, art):
         if directory.exists():
@@ -194,6 +249,7 @@ def stage_downloads(catalog, source, output, games, art):
 def add_art(output, games, art_bundle):
     """Publish the art bundle beside the games and name it in the catalog."""
     data = art_bundle.read_bytes()
+    payload_limit(len(data), "Library art bundle")
     digest = hashlib.sha256(data).hexdigest()
     (games / (digest + ".zx")).write_bytes(data)
     path = output / "assets/apps/catalog.json"
@@ -226,10 +282,6 @@ def main():
     catalog, packages = stage(ROOT, args.apps_bundle, args.apps_sha256, output)
     command = [args.ziran, "bundle", "--project", *(["--locked"] if args.locked else [])]
     env = os.environ.copy()
-    def bundle(source, entry, assets, target):
-        subprocess.run([*command, "--root", str(ROOT / "src"), "--entry", entry,
-            "--asset-dir", "assets=" + str(assets), "-o", str(target),
-            str(ROOT / "src" / source)], cwd=ROOT, env=env, check=True)
 
     # A game package with a standalone player (src/NAME_collection.zi) also
     # gets its own collection of exactly the leaves Arcade packs, with their
@@ -247,18 +299,15 @@ def main():
         assets = standalone / "assets"
         (assets / "apps").mkdir(parents=True)
         shutil.copyfile(output / "assets/apps/apps.zx", assets / "apps/apps.zx")
-        standalone_catalog = dict(schema=1, id=package["id"], title=package["title"],
-                                  harness="assets/apps/apps.zx", children=children)
-        (assets / "apps/catalog.json").write_text(json.dumps(standalone_catalog, indent=2) + "\n")
+        standalone_catalog = package_catalog(package, children)
+        (assets / "apps/catalog.json").write_bytes(catalog_bytes(standalone_catalog))
         for child in children:
-            resources = [child[field] for field in ("bundle", "preview")]
-            resources += [value for field, value in child.get("cover", {}).items()
-                          if field in ("portrait", "landscape", "logo")]
-            for relative in resources:
+            for relative in child_paths(child):
                 destination = standalone / relative
                 destination.parent.mkdir(parents=True, exist_ok=True)
                 shutil.copyfile(output / relative, destination)
-        bundle(f"{name}_collection.zi", f"{name}_collection:Main", assets, ROOT / f"build/{name}.zx")
+        bundle(command, ROOT, f"{name}_collection.zi", f"{name}_collection:Main",
+               assets, ROOT / f"build/{name}.zx", env)
         metadata = dict(id=package["id"], version=children[0]["version"],
             sha256=digest(ROOT / f"build/{name}.zx"), apps_sha256=args.apps_sha256,
             children=children, source_mode="project")
@@ -271,10 +320,10 @@ def main():
     game_downloads = node_apps / "arcade.games"
     art_assets = node_apps / "arcade-art"
     stage_downloads(catalog, output, catalog_assets, game_downloads, art_assets)
-    bundle("art.zi", "art:Main", art_assets / "assets", node_apps / "arcade-art.zx")
+    bundle(command, ROOT, "art.zi", "art:Main", art_assets / "assets", node_apps / "arcade-art.zx", env)
     art = add_art(catalog_assets, game_downloads, node_apps / "arcade-art.zx")
     archive_downloads(game_downloads, node_apps / "arcade.games.tar")
-    bundle("collection.zi", "collection:Main", catalog_assets / "assets", node_apps / "arcade.zx")
+    bundle(command, ROOT, "collection.zi", "collection:Main", catalog_assets / "assets", node_apps / "arcade.zx", env)
     shutil.copyfile(node_apps / "arcade.zx", ROOT / "build/arcade.zx")
     # The desktop host supplies its controller from beside the collection.
     shutil.copyfile(args.apps_bundle, ROOT / "build/apps.zx")

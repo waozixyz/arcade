@@ -3,11 +3,14 @@ import hashlib
 import importlib.util
 import io
 import json
+import os
 from pathlib import Path
 import shlex
 import shutil
+import subprocess
 import tempfile
 import unittest
+from unittest.mock import patch
 import sys
 import tarfile
 from PIL import Image
@@ -66,9 +69,15 @@ class CollectionTests(unittest.TestCase):
             self.assertTrue(path in assets, "Choano runtime image missing from its bundle: " + path)
 
     def setUp(self):
-        self.directory = tempfile.TemporaryDirectory(prefix="collection-", dir=ROOT / "build")
+        subprocess.run(["git", "check-ignore", "-q", "work/"], cwd=ROOT, check=True)
+        (ROOT / "work").mkdir(exist_ok=True)
+        self.directory = tempfile.TemporaryDirectory(prefix="collection-", dir=ROOT / "work")
         self.addCleanup(self.directory.cleanup)
         self.root = Path(self.directory.name)
+        self.lock_flags = ("--locked",)
+        if (ROOT / "ziran.local.toml").is_file():
+            (self.root / "ziran.local.toml").touch()
+            self.lock_flags = ()
         (self.root / "apps").mkdir()
         for name in ("games.json", "apps.json", "apps/versions.json"):
             shutil.copyfile(ROOT / name, self.root / name)
@@ -86,6 +95,9 @@ class CollectionTests(unittest.TestCase):
         (self.root / "assets/arcade").mkdir(parents=True)
         shutil.copyfile(ROOT / "assets/arcade/sidebar.shape", self.root / "assets/arcade/sidebar.shape")
         shutil.copytree(ROOT / "assets/arcade/library", self.root / "assets/arcade/library")
+        (self.root / "src").mkdir()
+        for source in (ROOT / "src").glob("*_collection.zi"):
+            shutil.copyfile(source, self.root / "src" / source.name)
         # Only a native VM identity gate can trust a controller. This fixture
         # tests packing and its exact-content requirement, not that handshake.
         self.controller = self.root / "controller.zx"
@@ -96,8 +108,135 @@ class CollectionTests(unittest.TestCase):
     def stage(self):
         return builder.stage(self.root, self.controller, self.controller_digest, self.output)[0]
 
+    def staged_bytes(self):
+        return {str(path.relative_to(self.output)): builder.digest(path)
+                for path in self.output.rglob("*") if path.is_file()}
+
+    def small_payloads(self):
+        # Real on-disk input sizes, bounded independently of production limits.
+        for path in (self.root / "build/games").glob("*.zx"):
+            path.write_bytes(b"game fixture".ljust(32 * 1024, b"\0"))
+        for path in (self.root / "assets/arcade/library").iterdir():
+            if path.suffix in (".png", ".jpg"):
+                path.write_bytes(b"art fixture".ljust(128, b"\0"))
+
+    def test_separately_loaded_games_can_exceed_one_root_limit_together(self):
+        # The registered games exceed 64 MiB together; each game and the
+        # Shovey standalone pair still fit. Never alter the real build outputs.
+        for path in (self.root / "build/games").glob("*.zx"):
+            with path.open("r+b") as data:
+                data.truncate(max(path.stat().st_size, 16 * 1024 * 1024))
+        catalog = self.stage()
+        self.assertGreater(sum(child["bytes"] for child in catalog["children"]), 64 * 1024 * 1024)
+        small, games, art = (self.root / name for name in ("small", "downloads", "art"))
+        builder.stage_downloads(catalog, self.output, small, games, art)
+        for child in catalog["children"]:
+            packed = games / (child["sha256"] + ".zx")
+            self.assertEqual(builder.digest(packed), child["sha256"])
+            self.assertEqual(packed.stat().st_size, child["bytes"])
+            self.assertLessEqual(packed.stat().st_size, 64 * 1024 * 1024)
+
+    def test_oversized_single_payload_preserves_previous_stage(self):
+        self.stage()
+        previous = self.staged_bytes()
+        largest = max(path.stat().st_size for path in (self.root / "build/games").glob("*.zx"))
+        with patch.object(builder, "MAX_PAYLOAD_BYTES", largest - 1):
+            with self.assertRaisesRegex(ValueError, "Game .* exceeds.*payload limit"):
+                self.stage()
+        self.assertEqual(self.staged_bytes(), previous)
+        with patch.object(builder, "MAX_PAYLOAD_BYTES", self.controller.stat().st_size - 1):
+            with self.assertRaisesRegex(ValueError, "Apps controller exceeds.*payload limit"):
+                self.stage()
+        self.assertEqual(self.staged_bytes(), previous)
+
+    def test_oversized_standalone_group_preserves_previous_stage(self):
+        self.stage()
+        previous = self.staged_bytes()
+        self.small_payloads()
+        # Each game is 32 KiB; the offline Shovey pair exceeds 48 KiB before
+        # even counting its controller, catalog and art. Other roots fit.
+        with patch.object(builder, "MAX_PAYLOAD_BYTES", 48 * 1024):
+            with self.assertRaisesRegex(ValueError, "Standalone shovey exceeds.*payload limit"):
+                self.stage()
+        self.assertEqual(self.staged_bytes(), previous)
+
+    def test_oversized_art_and_catalog_preserve_previous_stage(self):
+        self.stage()
+        previous = self.staged_bytes()
+        self.small_payloads()
+        for path in (self.root / "build/games").glob("*.zx"):
+            path.write_bytes(b"game")
+        # Art is one separately loaded root, even though it has many files.
+        pictures = [path for path in (self.root / "assets/arcade/library").iterdir()
+                    if path.suffix in (".png", ".jpg")]
+        for path in pictures:
+            path.write_bytes(b"x" * 8192)
+        with patch.object(builder, "MAX_PAYLOAD_BYTES", 48 * 1024):
+            with self.assertRaisesRegex(ValueError, "Library art exceeds.*payload limit"):
+                self.stage()
+        self.assertEqual(self.staged_bytes(), previous)
+        for path in pictures:
+            path.write_bytes(b"art")
+        catalog_size = (self.output / "assets/apps/catalog.json").stat().st_size
+        with patch.object(builder, "MAX_PAYLOAD_BYTES", catalog_size - 1):
+            with self.assertRaisesRegex(ValueError, "Arcade catalog exceeds.*payload limit"):
+                self.stage()
+        self.assertEqual(self.staged_bytes(), previous)
+
+    def test_compiled_limit_includes_zx_overhead_and_preserves_previous_bundle(self):
+        assets = self.root / "bundle-assets"
+        assets.mkdir()
+        (assets / "fixture").write_bytes(b"asset fixture")
+        target = self.root / "art.zx"
+        command = [os.environ.get("ZIRAN", str(ROOT / "scripts/ziran.sh")),
+                   "bundle", "--project", *self.lock_flags]
+
+        def compile_art():
+            builder.bundle(command, ROOT, "art.zi", "art:Main", assets, target, None)
+
+        compile_art()
+        previous = target.read_bytes()
+        self.assertGreater(len(previous), (assets / "fixture").stat().st_size)
+        with patch.object(builder, "MAX_PAYLOAD_BYTES", len(previous)):
+            compile_art()
+        self.assertEqual(target.read_bytes(), previous)
+        with patch.object(builder, "MAX_PAYLOAD_BYTES", len(previous) - 1):
+            with self.assertRaisesRegex(ValueError, "art.zx exceeds.*payload limit"):
+                compile_art()
+        self.assertEqual(target.read_bytes(), previous)
+
+    def test_staging_uses_locked_packages_unless_local_overrides_exist(self):
+        packages = builder.declared_packages(self.root, lock_flags=self.lock_flags)
+        artwork = json.loads((self.root / "games.json").read_text()).get("artwork", {})
+        sources = {package["name"]: package["source"] for package in packages[1:]}
+        for package in packages[1:]:
+            if package["name"] in artwork:
+                sources[artwork[package["name"]]] = package["apps"][0]["art_source"]
+        log = self.root / "resolver-args"
+        # Capture real subprocess arguments while resolving the same selected
+        # source directories, including the deliberately unlocked local case.
+        lines = ["#!/bin/sh", f"printf '%s\\n' \"$*\" >> {shlex.quote(str(log))}",
+                 'case "$3" in']
+        lines += [f"{shlex.quote(name)}) printf '%s\\n' {shlex.quote(str(path))} ;;"
+                  for name, path in sources.items()]
+        lines += ["*) exit 1 ;;", "esac"]
+        (self.root / "scripts/ziran.sh").write_text("\n".join(lines) + "\n")
+        local = self.root / "ziran.local.toml"
+        for override in (False, True):
+            with self.subTest(local_override=override):
+                if override:
+                    local.touch()
+                else:
+                    local.unlink(missing_ok=True)
+                log.unlink(missing_ok=True)
+                self.stage()
+                calls = [line.split() for line in log.read_text().splitlines()]
+                self.assertEqual({call[2] for call in calls}, set(sources))
+                for call in calls:
+                    self.assertEqual(call, ["pkg", "path", call[2]] + ([] if override else ["--locked"]))
+
     def assert_children_match_declarations(self, catalog, packages, payload_root):
-        declarations = builder.declared_packages(self.root)
+        declarations = builder.declared_packages(self.root, lock_flags=self.lock_flags)
         ledger = json.loads((self.root / "apps/versions.json").read_text())["node_apps"]
         expected_children = []
         for app in (app for package in declarations for app in package["apps"] if app["enabled"]):
@@ -240,7 +379,7 @@ class CollectionTests(unittest.TestCase):
         self.assertEqual(wurm_package["children"], ["xyz.waozi.wurm", "xyz.waozi.wurm-editor"])
         children = {child["id"]: child for child in catalog["children"]}
         self.assertEqual(children["xyz.waozi.choano"]["title"], "Choano")
-        self.assertEqual(children["xyz.waozi.choano"]["version"], "0.1.3")
+        self.assertEqual(children["xyz.waozi.choano"]["version"], pinned_ledger["choano"]["version"])
         self.assertEqual(children["xyz.waozi.choano"]["expected_id"], "choano")
         self.assertEqual(children["xyz.waozi.wurm"]["version"], wurm_version)
         self.assertEqual(children["xyz.waozi.wurm-editor"]["version"], "0.1.0")
@@ -265,16 +404,44 @@ class CollectionTests(unittest.TestCase):
             self.stage()
 
     def test_artwork_input_changes_no_game_payload_or_version(self):
-        packages = builder.declared_packages(self.root)
+        packages = builder.declared_packages(self.root, lock_flags=self.lock_flags)
+        # Released code/art aliases may resolve to the same package revision.
+        # Give the artwork its own fixture source so this still exercises an
+        # independent override, retaining the exact reviewed artwork bytes.
+        art_source = self.root / 'fixture-art'
+        wurm = next(package for package in packages if package['name'] == 'wurm')
+        for app in wurm['apps']:
+            paths = [app['descriptor']['preview']]
+            paths += [value for key, value in (app['cover'] or {}).items()
+                      if key in ('portrait', 'landscape', 'logo')]
+            for relative in paths:
+                destination = art_source / relative
+                destination.parent.mkdir(parents=True, exist_ok=True)
+                shutil.copyfile(app['art_source'] / relative, destination)
+        alias = json.loads((self.root / 'games.json').read_text())['artwork']['wurm']
+        (self.root / 'scripts/ziran.sh').write_text(
+            '#!/bin/sh\n'
+            f'if [ "$1" = pkg ] && [ "$2" = path ] && [ "$3" = {shlex.quote(alias)} ]; then\n'
+            f'  printf \'%s\\n\' {shlex.quote(str(art_source))}\n'
+            '  exit 0\n'
+            'fi\n'
+            f'cd {shlex.quote(str(ROOT))} && exec ./scripts/ziran.sh "$@"\n')
+        packages = builder.declared_packages(self.root, lock_flags=self.lock_flags)
         game = next(app for package in packages for app in package['apps']
                     if app['descriptor']['name'] == 'wurm-editor')
         self.assertNotEqual(game['source'], game['art_source'])
         self.assertEqual(hashlib.sha256((game['art_source'] / game['cover']['portrait']).read_bytes()).hexdigest(),
                          '07ff2ff0142c262cdcba3643bbc4d7d3d71643b7f9f4e678a910fee2bfd3eba1')
+        ledger_path = self.root / 'apps/versions.json'
+        ledger = ledger_path.read_bytes()
+        version = json.loads(ledger)['node_apps']['wurm-editor']['version']
+        game_digest = builder.digest(self.root / 'build/games/wurm-editor.zx')
         catalog = self.stage()
         child = next(item for item in catalog['children'] if item['expected_id'] == 'wurm-editor')
-        self.assertEqual(child['version'], '0.1.0')
-        self.assertEqual(child['sha256'], builder.digest(self.root / 'build/games/wurm-editor.zx'))
+        self.assertEqual(child['version'], version)
+        self.assertEqual(child['sha256'], game_digest)
+        self.assertEqual(builder.digest(self.root / 'build/games/wurm-editor.zx'), game_digest)
+        self.assertEqual(ledger_path.read_bytes(), ledger)
 
     def test_artwork_override_must_name_a_registered_game(self):
         path = self.root / 'games.json'
