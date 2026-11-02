@@ -54,6 +54,7 @@ run: all
 	./build/arcade
 
 test: all
+	python3 tests/game_module_paths_test.py
 	python3 tests/game_resource_packing_test.py
 	python3 tests/game_translation_keys_test.py
 	python3 tests/android_catalog_test.py

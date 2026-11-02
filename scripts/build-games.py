@@ -7,6 +7,7 @@ import shutil
 import subprocess
 from pathlib import Path
 from game_packages import declared_apps
+from game_module_paths import kryon_module_paths
 from game_resources import dependency_order, pack_opaque_pngs, share_resources
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -141,9 +142,7 @@ def build(ziran, lock_flags):
             # Game packages without a src folder (Shovey) keep sources beside their catalogs.
             *(["--module-path", str(source / "src")] if (source / "src").is_dir() else []),
             "--module-path", str(generated),
-            "--module-path", str(kryon / "src/ui"),
-            "--module-path", "kryon=" + str(kryon / "src/ui"),
-            "--module-path", "kryon=" + str(kryon / "src/backend"),
+            *kryon_module_paths(source, descriptor, kryon),
             "--module-path", "game2d=" + str(game2d / "src"),
             "--module-path", "std=" + str(toolchain / "std"),
             "--module-path", str(toolchain / "std"),
