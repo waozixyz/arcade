@@ -56,7 +56,7 @@ ref = "master"
 
 [dependencies.wurm]
 git = "https://github.com/waozixyz/wurm.git"
-ref = "99d9ad777325e9dfc15cd8610056948819dc1f07"
+ref = "2fa52f64eb0c29e8351b437176e896b938ece8e8"
 
 [dependencies.game2d]
 git = "https://github.com/kryonlabs/game2d.git"
@@ -64,7 +64,7 @@ ref = "d32e4b606ece83e8869c954f66c334f44f7b4838"
 
 [dependencies.choano]
 git = "https://github.com/waozixyz/choano.git"
-ref = "528618898db605b0f2960759d49871cde2209086"
+ref = "6a29dfde2742a5081d477bebefcddf3a733383c5"
 
 # Library art can advance independently of the tested game payload.
 [dependencies.wurm_art]
