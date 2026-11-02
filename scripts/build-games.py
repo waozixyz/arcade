@@ -46,6 +46,8 @@ def build(ziran, lock_flags):
     # Resolve transitive packages from Arcade's lock, never their private graphs.
     daochi_client = package("daochi_client")
     crypto = package("crypto")
+    # Shared KSS themes (Choano 0.1.5 and later import kss/Kss).
+    kss = package("kss")
     entries = []
     apps = dependency_order(declared_apps(ROOT, ziran, lock_flags))
     by_id = {app['descriptor']['id']: app for app in apps}
@@ -149,6 +151,7 @@ def build(ziran, lock_flags):
             "--module-path", "entity=" + str(entity / "src"),
             "--module-path", "daochi_client=" + str(daochi_client),
             "--module-path", "crypto=" + str(crypto / "src"),
+            "--module-path", "kss=" + str(kss / "src"),
             *[flag for name in defines for flag in ('--define', name)],
             *[flag for entry in app['library_entries'] for flag in ('--retain', entry)],
             *[flag for dependency_id in app['requires'] if app['shared_code']
