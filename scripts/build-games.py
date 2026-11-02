@@ -7,7 +7,7 @@ import shutil
 import subprocess
 from pathlib import Path
 from game_packages import declared_apps
-from game_resources import dependency_order, share_resources
+from game_resources import dependency_order, pack_opaque_pngs, share_resources
 
 ROOT = Path(__file__).resolve().parents[1]
 
@@ -112,6 +112,7 @@ def build(ziran, lock_flags):
                 subprocess.run([str(tool / prepare.stem), str(resources), str(generated)], cwd=source, check=True)
             else:
                 subprocess.run(['python3', str(source / prepare), str(resources), str(generated)], check=True)
+        pack_opaque_pngs(resources)
         shared = share_resources(app, apps, resources, ROOT / 'build/game-assets')
         metadata = ROOT / 'build/games' / (name + '-resources.json')
         metadata.parent.mkdir(parents=True, exist_ok=True)

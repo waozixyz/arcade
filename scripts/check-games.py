@@ -9,6 +9,15 @@ from game_packages import declared_apps
 ROOT = Path(__file__).resolve().parents[1]
 
 
+def translation_keys(code, prefix):
+    # Package imports and integer fields read from server JSON are not labels.
+    # Strip only those argument occurrences: the same key used by the UI must
+    # still have a translation.
+    code = re.sub(r'^\s*#import\s+"[^"\n]*"', '', code, flags=re.M)
+    code = re.sub(r'\bShopInteger\s*\(\s*[^,\n]+,\s*"[^"\n]*"', '', code)
+    return set(re.findall(r'"(' + re.escape(prefix) + r'[a-z0-9_]+)"', code))
+
+
 def check(ziran, lock_flags):
     standard = json.loads((ROOT / 'standards/game-v1.json').read_text())
     ledger = json.loads((ROOT / 'apps/versions.json').read_text())
@@ -33,9 +42,7 @@ def check(ziran, lock_flags):
         assert component['sequence'] > 0
         required = set()
         for file in manifest.parent.glob('*.zi'):
-            # Module names in #import lines share the prefix but are not text keys.
-            code = re.sub(r'^\s*#import\s+"[^"\n]*"', '', file.read_text(), flags=re.M)
-            required.update(re.findall(r'"(' + re.escape(game['locale_prefix']) + r'[a-z0-9_]+)"', code))
+            required.update(translation_keys(file.read_text(), game['locale_prefix']))
         locales = {}
         for file in (source / game['locales']).glob('*.txt'):
             text = file.read_text()

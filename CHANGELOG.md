@@ -2,6 +2,8 @@
 
 ## [Unreleased]
 
+- Use Entity's reviewed account authorization and shared Apps controller.
+- Keep the full game collection within the host payload limit by packing opaque pictures without redundant alpha data; decoded pixels stay identical.
 - On Android, Continue as can use the account from another signed-in Waozi app, once you approve it there.
 - Arcade and its games open again in Breeze builds that read the previous app bundle format.
 

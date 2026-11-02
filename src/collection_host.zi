@@ -1041,11 +1041,11 @@ CollectionNodeScreen :: (session: Session, viewport: Rectangle) -> bool {
     if collection_node_initial && collection_node.stage != 0 {
         Box(session, BoxProps.{.key = cast(u64)49510, .bounds = viewport, .fill = Color.{17, 18, 35, 255}})
         Text(session, TextProps.{.key = cast(u64)49511, .text = Labels.AppsLabel(TextUntilNul(collection_node_locale[:]), "loading_library"),
-            .font = 20, .bounds = Rectangle.{viewport.x + 24.0, viewport.y + viewport.height / 2.0, viewport.width - 48.0, 64.0}})
+                .font = 20, .bounds = Rectangle.{viewport.x + 24.0, viewport.y + viewport.height / 2.0, viewport.width - 48.0, 64.0}})
         if Button(session, ButtonProps.{.key = cast(u64)49512, .id = 49512,
-            .label = Labels.AppsLabel(TextUntilNul(collection_node_locale[:]), "stay_offline"),
-            .bounds = Rectangle.{viewport.x + 24.0, viewport.y + viewport.height / 2.0 + 72.0, viewport.width - 48.0, 44.0},
-            .tone = ButtonTone.ButtonToneNeutral, .emphasis = ButtonEmphasis.ButtonEmphasisSoft}) != 0 {
+                .label = Labels.AppsLabel(TextUntilNul(collection_node_locale[:]), "stay_offline"),
+                .bounds = Rectangle.{viewport.x + 24.0, viewport.y + viewport.height / 2.0 + 72.0, viewport.width - 48.0, 44.0},
+                .tone = ButtonTone.ButtonToneNeutral, .emphasis = ButtonEmphasis.ButtonEmphasisSoft}) != 0 {
             unused CollectionNodeChoose(APP_CONNECTION_OFFLINE)
         }
         return true
@@ -1058,29 +1058,29 @@ CollectionNodeToolbar :: (session: Session, viewport: Rectangle) {
     unused WidgetPaletteUse(session, AppCoversPalette())
     defer { unused WidgetPaletteRestore(session) }
     Box(session, BoxProps.{.key = cast(u64)49519,
-        .bounds = Rectangle.{viewport.x, viewport.y, viewport.width, 88.0},
-        .fill = Color.{17, 18, 35, 255}})
+            .bounds = Rectangle.{viewport.x, viewport.y, viewport.width, 88.0},
+            .fill = Color.{17, 18, 35, 255}})
     locale := TextUntilNul(collection_node_locale[:])
     allowed := collection_node_choice == APP_CONNECTION_ALLOWED
     status := ifx !allowed then "offline_library" else ifx collection_node.stage != 0 then "loading_library" else ifx collection_node.failed then "library_unavailable" else "saved_library"
     width := ifx viewport.width - 180.0 < 320.0 then viewport.width - 180.0 else 320.0
     if Button(session, ButtonProps.{.key = cast(u64)49520, .id = 49520,
-        .label = Labels.AppsLabel(locale, ifx allowed then "refresh_library" else "connect_node"),
-        .bounds = Rectangle.{viewport.x + 8.0, viewport.y + 6.0, width, 44.0},
-        .tone = ButtonTone.ButtonToneNeutral, .emphasis = ButtonEmphasis.ButtonEmphasisSoft}) != 0 {
+            .label = Labels.AppsLabel(locale, ifx allowed then "refresh_library" else "connect_node"),
+            .bounds = Rectangle.{viewport.x + 8.0, viewport.y + 6.0, width, 44.0},
+            .tone = ButtonTone.ButtonToneNeutral, .emphasis = ButtonEmphasis.ButtonEmphasisSoft}) != 0 {
         if !allowed { collection_node_notice = true }
         else if collection_node.changed { collection_node_apply = true }
         else { collection_node_apply = true; unused AppRemoteCatalogRefresh(*collection_node) }
     }
     // A separate connection control keeps revocation available after consent.
     if Button(session, ButtonProps.{.key = cast(u64)49521, .id = 49521,
-        .label = Labels.AppsLabel(locale, "node_connection"),
-        .bounds = Rectangle.{viewport.x + viewport.width - 170.0, viewport.y + 52.0, 158.0, 28.0},
-        .tone = ButtonTone.ButtonToneNeutral, .emphasis = ButtonEmphasis.ButtonEmphasisSoft}) != 0 {
+            .label = Labels.AppsLabel(locale, "node_connection"),
+            .bounds = Rectangle.{viewport.x + viewport.width - 170.0, viewport.y + 52.0, 158.0, 28.0},
+            .tone = ButtonTone.ButtonToneNeutral, .emphasis = ButtonEmphasis.ButtonEmphasisSoft}) != 0 {
         collection_node_notice = true
     }
     Text(session, TextProps.{.key = cast(u64)49522, .text = Labels.AppsLabel(locale, status), .font = 12, .wrap = TextWrap.TextWrapAuto,
-        .bounds = Rectangle.{viewport.x + 16.0, viewport.y + 58.0, viewport.width - 196.0, 26.0}})
+            .bounds = Rectangle.{viewport.x + 16.0, viewport.y + 58.0, viewport.width - 196.0, 26.0}})
 }
 
 CollectionNodeClose :: () {

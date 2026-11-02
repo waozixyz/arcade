@@ -7,7 +7,7 @@ bridge_modules = ["app"]
 
 [toolchain]
 git = "https://github.com/ziranlang/ziran.git"
-ref = "972dc244c4ae67e87b6089869dff5abc9d36c1f8"
+ref = "c47f927ca316a0494dff4f2389de3333bc8e08b4"
 
 [install]
 bin = "arcade"
@@ -34,12 +34,12 @@ ref = "e373b8a7f8821256b86de12dd5ee05a32d373e87"
 [dependencies.apps]
 git = "https://github.com/waozixyz/apps.git"
 # Use the shared controller reviewed with the supported collection host.
-ref = "47ce0302664fe2f87f3cb05407eac7aa09066c96"
+ref = "f39508361f79a10a57643e97b613b34e434b9834"
 
 # Shovey's editions and editor are available as separate downloads.
 [dependencies.shovey]
 git = "https://github.com/waozixyz/shovey.git"
-ref = "c152526893b92e75c82f55b0adf2c684e47fdbc2"
+ref = "4204ef694f54aff644ac6627e74a9fb9bcc6b643"
 
 # Compatibility tooling runs Inner Breeze's host checks; releases check its publisher pins.
 [dependencies.inbe]
@@ -48,7 +48,7 @@ ref = "master"
 
 [dependencies.entity]
 git = "https://github.com/waozixyz/entity.git"
-ref = "92a033e048b920b1b43940040771fc51e7d1f9f7"
+ref = "298a5413faf4d8bbcf0af38de1c0e3755876b18c"
 
 [dependencies.mingcute]
 git = "https://github.com/kryonlabs/mingcute.git"
