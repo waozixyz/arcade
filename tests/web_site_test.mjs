@@ -242,8 +242,10 @@ try {
       .filter(name => /\\/library\\//.test(new URL(name).pathname) || name.includes(${JSON.stringify(library?.art || '-')}))`);
     // This private page chooses the public node connection explicitly. A
     // returning visit reuses its saved origin-specific answer.
-    const initial = await waitButton(['Connect', 'Shovey']);
+    const initial = await waitButton(['Connect', 'Allow', 'Shovey']);
     if (initial.label === 'Connect') await click(initial);
+    const permission = initial.label === 'Connect' ? await waitButton(['Allow', 'Shovey']) : initial;
+    if (permission.label === 'Allow') await click(permission);
     await waitButton('Shovey');
     if (library) {
       // The first visit draws every cover from the small copies alone.
