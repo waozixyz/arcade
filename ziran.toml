@@ -48,7 +48,7 @@ ref = "master"
 
 [dependencies.entity]
 git = "https://github.com/waozixyz/entity.git"
-ref = "132d002e6a974bb2b3b27f4b97c8f0ed6d7a6d3d"
+ref = "908884c669ec05421373f3077d4bf5517af21bcd"
 
 [dependencies.mingcute]
 git = "https://github.com/kryonlabs/mingcute.git"
@@ -75,3 +75,7 @@ source = true
 [dependencies.daochi_client]
 git = "https://github.com/ziranlang/daochi-client.git"
 ref = "970d5e44b1702158cb16469892da6ff50f142427"
+
+[dependencies.kss]
+git = "https://github.com/kryonlabs/kss.git"
+ref = "1cb9df183089a77c8a16448a556186f30b261a98"
