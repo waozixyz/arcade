@@ -36,23 +36,23 @@ with tempfile.TemporaryDirectory(prefix='arcade-publisher-') as directory:
     store = work / 'store'
 
     def stage():
-        return publisher.stage_node_app(store, 'chess', private, 'test-key', pins,
-                                        ledger_path=ledger, bundle_directory=ROOT / 'build/games')
+        return publisher.stage_node_app(store, 'arcade', private, 'test-key', pins,
+                                        ledger_path=ledger, bundle_directory=ROOT / 'build/node-apps')
 
     value = stage()
     assert stage() == value
-    assert value['app_id'] == 'inbe.chess'
-    assert value['artifacts'][0]['sha256'] == sha256((ROOT / 'build/games/chess.zx').read_bytes()).hexdigest()
+    assert value['app_id'] == 'inbe.arcade'
+    assert value['artifacts'][0]['sha256'] == sha256((ROOT / 'build/node-apps/arcade.zx').read_bytes()).hexdigest()
     key.public_key().verify(bytes.fromhex(value['signature']), publisher.signing_message(value))
     # The upload carries the release files; the node writes its own history.
     entries = {str(path.relative_to(store)): path.read_bytes() for path in store.rglob('*')
                if path.is_file() and path.name not in ('.publish.lock', 'history-v2.json')}
     remote = work / 'receiver'
-    publisher.import_node_app(entries, remote, json.loads(pins.read_text()), 'inbe.chess')
-    assert json.loads((remote / 'inbe.chess/latest-v2.json').read_bytes()) == value
-    component = owned['node_apps']['chess']
+    publisher.import_node_app(entries, remote, json.loads(pins.read_text()), 'inbe.arcade')
+    assert json.loads((remote / 'inbe.arcade/latest-v2.json').read_bytes()) == value
+    component = owned['node_apps']['arcade']
     component['version'] = '1.0.1'
-    component['sequence'] = 2
+    component['sequence'] = 1
     ledger.write_text(json.dumps(owned))
     try:
         stage()
@@ -60,8 +60,8 @@ with tempfile.TemporaryDirectory(prefix='arcade-publisher-') as directory:
         pass
     else:
         raise AssertionError('Publisher accepted an older game release')
-    assert json.loads((store / 'inbe.chess/latest-v2.json').read_bytes()) == value
-    component['id'] = 'arcade.chess'
+    assert json.loads((store / 'inbe.arcade/latest-v2.json').read_bytes()) == value
+    component['id'] = 'arcade.renamed'
     ledger.write_text(json.dumps(owned))
     try:
         stage()

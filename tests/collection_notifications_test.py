@@ -10,7 +10,7 @@ import subprocess
 ROOT = Path(__file__).resolve().parents[1]
 WORK = ROOT / 'work/notification-api42'
 ZIRAN = ROOT / 'scripts/ziran.sh'
-LOCK = ['--locked']
+LOCK = [] if (ROOT / 'ziran.local.toml').exists() else ['--locked']
 
 
 def run(*args):
@@ -73,7 +73,9 @@ def main():
     lines = (ROOT / 'build/.ziran/module-map.tsv').read_text().splitlines()
     replacements = {'notification_schedule': apps / 'tests/notification_provider.zi',
                     'collection_notification_platform': ROOT / 'tests/collection_notification_native_fixture.zi'}
-    kryon_id = json.loads((ROOT / 'ziran.lock').read_text())['root']['dependencies']['kryon']
+    kryon_id = next(fields[3] for line in lines
+                    if len(fields := line.split('\t')) == 5
+                    and fields[:3] == ['D', 'root', 'kryon/notification_schedule'])
     replaced = dict.fromkeys(replacements, 0)
     for index, line in enumerate(lines):
         fields = line.split('\t')

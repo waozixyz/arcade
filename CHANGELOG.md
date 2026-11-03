@@ -1,22 +1,11 @@
 # Arcade changelog
 
-## [Unreleased]
+## 0.7.119
 
-- Keep game downloads in an artwork launch screen and add a shared in-game Arcade Home control that saves before returning.
-
-- Browse games on an artwork-led console shelf that adapts to landscape and portrait, with a focused selection and painted Dew and profile icons.
-- Open games on their normal titles and keep editors inside their games, retaining installed add-ons and saved drafts.
-
-- Paint the desktop host bar with the surrounding palette instead of exposing a light background above the library.
-
-- Support evening chest reminders from compatible games on Android, with the device's notification permission and only the selected game counted as opened.
-
-- Password fields start empty and show one star per character, including long passwords.
-
-- Use Entity's reviewed account authorization and shared Apps controller.
-- Keep the full game collection within the host payload limit by packing opaque pictures without redundant alpha data; decoded pixels stay identical.
-- On Android, Continue as can use the account from another signed-in Waozi app, once you approve it there.
-- Arcade and its games open again in Breeze builds that read the previous app bundle format.
+- Browse an artwork-led console shelf in portrait or landscape, with painted profile and Dew controls.
+- Download games from their launch screens and return Home with progress saved; editors and drafts stay inside their games.
+- Improve account sign-in, password entry and Android chest reminders.
+- Preserve installed games and saves across library, host and Breeze updates.
 
 ## 0.7.117
 

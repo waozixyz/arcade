@@ -157,6 +157,7 @@ class AndroidVerifierTests(Fixture):
         (self.root / 'apps/versions.json').write_text(json.dumps(ledger))
         self.metadata['node'] = builder.node_source(self.root)
         self.assets = {'assets/arcade.zx': payload, 'assets/apps.zx': controller,
+                       **{'assets/' + name: b'fixture-hud' for name in android_catalog.HUD_PATHS},
                        'assets/entity.zx': bundle({}), 'assets/kryon-font.ttf': b'font',
                        'res/icon.png': b'icon', 'lib/arm64-v8a/libmain.so': b'arm64',
                        'lib/armeabi-v7a/libmain.so': b'arm', 'classes.dex': b'normal'}
@@ -181,6 +182,8 @@ class AndroidVerifierTests(Fixture):
 
         with patch.object(release, 'ROOT', self.root), patch.object(android_catalog, 'ROOT', self.root), \
                 patch.object(android_catalog, 'profile_asset_hashes', return_value={}), \
+                patch.object(android_catalog, 'hud_hashes', return_value={
+                    name: hashlib.sha256(b'fixture-hud').hexdigest() for name in android_catalog.HUD_PATHS}), \
                 patch.object(release, 'verify_launcher'), \
                 patch.object(release.subprocess, 'check_output', side_effect=command), \
                 patch.object(release.subprocess, 'run'):

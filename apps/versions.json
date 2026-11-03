@@ -20,8 +20,8 @@
     "shovey": {
       "id": "arcade.shovey",
       "title": "Shovey",
-      "version": "0.6.164",
-      "sequence": 171,
+      "version": "0.6.165",
+      "sequence": 172,
       "host_api": 42
     },
     "shovey-editor": {
@@ -34,8 +34,8 @@
     "arcade": {
       "id": "inbe.arcade",
       "title": "Arcade",
-      "version": "0.7.118",
-      "sequence": 197,
+      "version": "0.7.119",
+      "sequence": 198,
       "host_api": 41
     },
     "wurm": {

@@ -1,0 +1,43 @@
+name: Export locked games
+description: Build portable exports in their owning repositories before Arcade imports them.
+runs:
+  using: composite
+  steps:
+    - id: games
+      shell: bash
+      working-directory: waozixyz/arcade
+      run: |
+        python3 - <<'PY' >> "$GITHUB_OUTPUT"
+        import json
+        lock = json.load(open('ziran.lock'))
+        for name in ('shovey', 'wurm', 'choano'):
+            identifier = lock['root']['dependencies'][name]
+            print(name + '=' + next(p['commit'] for p in lock['packages'] if p['id'] == identifier))
+        PY
+    - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+      with:
+        repository: waozixyz/shovey
+        ref: ${{ steps.games.outputs.shovey }}
+        path: waozixyz/shovey
+    - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+      with:
+        repository: waozixyz/wurm
+        ref: ${{ steps.games.outputs.wurm }}
+        path: waozixyz/wurm
+    - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+      with:
+        repository: waozixyz/choano
+        ref: ${{ steps.games.outputs.choano }}
+        path: waozixyz/choano
+    - shell: bash
+      working-directory: waozixyz/arcade
+      run: |
+        python3 - <<'PY'
+        from pathlib import Path
+        for name in ('shovey', 'wurm', 'choano'):
+            (Path('..') / name / 'ziran.local.toml').write_text('[overrides]\nziran = "../../ziranlang/ziran"\n')
+        Path('ziran.local.toml').write_text('[overrides]\nziran = "../../ziranlang/ziran"\nshovey = "../shovey"\nwurm = "../wurm"\nchoano = "../choano"\n')
+        PY
+        (cd ../shovey && make levels landscape && python3 scripts/player.py collection --web)
+        (cd ../wurm && python3 tools/build_portable.py)
+        (cd ../choano && make portable)

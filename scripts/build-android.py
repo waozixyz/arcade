@@ -111,7 +111,8 @@ def main():
     sdk = Path(os.environ.get('ANDROID_SDK_ROOT') or os.environ.get('ANDROID_HOME') or Path.home() / 'Android/Sdk')
     env = {key: value for key, value in os.environ.items() if key not in ('DISPLAY', 'WAYLAND_DISPLAY', 'XAUTHORITY', 'DBUS_SESSION_BUS_ADDRESS')}
     env.update(ANDROID_HOME=str(sdk), ANDROID_SDK_ROOT=str(sdk),
-               LIBOQS_DIR=str(package('liboqs')), MONOCYPHER_DIR=str(package('monocypher')))
+               LIBOQS_DIR=str(package('liboqs')), MONOCYPHER_DIR=str(package('monocypher')),
+               KRYON_ANDROID_WEBP_DIR=str(package('libwebp')))
     command = ['sh', str(ROOT / 'droid/gradlew'), '-p', str(ROOT / 'droid'), '--no-daemon', '--max-workers=2',
                '-Papp.product=' + args.product, '-Papp.abis=' + args.abis,
                '-Pkryon.dir=' + str(package('kryon')), '-Pziran.dir=' + str(package('ziran')),

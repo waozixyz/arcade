@@ -1,5 +1,10 @@
 # Arcade catalog changelog
 
+## 0.7.119
+
+- Browse the new console shelf, open games from their artwork and return Home with progress saved.
+- Keep editors and saved drafts inside their games.
+
 ## 0.7.118
 
 - Apfelwurm 0.2.28: The editor title painting includes the Apfelwurm Editor logo in portrait and landscape.

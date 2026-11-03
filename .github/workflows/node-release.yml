@@ -64,11 +64,12 @@ jobs:
           # Generate the game in its own checkout, never in the package cache.
           printf '[overrides]\nshovey = "../shovey"\nziran = "../../ziranlang/ziran"\n' > ziran.local.toml
           ../../ziranlang/ziran/build/bin/ziran fetch
+      - name: Export games in their owning repositories
+        uses: ./waozixyz/arcade/.github/actions/game-exports
       - name: Build and verify the node catalog
         env:
           EXPECTED_SHA256: ${{ inputs.sha256 }}
         run: |
-          make -C ../shovey levels landscape
           make collection
           python3 tests/collection_test.py
           python3 tests/publisher_test.py

@@ -37,10 +37,9 @@ assert b"xyz.waozi.choano\n" in listed_output
 unknown = subprocess.run([str(ROOT / "build/arcade"), "--app", "unknown"],
                          env=env, capture_output=True, timeout=10)
 assert unknown.returncode == 1 and b"unknown game" in unknown.stderr
-original = (ROOT / 'build/games/chess.zx').read_bytes()
 container = (ROOT / 'build/arcade.zx').read_bytes()
 metadata = json.loads((ROOT / 'build/arcade.json').read_text())
-assert original not in container, 'Disabled Chess must not remain in the published collection'
+assert not (ROOT / 'build/games/chess.zx').exists(), 'Disabled Chess must not be exported'
 assert {child['id'] for child in metadata['children']} == {
     'arcade.shovey', 'arcade.shovey-editor', 'xyz.waozi.choano',
     'xyz.waozi.wurm', 'xyz.waozi.wurm-editor'

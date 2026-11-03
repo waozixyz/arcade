@@ -119,11 +119,12 @@ jobs:
           # The game is generated in its own checkout at the locked release.
           printf '[overrides]\nshovey = "../shovey"\nziran = "../../ziranlang/ziran"\n' > ziran.local.toml
           ../../ziranlang/ziran/build/bin/ziran fetch
+      - name: Export games in their owning repositories
+        uses: ./waozixyz/arcade/.github/actions/game-exports
       - name: Build the APK
         env:
           EDITION: ${{ matrix.edition }}
         run: |
-          make -C ../shovey levels landscape
           if [ "$EDITION" = direct ]; then make android; else make "android-$EDITION"; fi
       - name: Keep Google libraries out of the normal and F-Droid APK
         if: matrix.edition != 'gplay'
