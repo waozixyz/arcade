@@ -245,7 +245,7 @@ GameAssetsValid :: () -> bool {
     if !id.valid || manifest.data[id.start:id.end] != GameAt(host.index).id ||
     !contract.valid || contract.value != GAME_CONTRACT_VERSION ||
     !module_api.valid || module_api.value != MODULE_ABI ||
-    !host_api.valid || host_api.value < 1 || host_api.value > GAME_HOST_API ||
+    !host_api.valid || host_api.value < 1 || host_api.value > GAME_DIRECT_HOST_API ||
     !save_schema.valid || save_schema.value < 1 { return false }
     read: bool
     write: bool

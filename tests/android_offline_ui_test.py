@@ -14,7 +14,7 @@ import time
 root = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(root / 'scripts'))
 from android_catalog import verify_assets
-from collection_ui_test import package_server, answer_library_question, answer_level_updates
+from collection_ui_test import package_server, answer_library_question, answer_level_updates, enter_shovey_play, campaign_progress
 
 parser = argparse.ArgumentParser(description=__doc__)
 parser.add_argument('--binary', type=Path, required=True)
@@ -23,7 +23,7 @@ args = parser.parse_args()
 assert int(os.environ['DISPLAY'].split(':')[-1].split('.')[0]) >= 400
 assert os.environ['YUE_DESKTOP_RECOVERY'] == '0'
 assets = root / 'build/android-assets'
-metadata = verify_assets({p.name: p.read_bytes() for p in assets.iterdir() if p.is_file()} |
+metadata = verify_assets({p.relative_to(assets).as_posix(): p.read_bytes() for p in assets.rglob('*') if p.is_file()} |
                          {'entity.zx': (root / 'build/entity.zx').read_bytes()})
 entries = {entry['expected_id']: entry for entry in metadata['children']}
 sys.path.insert(0, str(args.inbe_source / 'tests'))
@@ -38,6 +38,7 @@ with tempfile.TemporaryDirectory(prefix='host-', dir=output) as temporary, packa
     shutil.copy2(args.binary, install / 'arcade')
     for name in ('arcade.zx', 'arcade.json', 'apps.zx'):
         shutil.copyfile(assets / name, install / name)
+    shutil.copytree(assets / 'assets/hud', install / 'assets/hud')
     shutil.copyfile(root / 'build/entity.zx', install / 'entity.zx')
     profile = Path(temporary) / 'profile'
     retained = profile / 'games/inbe.chess/records/computer'
@@ -68,33 +69,47 @@ with tempfile.TemporaryDirectory(prefix='host-', dir=output) as temporary, packa
         driver.press(key=action['key'], role='button')
 
     def play():
+        enter_shovey_play(driver)
         answer_level_updates(driver)
         if driver.find(label='How do you want to move?', role='text'):
             driver.press(label='Swipe and tap')
         driver.wait(label='Restart', role='button', timeout=60)
         assert not driver.find(label='Download', role='button')
 
+    def library():
+        for _ in range(8):
+            if driver.find(label='Shovey', role='button'):
+                return
+            driver.key('escape')
+            driver.wait_idle(frames=5)
+        raise driver._failure('Back did not return to the library')
+
+    def editor():
+        driver.wait(label='Editor', role='button')
+        driver.press(label='Editor', role='button')
+        if driver.find(label='Cancel', role='button'):
+            download()
+        driver.wait(label='Levels', role='button', timeout=60)
+
     with application('install'):
         answer_library_question(driver)
         games = {entry['sha256'] for entry in metadata['children']}
         assert not games & set(server['requests']), 'No game before download consent'
-        driver.press(label='Shovey Editor', role='button')
+        assert not driver.find(label='Shovey Editor', role='button'), 'Editors belong inside their game'
+        driver.press(label='Shovey', role='button')
         driver.wait(label='Cancel', role='button')
         driver.press(label='Cancel', role='button')
         assert not games & set(server['requests']), 'Cancel must download nothing'
-        driver.press(label='Shovey Editor', role='button')
+        driver.press(label='Shovey', role='button')
         server['corrupt_shovey'] = True
         download()
         driver.wait(label='Try again', role='button', timeout=60)
-        assert not driver.find(label='New level', role='text'), 'Corrupt dependency must not open'
+        assert not driver.find(label='Play', role='button'), 'Corrupt game must not open'
         server['corrupt_shovey'] = False
         download('Try again')
-        driver.wait(label='New level', role='text', timeout=60)
+        driver.wait(label='Play', role='button', timeout=60)
         assert server['requests'].count(entries['shovey']['sha256']) == 2
-        assert server['requests'].count(entries['shovey-editor']['sha256']) == 1
-        driver.key('escape')
-        driver.wait(label='Shovey', role='button')
-        driver.press(label='Shovey', role='button')
+        assert entries['shovey-editor']['sha256'] not in server['requests']
         play()
         driver.key('right')
         deadline = time.monotonic() + 20
@@ -102,28 +117,16 @@ with tempfile.TemporaryDirectory(prefix='host-', dir=output) as temporary, packa
             driver.wait_idle(frames=5)
         assert record.exists(), 'Game must persist progress'
         driver.press(label='Back', role='button')
-        driver.wait(label='Shovey', role='button')
+        driver.wait(label='Editor', role='button')
+        editor()
+        assert server['requests'].count(entries['shovey-editor']['sha256']) == 1
+        library()
         driver.press(label='Apfelwurm', role='button')
         download()
         driver.wait(label='Play', role='button', timeout=60)
-        driver.key('escape')
-        driver.wait(label='Shovey', role='button')
-        driver.press(label='Profile', role='button')
-        driver.wait(label='Account', role='text')
-        driver.press(label='Leaderboard', role='button')
-        driver.wait(label='Apfelwurm', role='button')
-        driver.press(label='Apfelwurm', role='button')
-        # The profile stays usable with its optional game sheets omitted.
-        driver.wait(label='Back', role='button')
-        driver.press(label='Back', role='button')
-        driver.wait(label='Account', role='text')
-        driver.press(label='Back', role='button')
-        driver.key('escape')
-        driver.wait(label='Node connection', role='button')
-        driver.press(label='Node connection', role='button')
-        driver.wait(label='Stay offline', role='button')
-        driver.press(label='Stay offline', role='button')
-        driver.wait(label='Shovey', role='button')
+        library()
+        assert not driver.find(label='Node connection', role='button'), 'The library has no node controls'
+        assert not driver.find(label='Refresh library', role='button'), 'The library refreshes by itself'
     saved = record.read_bytes()
     for name in ('shovey', 'shovey-editor', 'wurm'):
         entry = entries[name]
@@ -133,18 +136,18 @@ with tempfile.TemporaryDirectory(prefix='host-', dir=output) as temporary, packa
     requested = list(server['requests'])
     server['offline'] = True
     with application('offline'):
-        answer_library_question(driver)
+        driver.wait(label='Shovey', role='button')
+        assert not driver.find(label='Allow fetching content and automatic app updates?', role='text'), 'Consent stays saved'
         driver.press(label='Shovey', role='button')
         play()
         driver.press(label='Back', role='button')
-        driver.wait(label='Shovey Editor', role='button')
-        driver.press(label='Shovey Editor', role='button')
-        driver.wait(label='New level', role='text', timeout=60)
-        driver.key('escape')
-        driver.wait(label='Apfelwurm', role='button')
+        driver.wait(label='Editor', role='button')
+        editor()
+        library()
         driver.press(label='Apfelwurm', role='button')
         driver.wait(label='Play', role='button', timeout=60)
-    assert server['requests'] == requested, 'Installed apps/art must reopen offline without requests'
-    assert record.read_bytes() == saved, 'Offline restart must preserve saved progress'
+    cached_payloads = games | {metadata['art']['sha256']}
+    assert not cached_payloads & set(server['requests'][len(requested):]), 'Installed apps/art must reopen offline without requests'
+    assert campaign_progress(record.read_bytes()) == campaign_progress(saved), 'Offline restart must preserve saved progress'
     assert retained.read_bytes() == b'existing private save'
 print('Android catalog: consent, dependency verification/retry, install/open, cached offline and retained saves passed')

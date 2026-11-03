@@ -50,10 +50,21 @@ class AndroidCatalogTests(unittest.TestCase):
     def setUp(self):
         self.assets = {name: (ROOT / 'build' / name).read_bytes()
                        for name in ('arcade.zx', 'arcade.json', 'apps.zx', 'entity.zx')}
+        self.assets.update({name: (ROOT / 'build/android-assets' / name).read_bytes()
+                            for name in android_catalog.HUD_PATHS})
         self.assets['kryon-font.ttf'] = b'font'  # Content boundary, not a font renderer.
 
     def test_standard_catalog(self):
         verify_assets(self.assets)
+
+    def test_reject_modified_or_missing_startup_hud(self):
+        for name in android_catalog.HUD_PATHS:
+            with self.subTest(path=name), self.assertRaisesRegex(AssertionError, 'HUD icons differ'):
+                verify_assets(self.assets | {name: b'changed'})
+            without = dict(self.assets)
+            del without[name]
+            with self.assertRaisesRegex(AssertionError, 'Unexpected or missing'):
+                verify_assets(without)
 
     def test_reject_changed_node_trust_binding(self):
         for key, value in (('origin', 'https://example.org'), ('public_key', 'a' * 64),

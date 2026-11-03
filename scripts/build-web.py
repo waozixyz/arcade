@@ -34,7 +34,7 @@ ROOT = Path(__file__).resolve().parents[1]
 ZIRAN = str(ROOT / 'scripts/ziran.sh')
 ART_LIMIT = 64 * 1024 * 1024
 # The committed library copies are at most this large (scripts/library-art.py).
-PICTURE_LONGEST = 640
+PICTURE_LONGEST = 1600
 COVER_QUALITY = 80
 
 
@@ -144,7 +144,8 @@ def stage_web_library_art(bundle, output):
     covers = {path for child in catalog['children'] for key, path in child.get('cover', {}).items()
               if key in ('portrait', 'landscape', 'logo')}
     copies = {}
-    for path in sorted(previews | covers):
+    hud = {path for path in pictures if path.startswith('assets/arcade/library/hud-') and path.endswith('.webp')}
+    for path in sorted(previews | covers | hud):
         if path not in pictures:
             raise ValueError(f'The art bundle lacks {path}')
         copies[path] = web_picture(pictures[path], path in previews)
@@ -183,7 +184,8 @@ def version_assets(output, receipt):
     if '__ARCADE_ASSET_REVISION__' not in html:
         return
     digest = hashlib.sha256()
-    for name in ('runtime.js', 'runtime.wasm', 'runtime.data', 'arcade.json', 'apps.zx', 'library.json'):
+    for name in ('runtime.js', 'runtime.wasm', 'runtime.data', 'arcade.json', 'apps.zx', 'library.json',
+                 'assets/hud/profile.webp', 'assets/hud/dew.webp'):
         path = output / name
         if path.is_file():
             digest.update(name.encode() + b'\0')
@@ -253,6 +255,8 @@ def main():
         print('No matching Apps controller beside the collection; it must pack its own')
     if not args.shovey and stage_web_library_art(bundle, output) is None:
         print('The collection packs its own library art')
+    from hud_assets import stage_hud_assets
+    stage_hud_assets(package('apps'), output)
     version_assets(output, receipt)
     print(f'{"Shovey" if args.shovey else "Arcade"} {args.version} for the browser in {output}')
 

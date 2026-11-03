@@ -68,6 +68,8 @@ def main():
                     str(package('monocypher') / 'src/optional/monocypher-ed25519.c'), str(oqs / 'lib/liboqs.a'),
                     '-Wl,--gc-sections', *libraries, '-lX11', '-l:libcurl.so.4', '-lz', '-lm', '-lpthread', '-o', str(temporary)], check=True)
     temporary.replace(output)
+    from hud_assets import stage_hud_assets
+    stage_hud_assets(package('apps'), output.parent)
     if args.standalone_shovey:
         from PIL import Image
         source = Path(subprocess.check_output([ZIRAN, 'pkg', 'path', 'shovey', *lock], cwd=ROOT, text=True).strip())

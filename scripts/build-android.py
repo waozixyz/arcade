@@ -57,8 +57,11 @@ def stage_arcade():
     for name in ('arcade.zx', 'arcade.json'):
         shutil.copyfile(ROOT / 'build' / name, assets / name)
     shutil.copyfile(collection / 'assets/apps/apps.zx', assets / 'apps.zx')
+    from hud_assets import stage_hud_assets
+    stage_hud_assets(package('apps'), assets)
     from android_catalog import verify_assets
-    metadata = verify_assets({p.name: p.read_bytes() for p in assets.iterdir()}, essentials=False)
+    metadata = verify_assets({p.relative_to(assets).as_posix(): p.read_bytes()
+                              for p in assets.rglob('*') if p.is_file()}, essentials=False)
     if metadata['version'] != release['version']:
         raise ValueError('The thin catalog version changed; rebuild the collection first')
     # Android before 10 has no font lookup; the Windows build ships the same font.

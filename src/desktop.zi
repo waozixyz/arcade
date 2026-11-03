@@ -14,6 +14,7 @@
 #import "kryon/carousel"
 #import "apps/appearance"
 #import "kryon/widget_palette"
+#import "kryon/loading_indicator"
 
 sdl :: #system_library "SDL2";
 SetTitle :: (window: *void, title: *u8) #foreign sdl "SDL_SetWindowTitle";
@@ -34,8 +35,8 @@ DrawStartup :: (session: Session, directory: string, standalone: bool = true) ->
     } else {
         unused WidgetPaletteUse(session, AppCoversPalette())
         Box(session, BoxProps.{.key = cast(u64)48000, .bounds = viewport, .fill = Color.{17, 18, 35, 255}})
-        Text(session, TextProps.{.key = cast(u64)48001, .text = "Arcade", .font = 32,
-                .bounds = Rectangle.{20.0, 20.0, viewport.width - 40.0, 44.0}})
+        LoadingIndicator(session, LoadingIndicatorProps.{.key = cast(u64)48001,
+                .bounds = viewport, .now = cast(float64)MonotonicMilliseconds() / 1000.0})
         unused WidgetPaletteRestore(session)
     }
     if EndFrame(session) != FrameStatus.FrameOk { return false }
@@ -48,7 +49,7 @@ Draw :: (session: Session) -> bool {
     BeginDesktopFrame()
     KeyboardModifiersSend(session, DesktopModifiers())
     key := DesktopPressedKey()
-    for candidate: cast(s32)0..269 {
+    for candidate: cast(s32)0..511 {
         if TestDriverKeyPressed(candidate) { key = candidate; break }
     }
     if key == 256 && CollectionBack() { key = 0 }

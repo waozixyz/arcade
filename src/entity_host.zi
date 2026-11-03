@@ -12,7 +12,7 @@
 #import "kryon/button_props"
 #import "kryon/button_widget"
 #import "platform"
-#import "shovey/shovey_theme"
+#import "profile_palette"
 #import "kryon/widget_palette"
 #import "apps/appearance"
 #import "kryon/drawing_props"
@@ -84,8 +84,9 @@ EntityBack :: () -> bool {
     return true
 }
 
-EntityFrame :: (session: Session, viewport: Rectangle, key: s32, modifiers: s32) -> bool {
-    unused WidgetPaletteUse(session, ifx entity_shovey then ShoveyPalette() else AppCoversPalette())
+EntityFrame :: (session: Session, viewport: Rectangle, key: s32, modifiers: s32,
+    connection_label: string = "", connection: *bool = null) -> bool {
+    unused WidgetPaletteUse(session, ifx entity_shovey then ShoveyHostPalette() else AppCoversPalette())
     defer { unused WidgetPaletteRestore(session) }
     Box(session, BoxProps.{.key = cast(u64)49010, .bounds = viewport,
             .fill = StyleTokenColorOr("canvas", Color.{239, 246, 244, 255})})
@@ -95,7 +96,12 @@ EntityFrame :: (session: Session, viewport: Rectangle, key: s32, modifiers: s32)
     if height > 720.0 { height = 720.0 }
     modal := ModalFrame(session, ModalFrameProps.{.key = cast(u64)49000, .id = 49000,
             .title = "Profile", .width = cast(s32)width, .height = cast(s32)height, .scale = 1.0,
+            .has_left_action = connection != null, .left_label = connection_label,
             .has_right_action = true, .right_label = "Back"})
+    if modal.left_clicked && connection != null && EntityHostSave() {
+        entity_visible = false
+        connection.* = true
+    }
     if modal.dismissed || modal.right_clicked { unused EntityBack() }
     if !modal.opened { return true }
     input := TextFieldInputFor(key, modifiers, TypedTextTake(session, entity_typed[:]))

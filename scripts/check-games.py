@@ -18,6 +18,13 @@ def translation_keys(code, prefix):
     return set(re.findall(r'"(' + re.escape(prefix) + r'[a-z0-9_]+)"', code))
 
 
+def compatible(game, standard):
+    for field in ('contract_version', 'module_api'):
+        assert game[field] == standard[field], f'{game["name"]}: incompatible {field}'
+    assert type(game['host_api']) is int and standard['oldest_host_api'] <= game['host_api'] <= standard['host_api'], \
+        f'{game["name"]}: incompatible host_api'
+
+
 def check(ziran, lock_flags):
     standard = json.loads((ROOT / 'standards/game-v1.json').read_text())
     ledger = json.loads((ROOT / 'apps/versions.json').read_text())
@@ -26,10 +33,12 @@ def check(ziran, lock_flags):
     player = re.search(r'^GAME_HOST_API :: (\d+)$', (ROOT / 'src/game_contract.zi').read_text(), re.M)
     assert player and int(player[1]) == standard['host_api'] == ledger['host_api'], \
         'src/game_contract.zi GAME_HOST_API, standards/game-v1.json and apps/versions.json must name the same host interface'
+    oldest = re.search(r'^GAME_OLDEST_HOST_API :: (\d+)$', (ROOT / 'src/game_contract.zi').read_text(), re.M)
+    assert oldest and int(oldest[1]) == standard['oldest_host_api'] == ledger['oldest_host_api'], \
+        'The player, standard and ledger must agree on the oldest supported host interface'
     for app in declared_apps(ROOT, ziran, lock_flags):
         source, manifest, game = app['source'], app['manifest'], app['descriptor']
-        for field in ['contract_version', 'module_api', 'host_api']:
-            assert game[field] == standard[field], f'{game["name"]}: incompatible {field}'
+        compatible(game, standard)
         component = ledger['node_apps'][game['name']]
         assert game['id'] == component['id'] and game['host_api'] == component['host_api']
         assert game['kind'] == 'game' and 'arcade' in game['harnesses']

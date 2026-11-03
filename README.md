@@ -1,9 +1,17 @@
 # Arcade
 
 Games and entertainment, alongside Werkzeug for practical tools and Inner
-Breeze for personal growth. Arcade opens on a dark grid of large rounded
-title-screen covers from the shared Apps controller. Click a cover to open
-an installed game or download it first. There are no separate launch buttons.
+Breeze for personal growth. Arcade opens on a console home from the shared Apps controller.
+Landscape fills the screen with the selected game’s screenshot above one bottom
+row of wide covers. Portrait centers a large tall cover, with neighbours peeking
+in and the same game colouring the background. A glowing outline marks focus. There is no home title or cover caption.
+Arrow keys, controller D-pad or left stick, swipes and the wheel select games;
+Enter or controller A opens the selection. Click a cover to open
+an installed game or open its artwork launch page first. Download consent,
+progress and retry stay in that page, without a modal. Back keeps the transfer
+running and returns to the same selected cover. Verified games open their own
+title screen. A house-shaped Arcade control stays above hosted games and editors;
+F1 or a controller’s View/Select button returns directly to the library after saving.
 Standalone Shovey opens on its own cover carousel;
 swipe, use the arrows or scroll the wheel to choose, then press Play/Open.
 Its desktop startup first draws a small full-colour title preview, then uses
@@ -13,16 +21,21 @@ existing saved games remain available for a later return.
 Each edition has a separate save and earned unlocks. Unlocked puzzles show
 their whole board; locked puzzles keep their lock until earned.
 
-The published Arcade carries only its catalog, well under one megabyte. Its host supplies the shared Apps controller (Inner Breeze its own, standalone Arcade the `apps.zx` installed beside it), and the covers and previews download once as one separate art bundle. Library covers, previews and logos use WebP thumbnails up to 256 pixels on their longest side: quality 80 for opaque art and lossless encoding for transparent art. Games keep their original artwork. The verified art bundle stays cached across restarts and is replaced when its content changes. The art lives in `assets/arcade/library/` (`python3 scripts/library-art.py` refreshes it when a game's art changes; the build stops until it does). Inner Breeze needs host interface 35 for it. Each game
+The published Arcade carries only its catalog, well under one megabyte. Its host supplies the shared Apps controller (Inner Breeze its own, standalone Arcade the `apps.zx` installed beside it), and the covers and previews download once as one separate art bundle. Library previews stay at 256 pixels. Real gameplay screenshots supply landscape heroes up to 1600 pixels and portrait covers up to 1080 pixels on the longest side, encoded as quality-80 WebP. The complete separate art bundle has a 2 MiB budget for the current games. Full-size originals stay in their game repositories. The verified art bundle stays cached across restarts and is replaced when its content changes. The art lives in `assets/arcade/library/` (`python3 scripts/library-art.py` refreshes it when a game's art changes; the build stops until it does). Inner Breeze needs host interface 35 for it. Each game
 downloads when opened, with its existing identity and saved progress. This
 catalog requires Inner Breeze host API 41. Downloaded games work offline;
 standalone Shovey keeps its complete offline collection. Apfelwurm comes from
 its own package, with the same game identity and private editor records.
 
-Shovey Editor is an add-on to Shovey. Its install dialog lists Shovey when it
-is needed and shows the total download size. Once Shovey is installed, only
+Arcade lists games only. Each game opens on its own normal title screen.
+Editors open from inside their games; installed editor add-ons and saved drafts
+keep their existing identities and records. Shovey’s Classic editor remains an
+add-on. Its named install dialog lists Shovey when needed and shows the total
+download size. The Island editor stays private. Once Shovey is installed, only
 the editor’s additions download. The editor reuses the original game’s art
-and sounds, and both remain available offline.
+and sounds, and both remain available offline. The top-right HUD uses the shared
+painted Dew jewel and profile medallion in one frame. Its two icons ship with the
+host independently of the remote library, so they also work offline.
 
 Chess’s retained implementation can choose a side and one of four computer
 levels. A local game
@@ -48,16 +61,17 @@ review are not implemented.
 
 Arcade includes the reviewed shared `apps.zx` controller and a small seed
 catalog. It asks before connecting to its node for the signed app library
-and compressed previews. The connection control can switch back to offline;
+and compressed previews. Profile’s Library connection control can switch back to offline;
 verified cached apps, previews and saved progress remain available.
 The catalog fixes the digest of every separately downloaded game. Each game package lists its apps in its own `apps.json`:
 the app's `catalog.json`, and for an app the library opens from a cover, the
-cover's portrait art, landscape art, logo, caption and action. `games.json`
+cover's portrait art, landscape art and action. `games.json`
 names the game packages, and Arcade's own `apps.json` its own apps. Arcade
-presents every declared leaf directly, without a second chooser, and a cover
-opens its app straight into play or editing. Shovey’s separate standalone
-collection uses the same leaves and saves. Kryon’s shared `Carousel` handles
-navigation and painting. Library refreshes use the reusable Apps signed catalog
+presents the games directly, and a cover opens the game's normal title screen.
+Editor add-ons remain declared for verified installation and save compatibility,
+and open from inside their game. Shovey’s separate standalone collection uses
+the same game identities and saves. The shared Apps console handles navigation
+and painting with Kryon widgets. Library refreshes use the reusable Apps signed catalog
 loader and do not update the native host. Inbe supplies its own account and package policy.
 Arcade's launcher icon is MingCute's `game_2` gamepad (Apache-2.0).
 
@@ -170,9 +184,39 @@ release. An APK's embedded seed catalog may have a different version from
 its native host.
 
 Game packages are registered in `games.json`; each declares its apps in its
-`apps.json`. `scripts/build-games.py` generates the catalog and bundles
-every declared app. Inbe remains a dependency for the existing shared interface
-and signed publisher, rather than for the Chess implementation.
+`apps.json`. Arcade is a catalog and downloader: games build and publish
+in their own repositories. `scripts/build-games.py` imports their portable
+exports byte for byte and generates catalog metadata; it never compiles game
+source, prepares assets, or runs game payloads. Disabled entries remain catalog
+metadata only, and private external editions (including Island) stay excluded.
+
+Before a local integrated build, export in each owning repository:
+
+- Shovey: `build-queue -- python3 scripts/player.py collection --web` exports
+  `build/player/games/{shovey,shovey-editor}.zx` and `-resources.json`.
+- Wurm: `build-queue -- python3 tools/build_portable.py` exports
+  `build/games/{wurm,wurm-editor}.zx`, `-resources.json` and `-preview.png`.
+- Choano: `build-queue -- make portable` exports `build/choano.zx`.
+
+Shovey and Choano previews come unchanged from their declared game preview
+paths. Every payload must embed its public app catalog at
+`assets/NAME/catalog.json`; add-ons must also embed `requirements.json` naming
+the exact imported dependency hashes. Import rejects identity, entry, resource
+link and dependency mismatches and payloads over 64 MiB before replacing prior
+staged games or catalogs. No compiler fallback exists.
+
+Clean locked/downloaded packages may have no local exports. Supply
+`--artifact-manifest PATH` to the importer (or `make
+GAME_ARTIFACT_MANIFEST=PATH`) with already exported artifacts. The JSON shape
+is `{"apps":{"APP_ID":{"bundle":"exports/game.zx",
+"preview":"exports/preview.png","resources":"exports/game-resources.json"}}}`.
+Paths are relative to the manifest or absolute; name exactly the enabled public
+IDs, including editor add-ons. `resources` may be omitted only for apps with
+no dependencies. Payloads and supplied sidecars are copied unchanged.
+Automatic remote release artifact retrieval/export wiring is not currently
+available here: obtain exports from the game owner or run its command above.
+The existing published web catalog build does not invoke game builds.
+Inbe remains a dependency for the existing shared interface and signed publisher.
 
 ## Saved games
 

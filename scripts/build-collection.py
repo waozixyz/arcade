@@ -17,6 +17,7 @@ from node_config import node_source
 ROOT = Path(__file__).resolve().parents[1]
 MAX_PAYLOAD_BYTES = 64 * 1024 * 1024
 MAX_GAMES = 16
+MAX_LIBRARY_ART_BYTES = 2 * 1024 * 1024
 
 
 def payload_limit(size, label):
@@ -68,7 +69,7 @@ def catalog_version(root):
     return version
 
 
-def library_art(root, name, key, source):
+def library_art(root, name, key, source, crop_top=0):
     """Arcade's committed library thumbnail (scripts/library-art.py), as
     (bytes, suffix): a bounded WebP image. Never pack a copy
     of outdated art."""
@@ -77,6 +78,8 @@ def library_art(root, name, key, source):
     copy = f"{name}-{key}"
     if sources.get(copy, {}).get("source_sha256") != hashlib.sha256(source).hexdigest():
         raise ValueError(f"{copy} art changed; run scripts/library-art.py")
+    if sources.get(copy, {}).get("crop_top", 0) != crop_top:
+        raise ValueError(f"{copy} crop changed; run scripts/library-art.py")
     for suffix in (".webp",):
         if (library / (copy + suffix)).is_file():
             return (library / (copy + suffix)).read_bytes(), suffix
@@ -101,6 +104,10 @@ def stage(root, controller, expected_controller_digest, output):
         raise ValueError("Arcade needs 1 to 16 games")
     ledger = json.loads((root / "apps/versions.json").read_text())["node_apps"]
     children, copies, identities = [], [], set()
+    shared_apps = Path(subprocess.check_output([str(root / 'scripts/ziran.sh'), 'pkg', 'path', 'apps', *lock_flags], cwd=root, text=True).strip())
+    for icon in ('profile', 'dew'):
+        contents, suffix = library_art(root, 'hud', icon, (shared_apps / 'assets/hud' / (icon + '.webp')).read_bytes())
+        copies.append((contents, Path('arcade/library') / ('hud-' + icon + suffix)))
     collection_ids = {package["id"] for package in packages}
     for package in packages:
         package["children"] = []
@@ -163,7 +170,7 @@ def stage(root, controller, expected_controller_digest, output):
                     relative = Path(cover[key])
                     if relative.is_absolute() or ".." in relative.parts or relative.suffix not in {".png", ".jpg"}:
                         raise ValueError("Invalid cover asset path")
-                    contents, suffix = library_art(root, name, key, (app["art_source"] / relative).read_bytes())
+                    contents, suffix = library_art(root, name, key, (app["art_source"] / relative).read_bytes(), app.get("cover_crops", {}).get(key, 0))
                     destination = Path("arcade/covers") / f"{name}-{key}{suffix}"
                     packed_cover[key] = "assets/" + destination.as_posix()
                     copies.append((contents, destination))
@@ -242,6 +249,10 @@ def stage_downloads(catalog, source, output, games, art):
             destination = art / relative
             destination.parent.mkdir(parents=True, exist_ok=True)
             shutil.move(output / relative, destination)
+    for picture in (output / 'assets/arcade/library').glob('hud-*.webp'):
+        destination = art / picture.relative_to(output)
+        destination.parent.mkdir(parents=True, exist_ok=True)
+        shutil.move(picture, destination)
     for digest, data in payloads.items():
         (games / (digest + ".zx")).write_bytes(data)
 
@@ -250,6 +261,8 @@ def add_art(output, games, art_bundle):
     """Publish the art bundle beside the games and name it in the catalog."""
     data = art_bundle.read_bytes()
     payload_limit(len(data), "Library art bundle")
+    if len(data) > MAX_LIBRARY_ART_BYTES:
+        raise ValueError("Library art bundle exceeds the 2 MiB art budget")
     digest = hashlib.sha256(data).hexdigest()
     (games / (digest + ".zx")).write_bytes(data)
     path = output / "assets/apps/catalog.json"

@@ -9,7 +9,7 @@ import re
 from pathlib import Path
 import subprocess
 
-APP_KEYS = {'manifest', 'cover', 'enabled', 'requires', 'shared_code', 'library_entries', 'shared_records'}
+APP_KEYS = {'manifest', 'cover', 'enabled', 'requires', 'shared_code', 'library_entries', 'shared_records', 'external', 'standalone_bundle'}
 COVER_KEYS = {'portrait', 'landscape', 'logo', 'caption', 'action'}
 
 
@@ -39,6 +39,9 @@ def declared_packages(root, ziran=None, lock_flags=()):
             not isinstance(alias, str) or not re.fullmatch(r'[A-Za-z_][A-Za-z0-9_]*', alias)
             for name, alias in artwork.items()):
         raise ValueError('Invalid artwork package')
+    screenshots = registration.get('screenshots', {})
+    if not isinstance(screenshots, dict) or any(name not in names[1:] for name in screenshots):
+        raise ValueError('Invalid gameplay screenshot package')
     packages = []
     for name in names:
         source = package_root(root, name, ziran, lock_flags)
@@ -48,6 +51,11 @@ def declared_packages(root, ziran=None, lock_flags=()):
         for app in declaration['apps']:
             if not set(app) <= APP_KEYS or not set(app.get('cover', {})) <= COVER_KEYS:
                 raise ValueError(f'{name}: unknown apps.json field')
+            if app.get('external', False):
+                # Independently published editions stay in their own game.
+                if app['external'] is not True or not str(relative_path(app.get('standalone_bundle', ''))).endswith('.zx'):
+                    raise ValueError(f'{name}: invalid external game edition')
+                continue
             manifest = source / relative_path(app['manifest'])
             requires = app.get('requires', [])
             if not isinstance(requires, list) or len(requires) > 8 or \
@@ -68,9 +76,32 @@ def declared_packages(root, ziran=None, lock_flags=()):
                         not re.fullmatch(r'[A-Za-z_][A-Za-z0-9_]*:[A-Za-z_][A-Za-z0-9_]*', item)
                         for item in library_entries) or len(set(library_entries)) != len(library_entries):
                 raise ValueError(f'{name}: invalid portable library entries')
-            apps.append(dict(package=name, source=source, art_source=art_source, manifest=manifest,
-                             descriptor=json.loads(manifest.read_text()),
-                             cover=app.get('cover'), requires=requires, shared_code=shared_code,
+            app_art_source = art_source
+            descriptor = json.loads(manifest.read_text())
+            cover_crops = {}
+            cover = app.get('cover')
+            internal = descriptor['name'].endswith('-editor')
+            if cover:
+                cover = dict(cover)
+                if internal:
+                    cover['action'] = 'internal'
+                elif name in screenshots:
+                    views = screenshots[name]
+                    if not isinstance(views, dict) or set(views) != {'portrait', 'landscape'}:
+                        raise ValueError('Gameplay screenshots need portrait and landscape')
+                    cover = {}
+                    for key, value in views.items():
+                        if isinstance(value, dict):
+                            if set(value) != {'path', 'crop_top'} or type(value['crop_top']) is not int or not 0 <= value['crop_top'] <= 256:
+                                raise ValueError('Invalid gameplay screenshot crop')
+                            cover_crops[key] = value['crop_top']
+                            value = value['path']
+                        cover[key] = str(relative_path(value))
+                    cover['action'] = 'open'
+                    app_art_source = source
+            apps.append(dict(package=name, source=source, art_source=app_art_source, manifest=manifest,
+                             descriptor=descriptor,
+                             cover=cover, cover_crops=cover_crops, internal=internal, requires=requires, shared_code=shared_code,
                              shared_records=shared_records,
                              library_entries=library_entries, enabled=app.get('enabled', True)))
         packages.append(dict(name=name, source=source, id=declaration['id'],
@@ -80,3 +111,40 @@ def declared_packages(root, ziran=None, lock_flags=()):
 
 def declared_apps(root, ziran=None, lock_flags=()):
     return [app for package in declared_packages(root, ziran, lock_flags) for app in package['apps']]
+
+
+def portable_artifacts(app, manifest=None, exports=None):
+    """Locate game-owned exports. Resolving paths never builds or runs a game.
+
+    An explicit manifest is useful with clean locked/downloaded packages whose
+    source cache deliberately has no build outputs. Paths are relative to it.
+    """
+    descriptor, source = app['descriptor'], app['source']
+    name, package = descriptor['name'], app['package']
+    instruction = ('Supply --artifact-manifest with exports from the game owner; '
+                   'Arcade never compiles games.')
+    if exports is not None:
+        record = exports['apps'][descriptor['id']]
+        if (not isinstance(record, dict) or not {'bundle', 'preview'} <= set(record)
+                or not set(record) <= {'bundle', 'preview', 'resources'}):
+            raise ValueError(f'{name}: artifact entry needs bundle, preview and optional resources paths')
+        locations = {}
+        for kind, value in record.items():
+            if not isinstance(value, str) or not value:
+                raise ValueError(f'{name}: invalid artifact path')
+            path = Path(value)
+            locations[kind] = path if path.is_absolute() else manifest.parent / path
+        return locations, instruction
+    folders = {'shovey': 'build/player/games', 'wurm': 'build/games', 'choano': 'build'}
+    commands = {'shovey': 'build-queue -- python3 scripts/player.py collection --web',
+                'wurm': 'build-queue -- python3 tools/build_portable.py',
+                'choano': 'build-queue -- make portable'}
+    if package not in folders:
+        raise ValueError(f'{name}: no game-owned artifact location. {instruction}')
+    folder = source / folders[package]
+    locations = dict(bundle=folder / (name + '.zx'),
+                     preview=folder / (name + '-preview.png') if package == 'wurm'
+                     else source / relative_path(descriptor['preview']))
+    if package in ('shovey', 'wurm'):
+        locations['resources'] = folder / (name + '-resources.json')
+    return locations, f'In {source}, run {commands[package]}. {instruction}'

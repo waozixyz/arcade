@@ -80,6 +80,8 @@ class WebLibraryArtTests(unittest.TestCase):
             'assets/arcade/covers/wurm-landscape.jpg': self.landscape,
             'assets/arcade/covers/wurm-logo.png': self.logo,
             'assets/arcade/previews/wurm.png': self.preview,
+            'assets/arcade/library/hud-profile.webp': self.logo,
+            'assets/arcade/library/hud-dew.webp': self.logo,
         })
 
     def tearDown(self):
@@ -122,7 +124,9 @@ class WebLibraryArtTests(unittest.TestCase):
         self.assertEqual(set(pictures), {'assets/arcade/covers/wurm-portrait.jpg',
                                          'assets/arcade/covers/wurm-landscape.jpg',
                                          'assets/arcade/covers/wurm-logo.png',
-                                         'assets/arcade/previews/wurm.png'})
+                                         'assets/arcade/previews/wurm.png',
+                                     'assets/arcade/library/hud-profile.webp',
+                                     'assets/arcade/library/hud-dew.webp'})
         copies = {}
         for name, picture in pictures.items():
             data = (self.site / picture['file']).read_bytes()
@@ -132,7 +136,7 @@ class WebLibraryArtTests(unittest.TestCase):
             copies[name] = data
         portrait = decoded(copies['assets/arcade/covers/wurm-portrait.jpg'])
         self.assertEqual(portrait.format, 'WEBP')
-        self.assertEqual(portrait.size, (427, 640))
+        self.assertEqual(portrait.size, (800, 1200))
         landscape = copies['assets/arcade/covers/wurm-landscape.jpg']
         self.assertEqual(decoded(landscape).format, 'WEBP')
         self.assertLess(len(landscape), len(self.landscape))

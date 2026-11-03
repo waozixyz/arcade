@@ -7,6 +7,8 @@ KRYON_DIR = $(shell $(ZIRAN) pkg path kryon $(LOCK_FLAGS))
 # The shared Apps controller is built from the locked Apps package. Arcade
 # trusts only the reviewed digest committed in apps-controller.sha256.
 ENTITY_DIR = $(shell $(ZIRAN) pkg path entity $(LOCK_FLAGS))
+# Optional manifest of already exported game artifacts (never compiler inputs).
+GAME_ARTIFACT_MANIFEST ?=
 APPS_BUNDLE := build/apps-ui/apps.zx
 APPS_SHA256 := $(shell cat apps-controller.sha256)
 INBE_SOURCE ?= $(shell $(ZIRAN) pkg path inbe $(LOCK_FLAGS))
@@ -21,7 +23,7 @@ all: collection build/entity.zx build/arcade build/shovey
 
 games:
 	python3 scripts/check-games.py --ziran '$(ZIRAN)' $(LOCK_FLAGS)
-	python3 scripts/build-games.py --ziran '$(ZIRAN)' $(LOCK_FLAGS)
+	python3 scripts/build-games.py --ziran '$(ZIRAN)' $(LOCK_FLAGS) $(if $(GAME_ARTIFACT_MANIFEST),--artifact-manifest '$(GAME_ARTIFACT_MANIFEST)')
 
 $(APPS_BUNDLE): ziran.lock apps-controller.sha256 scripts/build-apps.py Makefile
 	$(ZIRAN) version > /dev/null
@@ -33,8 +35,17 @@ collection: games $(APPS_BUNDLE)
 	python3 scripts/build-collection.py --ziran '$(ZIRAN)' $(LOCK_FLAGS) \
 		--apps-bundle '$(APPS_BUNDLE)' --apps-sha256 '$(APPS_SHA256)'
 
+.PHONY: game-artifacts-test
+game-artifacts-test:
+	python3 tests/game_artifacts_test.py
+
 collection-test:
 	python3 tests/collection_test.py
+
+.PHONY: collection-notifications-test
+collection-notifications-test:
+	python3 tests/game_host_compatibility_test.py
+	python3 tests/collection_notifications_test.py
 
 src/catalog.zi: games
 
@@ -54,6 +65,9 @@ run: all
 	./build/arcade
 
 test: all
+	python3 tests/game_artifacts_test.py
+	python3 tests/game_host_compatibility_test.py
+	python3 tests/collection_notifications_test.py
 	python3 tests/game_module_paths_test.py
 	python3 tests/game_resource_packing_test.py
 	python3 tests/game_translation_keys_test.py
@@ -120,6 +134,8 @@ install-arcade: collection build/entity.zx build/arcade
 	mv -f '$(LIB_DIR)/arcade.new' '$(LIB_DIR)/arcade'
 	install -m 0644 build/entity.zx build/arcade.zx build/arcade.json '$(LIB_DIR)/'
 	install -m 0644 '$(APPS_BUNDLE)' '$(LIB_DIR)/apps.zx'
+	mkdir -p '$(LIB_DIR)/assets/hud'
+	install -m 0644 build/assets/hud/profile.webp build/assets/hud/dew.webp '$(LIB_DIR)/assets/hud/'
 	ln -sfn '$(LIB_DIR)/arcade' '$(BIN_DIR)/arcade'
 	install -m 0644 packaging/xyz.waozi.arcade.desktop '$(DATA_DIR)/applications/'
 
@@ -133,6 +149,8 @@ install: all install-arcade
 	mv -f '$(LIB_DIR)/shovey.new' '$(LIB_DIR)/shovey'
 	install -m 0644 build/entity.zx build/arcade.zx build/arcade.json build/shovey.zx build/shovey.json '$(LIB_DIR)/'
 	install -m 0644 '$(APPS_BUNDLE)' '$(LIB_DIR)/apps.zx'
+	mkdir -p '$(LIB_DIR)/assets/hud'
+	install -m 0644 build/assets/hud/profile.webp build/assets/hud/dew.webp '$(LIB_DIR)/assets/hud/'
 	ln -sfn '$(LIB_DIR)/arcade' '$(BIN_DIR)/arcade'
 	ln -sfn '$(LIB_DIR)/shovey' '$(BIN_DIR)/shovey'
 	mkdir -p '$(DATA_DIR)/icons/hicolor/256x256/apps'

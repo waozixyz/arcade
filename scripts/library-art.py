@@ -14,17 +14,20 @@ game's art changes until this script makes fresh copies.
 import hashlib
 import io
 import json
+import subprocess
 from pathlib import Path
 from PIL import Image
 from game_packages import declared_packages
 
 ROOT = Path(__file__).resolve().parents[1]
 LIBRARY = ROOT / 'assets/arcade/library'
-# The shared cover grid starts at 104 logical pixels wide on phones
-# (156 high), and 200 wide on desktop. These deliberately small thumbnails
-# cover the phone cards without carrying the original full-screen artwork.
+# Previews stay at 256 px. Separately fetched gameplay heroes are sized for
+# full-screen landscape and focused portrait art, with a total 2 MiB budget.
 PREVIEW_LONGEST = 256
+LANDSCAPE_LONGEST = 1600
+PORTRAIT_LONGEST = 1080
 COVER_LONGEST = 256
+ART_BUDGET = 2 * 1024 * 1024
 LOGO_LONGEST = 256
 
 
@@ -40,18 +43,22 @@ def copy_path(name):
     raise FileNotFoundError(f'{name} has no library copy; run scripts/library-art.py')
 
 
-def small_copy(data, key):
+def small_copy(data, key, crop_top=0):
     """(bytes, suffix) of the library's copy of one picture."""
     image = Image.open(io.BytesIO(data))
     image.load()
+    if not 0 <= crop_top < image.height:
+        raise ValueError('Gameplay crop exceeds screenshot')
+    if crop_top:
+        image = image.crop((0, crop_top, image.width, image.height))
     # The shared library cards are 2:3. Keep the top of taller paintings,
     # where their title lives, rather than letting the card centre-crop it.
     # Originals remain untouched; this framing belongs to the thumbnail.
     if key == 'portrait' and image.height > image.width * 1.5:
         image = image.crop((0, 0, image.width, round(image.width * 1.5)))
-    longest = PREVIEW_LONGEST if key == 'preview' else LOGO_LONGEST if key == 'logo' else COVER_LONGEST
+    longest = {'preview': PREVIEW_LONGEST, 'logo': LOGO_LONGEST, 'landscape': LANDSCAPE_LONGEST, 'portrait': PORTRAIT_LONGEST}.get(key, COVER_LONGEST)
     scale = min(1.0, longest / max(image.size))
-    alpha = 'A' in image.getbands() or 'transparency' in image.info
+    alpha = ('A' in image.getbands() or 'transparency' in image.info) and key not in ('landscape', 'portrait')
     image = image.convert('RGBA' if alpha else 'RGB')
     if scale < 1.0:
         size = (max(1, round(image.width * scale)), max(1, round(image.height * scale)))
@@ -64,34 +71,40 @@ def small_copy(data, key):
 
 def art(root=ROOT):
     """(copy name, key, source bytes) for every enabled game's library art."""
+    flags = [] if (root / 'ziran.local.toml').exists() else ['--locked']
+    apps = Path(subprocess.check_output([str(root / 'scripts/ziran.sh'), 'pkg', 'path', 'apps', *flags], cwd=root, text=True).strip())
+    for icon in ('profile', 'dew'):
+        yield 'hud', icon, (apps / 'assets/hud' / (icon + '.webp')).read_bytes(), 0
     for package in declared_packages(root)[1:]:
         for app in package['apps']:
             if not app['enabled']:
                 continue
             name = app['descriptor']['name']
-            yield name, 'preview', (app['art_source'] / app['descriptor']['preview']).read_bytes()
+            yield name, 'preview', (app['art_source'] / app['descriptor']['preview']).read_bytes(), 0
             for key in ('portrait', 'landscape', 'logo'):
                 if app['cover'] and key in app['cover']:
-                    yield name, key, (app['art_source'] / app['cover'][key]).read_bytes()
+                    yield name, key, (app['art_source'] / app['cover'][key]).read_bytes(), app.get('cover_crops', {}).get(key, 0)
 
 
 def main():
     LIBRARY.mkdir(parents=True, exist_ok=True)
     sources = {}
     written = set()
-    for name, key, data in art():
+    for name, key, data, crop_top in art():
         copy = f'{name}-{key}'
-        contents, suffix = small_copy(data, key)
+        contents, suffix = small_copy(data, 'preview' if name.endswith('-editor') else key, crop_top)
         (LIBRARY / (copy + suffix)).write_bytes(contents)
         written.add(copy + suffix)
-        sources[copy] = {'source_sha256': hashlib.sha256(data).hexdigest()}
+        sources[copy] = {'source_sha256': hashlib.sha256(data).hexdigest(), 'crop_top': crop_top}
     for suffix in SUFFIXES:
         for stale in LIBRARY.glob('*' + suffix):
             if stale.name not in written:
                 stale.unlink()
     (LIBRARY / 'sources.json').write_text(json.dumps(dict(sorted(sources.items())), indent=2) + '\n')
     total = sum((LIBRARY / name).stat().st_size for name in written)
-    print(f'{len(sources)} library images, {total / 1048576:.1f} MiB')
+    if total > ART_BUDGET:
+        raise ValueError(f'Library art exceeds {ART_BUDGET} bytes: {total}')
+    print(f'{len(sources)} library images, {total / 1048576:.1f} MiB (budget 2 MiB)')
 
 
 if __name__ == '__main__':

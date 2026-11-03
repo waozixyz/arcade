@@ -32,13 +32,10 @@ class ControllerSourceTests(unittest.TestCase):
             (root / 'ziran.local.toml').write_text('unreviewed local dependency')
             package = root / 'cached-apps'
             output = root / 'output'
-            compiler = root / 'cached-ziran/build/bin/ziran'
-            compiler.parent.mkdir(parents=True)
-            compiler.write_text('fixture compiler path; subprocess calls are mocked')
             contexts = []
 
             def resolve(command, *, cwd, text):
-                self.assertIn(command, [['ziran', 'pkg', 'path', name, '--locked'] for name in ('apps', 'ziran', 'kryon')])
+                self.assertEqual(command, ['ziran', 'pkg', 'path', 'apps', '--locked'])
                 self.assertTrue(text)
                 self.assertNotIn('dependencies.wurm', (cwd / 'ziran.toml').read_text())
                 selected = json.loads((cwd / 'ziran.lock').read_text())
@@ -47,18 +44,17 @@ class ControllerSourceTests(unittest.TestCase):
                 self.assertEqual(selected['toolchain'], lock['toolchain'])
                 self.assertEqual({p.name for p in cwd.iterdir()}, {'ziran.toml', 'ziran.lock'})
                 contexts.append(cwd)
-                return str(package if command[3] == 'apps' else root / ('cached-' + command[3])) + '\n'
+                return str(package) + '\n'
 
             with patch.object(builder.subprocess, 'check_output', side_effect=resolve), \
                  patch.object(builder.subprocess, 'run') as run:
                 builder.build(root, output)
-            self.assertEqual(run.call_count, 2)
+            self.assertEqual(run.call_count, 1)
             command = run.call_args.args[0]
-            self.assertEqual(command[0], str(compiler))
-            self.assertIn(str(package / 'ui/apps.zi'), command)
-            self.assertIn('kryon=' + str(root / 'cached-kryon/src/ui'), command)
-            self.assertIn(str(root / 'cached-ziran/std'), command)
-            self.assertNotIn('--project', command)
+            self.assertEqual(command, [builder.sys.executable,
+                                      str(package / 'scripts/build-ui.py'),
+                                      '--output', str(output.resolve())])
+            self.assertEqual(run.call_args.kwargs, {'cwd': contexts[0], 'check': True})
             self.assertFalse(contexts[0].exists())
             self.assertEqual((root / 'ziran.toml').read_text(), manifest)
             self.assertEqual(json.loads((root / 'ziran.lock').read_text()), lock)

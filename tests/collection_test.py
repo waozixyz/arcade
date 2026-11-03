@@ -121,11 +121,12 @@ class CollectionTests(unittest.TestCase):
                 path.write_bytes(b"art fixture".ljust(128, b"\0"))
 
     def test_separately_loaded_games_can_exceed_one_root_limit_together(self):
-        # The registered games exceed 64 MiB together; each game and the
-        # Shovey standalone pair still fit. Never alter the real build outputs.
+        # Five bounded fixture payloads exceed 64 MiB together, while every
+        # game and the Shovey standalone pair fit. Their sizes are independent
+        # of future game-art growth. Never alter the real build outputs.
         for path in (self.root / "build/games").glob("*.zx"):
             with path.open("r+b") as data:
-                data.truncate(max(path.stat().st_size, 16 * 1024 * 1024))
+                data.truncate(16 * 1024 * 1024)
         catalog = self.stage()
         self.assertGreater(sum(child["bytes"] for child in catalog["children"]), 64 * 1024 * 1024)
         small, games, art = (self.root / name for name in ("small", "downloads", "art"))
@@ -205,10 +206,25 @@ class CollectionTests(unittest.TestCase):
                 compile_art()
         self.assertEqual(target.read_bytes(), previous)
 
+    def test_oversized_art_bundle_is_not_published(self):
+        output = self.root / "art-budget-catalog"
+        games = self.root / "art-budget-downloads"
+        (output / "assets/apps").mkdir(parents=True)
+        games.mkdir()
+        catalog = output / "assets/apps/catalog.json"
+        catalog.write_text('{"children": []}\n')
+        bundle = self.root / "over-budget-art.zx"
+        bundle.write_bytes(b"art" + bytes(builder.MAX_LIBRARY_ART_BYTES))
+        with self.assertRaisesRegex(ValueError, "2 MiB art budget"):
+            builder.add_art(output, games, bundle)
+        self.assertEqual(catalog.read_text(), '{"children": []}\n')
+        self.assertEqual(list(games.iterdir()), [])
+
     def test_staging_uses_locked_packages_unless_local_overrides_exist(self):
         packages = builder.declared_packages(self.root, lock_flags=self.lock_flags)
         artwork = json.loads((self.root / "games.json").read_text()).get("artwork", {})
         sources = {package["name"]: package["source"] for package in packages[1:]}
+        sources["apps"] = Path(subprocess.check_output([str(ROOT / "scripts/ziran.sh"), "pkg", "path", "apps", *self.lock_flags], cwd=ROOT, text=True).strip())
         for package in packages[1:]:
             if package["name"] in artwork:
                 sources[artwork[package["name"]]] = package["apps"][0]["art_source"]
@@ -288,9 +304,12 @@ class CollectionTests(unittest.TestCase):
         (library / "sources.json").write_text(json.dumps(sources))
 
     def stage_four_leaf_wurm_fixture(self):
+        ledger_path = self.root / "apps/versions.json"
+        ledger = json.loads(ledger_path.read_text())
         registration = self.root / 'games.json'
         value = json.loads(registration.read_text())
         value.pop('artwork', None)
+        value.get('screenshots', {}).pop('wurm', None)
         registration.write_text(json.dumps(value))
         source = self.root / "fixture-packages/wurm"
         (source / "editor").mkdir(parents=True)
@@ -303,7 +322,8 @@ class CollectionTests(unittest.TestCase):
 
         (source / "catalog.json").write_text(json.dumps({
             "id": "xyz.waozi.wurm", "name": "wurm", "title": "Apfelwurm",
-            "kind": "game", "contract_version": 1, "module_api": 2, "host_api": 41,
+            "kind": "game", "contract_version": 1, "module_api": 2,
+            "host_api": ledger["node_apps"]["wurm"]["host_api"],
             "harnesses": ["arcade"], "preview": "assets/wurm-preview.png",
         }))
         (source / "editor/catalog.json").write_text(json.dumps({
@@ -340,8 +360,6 @@ class CollectionTests(unittest.TestCase):
         for name, key in (("wurm", "preview"), ("wurm", "portrait"),
                           ("wurm-editor", "preview"), ("wurm-editor", "portrait")):
             self.add_library_copy(name, key, images[f"{name}-{key}"])
-        ledger_path = self.root / "apps/versions.json"
-        ledger = json.loads(ledger_path.read_text())
         ledger["node_apps"]["wurm-editor"] = {
             "id": "xyz.waozi.wurm-editor", "title": "Apfelwurm Editor", "version": "0.1.0",
             "sequence": 1, "host_api": 41,
@@ -451,7 +469,15 @@ class CollectionTests(unittest.TestCase):
         with self.assertRaisesRegex(ValueError, 'Invalid artwork package'):
             self.stage()
 
-    def test_every_library_cover_uses_a_bounded_thumbnail(self):
+    def test_changed_gameplay_crop_requires_regenerating_art(self):
+        registration = self.root / 'games.json'
+        value = json.loads(registration.read_text())
+        value['screenshots']['shovey']['landscape']['crop_top'] += 1
+        registration.write_text(json.dumps(value))
+        with self.assertRaisesRegex(ValueError, 'crop changed'):
+            self.stage()
+
+    def test_library_heroes_are_bounded_and_editor_art_stays_small(self):
         catalog, packages = builder.stage(self.root, self.controller, self.controller_digest, self.output)
         children = {child['id']: child for child in catalog['children']}
         for package in packages:
@@ -466,12 +492,13 @@ class CollectionTests(unittest.TestCase):
                     with self.subTest(app=child['id'], image=key):
                         with Image.open(io.BytesIO(original)) as source:
                             with Image.open(self.output / child['cover'][key]) as thumbnail:
-                                limit = 256
+                                limit = 256 if app['internal'] or key == 'logo' else (1600 if key == 'landscape' else 1080)
                                 self.assertLessEqual(max(thumbnail.size), limit)
                                 self.assertLessEqual(thumbnail.width, source.width)
                                 self.assertLessEqual(thumbnail.height, source.height)
-                                expected_ratio = source.width / source.height
-                                if key == 'portrait':
+                                crop_top = app.get("cover_crops", {}).get(key, 0)
+                                expected_ratio = source.width / (source.height - crop_top)
+                                if key == 'portrait' and not app['internal']:
                                     expected_ratio = max(2 / 3, expected_ratio)
                                 self.assertAlmostEqual(thumbnail.width / thumbnail.height,
                                                        expected_ratio, delta=(1 + expected_ratio) / thumbnail.height)
@@ -631,9 +658,9 @@ class LibraryThumbnailTests(unittest.TestCase):
         contents, suffix = artist.small_copy(data.getvalue(), 'portrait')
         self.assertEqual(suffix, '.webp')
         with Image.open(io.BytesIO(contents)) as thumbnail:
-            self.assertEqual(thumbnail.size, (171, 256))
+            self.assertEqual(thumbnail.size, (720, 1080))
             # The real card's centred cover fit now leaves the title intact.
-            red, green, blue = thumbnail.getpixel((85, 34))
+            red, green, blue = thumbnail.getpixel((360, 144))
             self.assertGreater(red, 200)
             self.assertGreater(green, 160)
             self.assertLess(blue, 60)
@@ -648,9 +675,22 @@ class LibraryThumbnailTests(unittest.TestCase):
         self.assertEqual(suffix, '.webp')
         with Image.open(io.BytesIO(contents)) as thumbnail:
             self.assertEqual(thumbnail.format, 'WEBP')
-            self.assertEqual(thumbnail.size, (192, 256))
+            self.assertEqual(thumbnail.size, (810, 1080))
             self.assertEqual(thumbnail.mode, 'RGB')
             self.assertIsNone(thumbnail.getcolors(256))
+
+    def test_gameplay_crop_removes_only_the_game_toolbar(self):
+        source = Image.new('RGB', (1440, 900), (20, 100, 180))
+        source.paste((240, 20, 220), (0, 0, 1440, 52))
+        encoded = io.BytesIO()
+        source.save(encoded, 'PNG')
+        contents, _ = artist.small_copy(encoded.getvalue(), 'landscape', crop_top=52)
+        with Image.open(io.BytesIO(contents)) as cover:
+            self.assertEqual(cover.size, (1440, 848))
+            red, green, blue = cover.getpixel((720, 0))
+            self.assertLess(red, 40)
+            self.assertGreater(blue, 150)
+        self.assertEqual(source.getpixel((720, 0)), (240, 20, 220))
 
     def test_logo_retains_transparency(self):
         source = Image.new('RGBA', (1200, 400), (45, 155, 90, 0))

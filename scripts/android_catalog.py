@@ -7,6 +7,7 @@ import subprocess
 from functools import lru_cache
 from pathlib import Path
 from node_config import node_source
+from hud_assets import HUD_PATHS, hud_asset_hashes
 
 ROOT = Path(__file__).resolve().parents[1]
 ESSENTIALS = {'arcade.zx', 'arcade.json', 'apps.zx', 'entity.zx', 'kryon-font.ttf'}
@@ -24,6 +25,15 @@ def profile_asset_hashes():
         with (package / path).open('rb') as source:
             result[path] = hashlib.file_digest(source, 'sha256').hexdigest()
     return result
+
+
+@lru_cache(maxsize=1)
+def hud_hashes():
+    flags = [] if (ROOT / 'ziran.local.toml').is_file() else ['--locked']
+    package = Path(subprocess.check_output(
+        [str(ROOT / 'scripts/ziran.sh'), 'pkg', 'path', 'apps', *flags],
+        cwd=ROOT, text=True).strip())
+    return hud_asset_hashes(package)
 
 
 def profile_assets():
@@ -73,11 +83,12 @@ def catalog_assets(payload):
 
 
 def verify_assets(assets, essentials=True, edition='direct'):
-    expected = ESSENTIALS if essentials else ESSENTIALS - {'entity.zx', 'kryon-font.ttf'}
+    expected = (ESSENTIALS if essentials else ESSENTIALS - {'entity.zx', 'kryon-font.ttf'}) | set(HUD_PATHS)
     if essentials and edition == 'gplay':
         # AndroidX's generated ART startup profiles accompany Play Billing.
         expected = expected | {'dexopt/baseline.prof', 'dexopt/baseline.profm'}
     assert set(assets) == expected, 'Unexpected or missing Android asset: ' + str(set(assets) ^ expected)
+    assert {name: hashlib.sha256(assets[name]).hexdigest() for name in HUD_PATHS} == hud_hashes(), 'HUD icons differ from the pinned shared assets'
     metadata = json.loads(assets['arcade.json'])
     assert metadata['id'] == 'inbe.arcade' and metadata.get('games') != 'packed'
     assert metadata.get('node') == node_source(ROOT), 'Node publisher binding differs from the reviewed host configuration'

@@ -3,7 +3,7 @@
 // library's art never comes from api.waozi.xyz: those requests are refused,
 // and the covers must draw from the site's own copies or its exact art.
 // Usage: node tests/web_site_test.mjs SITE_DIR
-// ARCADE_TEST_LIBRARY_ONLY=1 checks painted library covers and titles without downloading games.
+// ARCADE_TEST_LIBRARY_ONLY=1 checks painted console covers and accessible names without downloading games.
 // ARCADE_TEST_PACKAGES=DIR serves local packages by their verified SHA-256 for unpublished builds.
 import { spawn } from 'node:child_process';
 import { createHash } from 'node:crypto';
@@ -16,7 +16,7 @@ import { setTimeout as delay } from 'node:timers/promises';
 
 const site = process.argv[2];
 const libraryOnly = process.env.ARCADE_TEST_LIBRARY_ONLY === '1';
-const requiredTitles = ['Apfelwurm', 'Apfelwurm Editor', 'Choano'];
+const requiredTitles = ['Shovey', 'Apfelwurm', 'Choano'];
 const game = process.env.ARCADE_TEST_GAME || 'Apfelwurm';
 const packages = process.env.ARCADE_TEST_PACKAGES;
 if (!site) throw new Error('Usage: node tests/web_site_test.mjs SITE_DIR');
@@ -256,26 +256,21 @@ try {
         throw new Error('The covers did not come from the small copies alone: ' + JSON.stringify({ served, refusedArt, fetched }));
       await command('Emulation.setDeviceMetricsOverride', { width: 1280, height: 1400, deviceScaleFactor: 1, mobile: false });
       await delay(500);
-      // Sample only the Text widget's rectangle below each cover. Neither the
-      // cover image nor its invisible button/alt text can satisfy this check.
-      const titles = (await tree()).filter(node => node.kind === 'text' && node.visible &&
-        node.visible_height >= 20 && requiredTitles.includes(node.label));
-      const paintedTitles = await evaluate(`(() => {
-        const canvas = document.getElementById('canvas'), context = canvas.getContext('2d');
-        const scale = canvas.width / canvas.clientWidth;
-        return Object.fromEntries(${JSON.stringify(titles)}.map(node => {
-          const pixels = context.getImageData(Math.round(node.visible_x * scale), Math.round(node.visible_y * scale),
-            Math.round(node.visible_width * scale), Math.round(node.visible_height * scale)).data;
-          let ink = 0;
-          for (let at = 0; at < pixels.length; at += 4)
-            if (pixels[at] > 120 && pixels[at + 1] > 120 && pixels[at + 2] > 120) ink++;
-          return [node.label, ink];
-        }));
-      })()`);
-      for (const title of requiredTitles) {
-        if (!(paintedTitles[title] >= 100)) throw new Error(`Game title was not painted: ${title}: ${JSON.stringify(paintedTitles)}`);
+      // Art carries the name. Accessible actions retain every catalog title.
+      for (const [width, height, ratio] of [[1280, 800, 16 / 9], [480, 820, 2 / 3]]) {
+        await command('Emulation.setDeviceMetricsOverride', { width, height, deviceScaleFactor: 1, mobile: false });
+        await delay(500);
+        const nodes = await tree();
+        const focused = nodes.filter(node => node.kind === 'button' && node.selected && node.height > 100);
+        if (focused.length !== 1 || Math.abs(focused[0].width / focused[0].height - ratio) > .02)
+          throw new Error('Console cover orientation or selection is wrong: ' + JSON.stringify(focused));
+        if (nodes.some(node => node.kind === 'text' && (requiredTitles.includes(node.label) || node.label === 'Arcade')))
+          throw new Error('The console must not show a home title or cover captions');
+        for (const title of requiredTitles)
+          if (!nodes.some(node => node.kind === 'button' && node.label === title))
+            throw new Error('Game name missing from accessible shelf: ' + title);
       }
-      console.log(`Covers drew from ${served.pictures} small copies (${Object.values(library.pictures).reduce((sum, picture) => sum + picture.bytes, 0)} bytes, art ${library.bytes} bytes); colours ${colours}; title ink pixels ${JSON.stringify(paintedTitles)}`);
+      console.log(`Console covers drew from ${served.pictures} bounded pictures; art ${library.bytes} bytes; landscape/portrait, accessible names and removed captions verified`);
     }
     if (!libraryOnly) {
       await command('Emulation.setDeviceMetricsOverride', { width: 1280, height: 800, deviceScaleFactor: 1, mobile: false });
@@ -283,6 +278,10 @@ try {
       const cover = button(await tree(), game);
       if (!cover) throw new Error('Game cover missing');
       await click(cover);
+      if (cover.height <= 100) {
+        await delay(700);
+        await click(button(await tree(), game));
+      }
       const download = (await tree()).findLast(node => node.kind === 'button' && node.label === 'Download');
       if (!download) throw new Error('The cover did not offer its download');
       await click(download);
