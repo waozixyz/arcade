@@ -20,8 +20,8 @@
     "shovey": {
       "id": "arcade.shovey",
       "title": "Shovey",
-      "version": "0.6.165",
-      "sequence": 172,
+      "version": "0.6.164",
+      "sequence": 171,
       "host_api": 42
     },
     "shovey-editor": {
