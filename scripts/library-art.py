@@ -16,12 +16,12 @@ import io
 import json
 import subprocess
 from pathlib import Path
-from PIL import Image
+from PIL import Image, ImageOps
 from game_packages import declared_packages
 
 ROOT = Path(__file__).resolve().parents[1]
 LIBRARY = ROOT / 'assets/arcade/library'
-# Previews stay at 256 px. Separately fetched gameplay heroes are sized for
+# Previews stay at 256 px. Separately fetched painted covers are sized for
 # full-screen landscape and focused portrait art, with a total 2 MiB budget.
 PREVIEW_LONGEST = 256
 LANDSCAPE_LONGEST = 1600
@@ -51,11 +51,14 @@ def small_copy(data, key, crop_top=0):
         raise ValueError('Gameplay crop exceeds screenshot')
     if crop_top:
         image = image.crop((0, crop_top, image.width, image.height))
-    # The shared library cards are 2:3. Keep the top of taller paintings,
-    # where their title lives, rather than letting the card centre-crop it.
-    # Originals remain untouched; this framing belongs to the thumbnail.
-    if key == 'portrait' and image.height > image.width * 1.5:
-        image = image.crop((0, 0, image.width, round(image.width * 1.5)))
+    # Frame the original painted artwork for the shelf, never gameplay captures.
+    # Portrait paintings keep their title near the top; landscape art is centred.
+    if key in ('portrait', 'landscape'):
+        ratio = 2 / 3 if key == 'portrait' else 16 / 9
+        width = min(image.width, round(image.height * ratio))
+        height = min(image.height, round(image.width / ratio))
+        image = ImageOps.fit(image, (width, height), Image.Resampling.LANCZOS,
+                             centering=(0.5, 0.0 if key == 'portrait' else 0.5))
     longest = {'preview': PREVIEW_LONGEST, 'logo': LOGO_LONGEST, 'landscape': LANDSCAPE_LONGEST, 'portrait': PORTRAIT_LONGEST}.get(key, COVER_LONGEST)
     scale = min(1.0, longest / max(image.size))
     alpha = ('A' in image.getbands() or 'transparency' in image.info) and key not in ('landscape', 'portrait')

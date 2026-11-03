@@ -6,37 +6,5 @@
   ],
   "artwork": {
     "wurm": "wurm_art"
-  },
-  "screenshots": {
-    "shovey": {
-      "portrait": {
-        "path": "packaging/library/portrait.png",
-        "crop_top": 52
-      },
-      "landscape": {
-        "path": "packaging/library/landscape.png",
-        "crop_top": 52
-      }
-    },
-    "wurm": {
-      "portrait": {
-        "path": "packaging/library/portrait.png",
-        "crop_top": 72
-      },
-      "landscape": {
-        "path": "packaging/library/landscape.png",
-        "crop_top": 72
-      }
-    },
-    "choano": {
-      "portrait": {
-        "path": "packaging/library/portrait.png",
-        "crop_top": 76
-      },
-      "landscape": {
-        "path": "packaging/library/landscape.png",
-        "crop_top": 76
-      }
-    }
   }
 }

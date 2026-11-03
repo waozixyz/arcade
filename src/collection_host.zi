@@ -63,7 +63,6 @@ Codec :: #import "apps/node_codec";
 #import "apps/connection"
 #import "apps/remote_catalog"
 Labels :: #import "apps/words";
-HostBarTheme :: #import "shovey/shovey_theme";
 #import "profile_palette"
 #import "apps/game_hud"
 collection_dew_text: [32]u8;
@@ -642,7 +641,7 @@ CollectionOpenBytes :: (bytes: string, metadata: string, data: string) -> bool {
     selected_digest := TextUntilNul(digest[:])
     if !packed {
         if !CollectionNodeOpen(metadata, data, bytes, selected_digest, TextUntilNul(harness[:]), language) { return false }
-        if collection_node.ready {
+        if collection_node_remote {
             selected = collection_node.bytes
             selected_digest = TextUntilNul(collection_node.release.artifacts[0].sha256[:])
         }
@@ -766,7 +765,8 @@ CollectionOpenGame :: (id: string) -> bool {
     if root == null || !root.collection { Report("Arcade: no collection is open to start "); Report(id); Report("\n"); return false }
     entry := AppCatalogAt(*root.catalog, AppCatalogFind(*root.catalog, id))
     plan: AppInstallPlan
-    if entry != null && AppHostInstallPlan(*collection_host, root, entry, *plan) && plan.count > 0 {
+    if entry != null && (TextUntilNul(entry.cover.action[:]) == "title" ||
+        (AppHostInstallPlan(*collection_host, root, entry, *plan) && plan.count > 0)) {
         unused CopyCString(id, collection_host.platform.presentation.download_id[:])
         collection_host.platform.presentation.download_request += 1
         return true
@@ -895,7 +895,7 @@ CollectionFrame :: (session: Session, viewport: Rectangle, key: s32, modifiers: 
     if top > 0 {
         Box(session, BoxProps.{.key = cast(u64)49190,
                 .bounds = Rectangle.{viewport.x, viewport.y, viewport.width, cast(float32)top},
-                .fill = ColorFromPacked(ifx entity_shovey then HostBarTheme.ShoveyPalette().background else AppCoversPalette().background)})
+                .fill = ColorFromPacked(ifx entity_shovey then ShoveyHostPalette().background else AppCoversPalette().background)})
     }
     now := cast(float64)MonotonicMilliseconds() / 1000.0
     runtime.app.session = session
@@ -1045,6 +1045,35 @@ collection_seed: string;
 collection_seed_digest: [65]u8;
 collection_harness_digest: [65]u8;
 collection_node_locale: [16]u8;
+// The version of the catalog this build carries; "" when its receipt has none.
+collection_seed_version: [32]u8;
+
+CollectionVersionPart :: (text: string, at: *s64) -> s64 {
+    value: s64
+    while at.* < text.count && text[at.*] >= cast(u8)48 && text[at.*] <= cast(u8)57 {
+        value = value * 10 + cast(s64)(text[at.*] - cast(u8)48)
+        at.* += 1
+    }
+    if at.* < text.count && text[at.*] == cast(u8)46 { at.* += 1 }
+    return value
+}
+
+// A saved or fetched signed release replaces the catalog this build carries
+// only when it is newer. An older or equal cached release never hides the
+// build's own library, artwork or games.
+CollectionNodeNewer :: () -> bool {
+    current := TextUntilNul(collection_seed_version[:])
+    if current == "" { return true }
+    candidate := TextUntilNul(collection_node.release.version[:])
+    left: s64
+    right: s64
+    for part: cast(s32)0..2 {
+        a := CollectionVersionPart(candidate, *left)
+        b := CollectionVersionPart(current, *right)
+        if a != b { return a > b }
+    }
+    return false
+}
 
 collection_signature :: #system_library "c";
 CollectionCheckSignature :: (signature: *u8, public_key: *u8, message: *u8,
@@ -1073,13 +1102,15 @@ CollectionNodeOpen :: (metadata: string, data: string, seed: string,
     unused CopyCString(digest, collection_seed_digest[:])
     unused CopyCString(harness, collection_harness_digest[:])
     unused CopyCString(locale, collection_node_locale[:])
+    collection_seed_version[0] = 0
+    unused AppsReadText(metadata, 0, "version", collection_seed_version[:])
     collection_package_origin = AppRemoteCopy(TextUntilNul(collection_node.source.origin[:]))
     collection_node_choice = AppConnectionRead(*collection_node_files, collection_package_origin)
     collection_node_notice = collection_node_choice == APP_CONNECTION_UNDECIDED
     allowed := collection_node_choice == APP_CONNECTION_ALLOWED
     CollectionDownloadsAllow(allowed)
     AppRemoteCatalogAllow(*collection_node, allowed)
-    collection_node_remote = collection_node.ready
+    collection_node_remote = collection_node.ready && CollectionNodeNewer()
     if allowed { unused AppRemoteCatalogRefresh(*collection_node) }
     return true
 }
@@ -1138,6 +1169,16 @@ CollectionNodePump :: () {
     AppRemoteCatalogPump(*collection_node)
     // A newer library applies on its own once the background fetch finishes.
     if (collection_node_apply || collection_node_choice == APP_CONNECTION_ALLOWED) && collection_node.stage == 0 {
+        // The build's own newer catalog stays; the fetched release stays cached.
+        if collection_node.changed && !collection_node_remote && !CollectionNodeNewer() {
+            AppRemoteCatalogCollect(*collection_node)
+        }
+        // A newer signed release can reuse cached verified bytes without a
+        // download, so the catalog does not report it as changed.
+        if !collection_node.changed && !collection_node_remote && collection_node.ready &&
+        !collection_node.failed && CollectionNodeNewer() {
+            collection_node.changed = true
+        }
         if collection_node.changed && !CollectionNodeActivate() { return }
         collection_node_apply = false
         collection_node_initial = false

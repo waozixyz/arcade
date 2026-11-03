@@ -39,9 +39,6 @@ def declared_packages(root, ziran=None, lock_flags=()):
             not isinstance(alias, str) or not re.fullmatch(r'[A-Za-z_][A-Za-z0-9_]*', alias)
             for name, alias in artwork.items()):
         raise ValueError('Invalid artwork package')
-    screenshots = registration.get('screenshots', {})
-    if not isinstance(screenshots, dict) or any(name not in names[1:] for name in screenshots):
-        raise ValueError('Invalid gameplay screenshot package')
     packages = []
     for name in names:
         source = package_root(root, name, ziran, lock_flags)
@@ -85,20 +82,6 @@ def declared_packages(root, ziran=None, lock_flags=()):
                 cover = dict(cover)
                 if internal:
                     cover['action'] = 'internal'
-                elif name in screenshots:
-                    views = screenshots[name]
-                    if not isinstance(views, dict) or set(views) != {'portrait', 'landscape'}:
-                        raise ValueError('Gameplay screenshots need portrait and landscape')
-                    cover = {}
-                    for key, value in views.items():
-                        if isinstance(value, dict):
-                            if set(value) != {'path', 'crop_top'} or type(value['crop_top']) is not int or not 0 <= value['crop_top'] <= 256:
-                                raise ValueError('Invalid gameplay screenshot crop')
-                            cover_crops[key] = value['crop_top']
-                            value = value['path']
-                        cover[key] = str(relative_path(value))
-                    cover['action'] = 'open'
-                    app_art_source = source
             apps.append(dict(package=name, source=source, art_source=app_art_source, manifest=manifest,
                              descriptor=descriptor,
                              cover=cover, cover_crops=cover_crops, internal=internal, requires=requires, shared_code=shared_code,

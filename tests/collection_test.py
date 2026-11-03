@@ -469,13 +469,14 @@ class CollectionTests(unittest.TestCase):
         with self.assertRaisesRegex(ValueError, 'Invalid artwork package'):
             self.stage()
 
-    def test_changed_gameplay_crop_requires_regenerating_art(self):
-        registration = self.root / 'games.json'
-        value = json.loads(registration.read_text())
-        value['screenshots']['shovey']['landscape']['crop_top'] += 1
-        registration.write_text(json.dumps(value))
-        with self.assertRaisesRegex(ValueError, 'crop changed'):
-            self.stage()
+    def test_library_covers_use_original_painted_art(self):
+        approved = json.loads((ROOT / 'tests/library_art_sources.json').read_text())
+        sources = json.loads((self.root / 'assets/arcade/library/sources.json').read_text())
+        for game in ('shovey', 'wurm', 'choano'):
+            for view in ('portrait', 'landscape'):
+                name = game + '-' + view
+                self.assertEqual(sources[name]['source_sha256'], approved[name])
+        self.assertNotIn('screenshots', json.loads((self.root / 'games.json').read_text()))
 
     def test_library_heroes_are_bounded_and_editor_art_stays_small(self):
         catalog, packages = builder.stage(self.root, self.controller, self.controller_digest, self.output)
@@ -496,10 +497,8 @@ class CollectionTests(unittest.TestCase):
                                 self.assertLessEqual(max(thumbnail.size), limit)
                                 self.assertLessEqual(thumbnail.width, source.width)
                                 self.assertLessEqual(thumbnail.height, source.height)
-                                crop_top = app.get("cover_crops", {}).get(key, 0)
-                                expected_ratio = source.width / (source.height - crop_top)
-                                if key == 'portrait' and not app['internal']:
-                                    expected_ratio = max(2 / 3, expected_ratio)
+                                expected_ratio = 2 / 3 if key == 'portrait' else 16 / 9 if key == 'landscape' else source.width / source.height
+                                if app['internal']: expected_ratio = source.width / source.height
                                 self.assertAlmostEqual(thumbnail.width / thumbnail.height,
                                                        expected_ratio, delta=(1 + expected_ratio) / thumbnail.height)
                                 self.assertIn(thumbnail.mode, ('RGB', 'RGBA'))
@@ -675,7 +674,7 @@ class LibraryThumbnailTests(unittest.TestCase):
         self.assertEqual(suffix, '.webp')
         with Image.open(io.BytesIO(contents)) as thumbnail:
             self.assertEqual(thumbnail.format, 'WEBP')
-            self.assertEqual(thumbnail.size, (810, 1080))
+            self.assertEqual(thumbnail.size, (720, 1080))
             self.assertEqual(thumbnail.mode, 'RGB')
             self.assertIsNone(thumbnail.getcolors(256))
 
@@ -686,7 +685,7 @@ class LibraryThumbnailTests(unittest.TestCase):
         source.save(encoded, 'PNG')
         contents, _ = artist.small_copy(encoded.getvalue(), 'landscape', crop_top=52)
         with Image.open(io.BytesIO(contents)) as cover:
-            self.assertEqual(cover.size, (1440, 848))
+            self.assertEqual(cover.size, (1440, 810))
             red, green, blue = cover.getpixel((720, 0))
             self.assertLess(red, 40)
             self.assertGreater(blue, 150)

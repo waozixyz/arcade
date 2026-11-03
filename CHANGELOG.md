@@ -1,5 +1,14 @@
 # Arcade changelog
 
+## 0.7.120
+
+- Library covers show their original painted artwork again.
+- Landscape uses the same cover carousel as portrait, on a scenic background.
+- Clicking or tapping a cover beside the centre selects it; the centre cover starts the game.
+- Missing games download on their cover with a progress bar while you keep browsing.
+- Updating Arcade no longer brings back an older saved library with the wrong artwork.
+- Shovey opens its proper title with the daily chest, profile and swipeable covers.
+
 ## 0.7.119
 
 - Browse an artwork-led console shelf in portrait or landscape, with painted profile and Dew controls.

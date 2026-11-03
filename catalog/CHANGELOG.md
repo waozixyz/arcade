@@ -1,5 +1,12 @@
 # Arcade catalog changelog
 
+## 0.7.120
+
+- Show the original painted covers for Shovey, Apfelwurm and Choano.
+- Browse covers on a scenic background in portrait and landscape; a side cover selects, the centre cover plays.
+- Download missing games on their cover with a progress bar while browsing.
+- Shovey opens its proper title with the daily chest, profile and swipeable covers.
+
 ## 0.7.119
 
 - Browse the new console shelf, open games from their artwork and return Home with progress saved.

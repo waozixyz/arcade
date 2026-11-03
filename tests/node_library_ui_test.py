@@ -49,10 +49,15 @@ def live_library(binary, driver, work):
                 driver.wait(label='Choano', role='button', timeout=60)
                 metadata = json.loads((profile / 'node/current.json').read_text())
                 assert metadata['app_id'] == 'inbe.arcade'
-                source = json.loads((ROOT / 'build/arcade.json').read_text())['node']
+                bundled = json.loads((ROOT / 'build/arcade.json').read_text())
+                source = bundled['node']
                 assert metadata['sequence'] >= source['minimum_sequence']
                 digest = next(item['sha256'] for item in metadata['artifacts'] if item['variant'] == 'module')
                 catalog = catalog_assets((profile / 'node' / (digest + '.zx')).read_bytes())
+                # Equal or older signed releases stay cached; the newer build's
+                # own art remains authoritative, as it does in installed Arcade.
+                if tuple(map(int, metadata['version'].split('.'))) <= tuple(map(int, bundled['version'].split('.'))):
+                    catalog = bundled
                 art = profile / 'resources/downloads' / (catalog['art']['sha256'] + '.zx')
                 deadline = time.monotonic() + 60
                 while (not art.exists() or art.stat().st_size != catalog['art']['bytes']) and time.monotonic() < deadline:
@@ -143,7 +148,11 @@ def main():
             relative = self.path.removeprefix('/api/v2/packages/inbe.arcade/')
             if relative.startswith('latest?'):
                 index = state['revision']
-                data = json.dumps(descriptor(key, payloads[index], 196 + index, module_api=2)).encode()
+                if state.get('older'):
+                    # Signed, valid and newer in sequence, but an older app version.
+                    data = json.dumps(descriptor(key, payloads[0], 195, module_api=2, version='0.0.1')).encode()
+                else:
+                    data = json.dumps(descriptor(key, payloads[index], 196 + index, module_api=2)).encode()
             elif relative.removesuffix('.zx') in digests:
                 data = payloads[digests.index(relative.removesuffix('.zx'))]
             else:
@@ -169,6 +178,8 @@ def main():
             shutil.copy2(args.binary, app / 'arcade')
             for name in ('arcade.zx', 'apps.zx', 'entity.zx'):
                 shutil.copyfile(ROOT / 'build' / name, app / name)
+            # The installed HUD icons sit beside the binary, as in a release.
+            shutil.copytree(ROOT / 'build/assets/hud', app / 'assets/hud')
             receipt = json.loads((ROOT / 'build/arcade.json').read_text())
             receipt['node'] = dict(origin=origin, app_id='inbe.arcade', key_id='fixture-2026', minimum_sequence=195,
                 public_key=key.public_key().public_bytes(serialization.Encoding.Raw, serialization.PublicFormat.Raw).hex())
@@ -205,7 +216,7 @@ def main():
                 # event is still queued. Wait for the accepted viewport first.
                 import time
                 deadline = time.monotonic() + 10
-                while max(node['width'] for node in driver.tree()) != width:
+                while max(node['width'] for node in driver.tree() if node['x'] == 0 and node['y'] == 0) != width:
                     assert time.monotonic() < deadline, 'The host did not accept the new viewport'
                     time.sleep(0.05)
                 driver.wait_idle(frames=20)
@@ -233,6 +244,27 @@ def main():
                 driver.wait_idle(frames=20)
                 assert not state['requests'], 'Offline choice must prevent preview downloads'
                 assert_plain_library()
+            consent.unlink()
+            # A signed release older than the catalog this build carries is kept
+            # cached but never replaces the bundled library, then or after restart.
+            state['older'] = True
+            with application('older-release'):
+                import time
+                driver.wait(label='Allow', role='button')
+                driver.press(label='Allow', role='button')
+                cached = profile / 'node/current.json'
+                deadline = time.monotonic() + 60
+                while not (cached.is_file() and json.loads(cached.read_text() or '{}').get('version') == '0.0.1'):
+                    assert time.monotonic() < deadline, 'The older signed release was not fetched'
+                    time.sleep(0.1)
+                driver.wait_idle(frames=60)
+                assert driver.find(label='Choano', role='button'), 'An older release replaced the bundled library'
+                assert not driver.find(label='Node Shovey', role='button')
+            with application('older-cached'):
+                driver.wait(label='Choano', role='button', timeout=60)
+                driver.wait_idle(frames=40)
+                assert not driver.find(label='Node Shovey', role='button'), 'A cached older release replaced the bundled library'
+            state['older'] = False
             consent.unlink()
             with application('consent-refresh') as child:
                 driver.wait(label='Allow', role='button')
@@ -286,7 +318,7 @@ def main():
         server.shutdown()
         server.server_close()
         thread.join()
-    print('Arcade node consent, automatic signed membership refresh, preview rendering, game download consent and offline restart passed')
+    print('Arcade node consent, older releases never replacing the bundled library, automatic signed membership refresh, preview rendering, game download consent and offline restart passed')
 
 
 if __name__ == '__main__':

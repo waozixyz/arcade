@@ -1,11 +1,11 @@
 {
   "choano-landscape": {
-    "source_sha256": "ffe548ab4b32d1eb45c539cca77c211fdf38edb19c7e3adafb8e6791d3d57a2a",
-    "crop_top": 76
+    "source_sha256": "1ca6e31c1062a7cca41bace4cf1bb221291988aea4a1dd61271899c2f5f28307",
+    "crop_top": 0
   },
   "choano-portrait": {
-    "source_sha256": "225b44f3de4f201220a581850c87ed402e9659d5d56a70fcbdd5bf7d24a65329",
-    "crop_top": 76
+    "source_sha256": "47b07722c474a67ee4a06b7644a3aff211503674391e363c17eb06a34ce60d6c",
+    "crop_top": 0
   },
   "choano-preview": {
     "source_sha256": "1ca6e31c1062a7cca41bace4cf1bb221291988aea4a1dd61271899c2f5f28307",
@@ -36,12 +36,16 @@
     "crop_top": 0
   },
   "shovey-landscape": {
-    "source_sha256": "50ff90599ea10dda9f85f4f6b3a6b6bf10a37bc8ef77c2533fa2a476e0ce2e06",
-    "crop_top": 52
+    "source_sha256": "40c01eb8300e4c5db52b2d75373e17cdaf7f68140c33c0a225613fc174660747",
+    "crop_top": 0
+  },
+  "shovey-logo": {
+    "source_sha256": "e47781aa3328f68077589f95d813e9c2e6fff10ebd62a9d003773bb2c2f7a092",
+    "crop_top": 0
   },
   "shovey-portrait": {
-    "source_sha256": "c34a5b87b23471abe9d7cd472b8b353a88d7c50adc840da988cfd1af49a0446a",
-    "crop_top": 52
+    "source_sha256": "ddcbf989eab5971157d8cdc73494ed03660bb4c7a7679543248f45be260777e3",
+    "crop_top": 0
   },
   "shovey-preview": {
     "source_sha256": "96db251f36835c76cd03cd0104a6e1b5096e4c442d410960457edcd8e2377a38",
@@ -60,12 +64,12 @@
     "crop_top": 0
   },
   "wurm-landscape": {
-    "source_sha256": "7bcfd9b73064886560bf2e72fb310fe6c69c345aa400f50b8f5b533384c33085",
-    "crop_top": 72
+    "source_sha256": "472773b7c106325e12777a81a29209496e22e0853782ca76955b6587824b1b30",
+    "crop_top": 0
   },
   "wurm-portrait": {
-    "source_sha256": "e6f814fca6d53ab8c4112a3b98809815c7a019d66bb793a55d5725ebdeecf0cf",
-    "crop_top": 72
+    "source_sha256": "e8962c969f554567d598eb0b54db5836f7f1ed7462619463040c6cc2887a5a47",
+    "crop_top": 0
   },
   "wurm-preview": {
     "source_sha256": "472773b7c106325e12777a81a29209496e22e0853782ca76955b6587824b1b30",

@@ -229,15 +229,20 @@ def main():
             assert len(set(pixels)) > 20, "Focused art must color the background"
 
     def open_game(label):
-        # Position marks select an offscreen cover; the artwork itself opens it.
-        nodes = driver.find(label=label, role='button', visible=True)
-        covers = [node for node in nodes if node['height'] > 100]
-        if not covers:
-            driver.press(label=label, role='button')
+        order = ['Shovey', 'Apfelwurm', 'Choano']
+        current = next(n for n in driver.tree() if n['kind']=='button' and n['selected'] and n['height']>100)
+        while current['label'] != label:
+            driver.key('right' if order.index(current['label']) < order.index(label) else 'left')
             driver.wait_idle(frames=20)
-            covers = [node for node in driver.find(label=label, role='button', visible=True) if node['height'] > 100]
-        assert covers, f'{label} must become reachable on the shelf'
-        driver.press(key=covers[0]['key'], role='button')
+            current = next(n for n in driver.tree() if n['kind']=='button' and n['selected'] and n['height']>100)
+        driver.press(key=current['key'],role='button')
+
+    def finish_download(label):
+        entry = next(e for e in by_name.values() if e['title']==label)
+        wait(lambda: (profile/'resources/downloads'/(entry['sha256']+'.zx')).exists() and
+             not driver.find(label='Downloading',role='text'), 'Download did not finish on shelf')
+        assert driver.find(label=label,role='button'), 'Download left the shelf'
+        open_game(label)
 
     def primary_download(label='Download'):
         driver.wait(label=label, role='button')
@@ -265,11 +270,6 @@ def main():
             driver.wait_idle(frames=20)
             editor = [n for n in driver.find(label='Apfelwurm', role='button') if n['height'] > 100]
             assert editor and editor[0]['selected'], 'Right selects the next game'
-            driver.key('enter')
-            driver.wait(label='Cancel', role='button')
-            driver.wait(label='Apfelwurm', role='text')
-            assert not driver.find(role='modal'), 'Game launch must stay in the page'
-            driver.press(label='Cancel', role='button')
             driver.key('left')
             driver.wait_idle(frames=20)
             subprocess.run(['xdotool', 'windowsize', window, '1120', '700'], check=True)
@@ -300,21 +300,15 @@ def main():
             driver.press(label='Back', role='button')
             driver.wait(label='Shovey', role='button')
             assert not [path for path in (profile / 'resources/downloads').glob('*.zx') if path.stem in games]
-            open_game('Shovey')
-            driver.wait(label='Cancel', role='button')
-            driver.press(label='Cancel', role='button')
-            assert not games & set(server['requests']), 'Cancel must download nothing'
-            open_game('Shovey')
             server['game_delay'] = 3
-            primary_download()
-            driver.wait(label='Hide', role='button')
-            assert not driver.find(role='modal'), 'Transfer progress must not capture modal focus'
-            driver.press(key=50033, role='button')
-            driver.wait(label='Shovey', role='button')
-            assert any(n['selected'] and n['height'] > 100 for n in driver.find(label='Shovey', role='button')), 'Returning keeps the selected cover'
             open_game('Shovey')
+            driver.wait(label='Downloading',role='text')
+            assert driver.find(label='Apfelwurm',role='button'), 'Download must keep the carousel available'
+            assert not driver.find(role='modal'), 'Transfer progress must not capture modal focus'
+            assert any(n['selected'] and n['height']>100 for n in driver.find(label='Shovey',role='button'))
+            finish_download('Shovey')
             server['game_delay'] = 0
-            driver.wait(key=20510, label="Play", role="button")
+            driver.wait(label='Play',role='button',timeout=60)
             assert not driver.find(label="Restart", role="button"), "A game opens its own title"
             capture(child, "shovey-title")
             enter_shovey_play(driver)
@@ -337,13 +331,15 @@ def main():
                 driver.wait_idle(frames=5)
             driver.press(label="Back", role="button")
             driver.wait(label="Play", role="button")
-            driver.key("escape")
-            driver.wait(label="Shovey", role="button")
+            driver.key(290)
+            driver.wait(key=50400,visible=True)
             saved = wait(lambda: record.read_bytes() if record.exists() else None, "Classic did not save")
             assert not driver.find(label=sizes["shovey"], role="text"), "Installed games must omit their download size"
             open_game('Shovey')
-            driver.wait(label='Editor', role='button')
-            driver.press(label='Editor', role='button')
+            driver.wait(label='Next',role='button')
+            driver.press(label='Next',role='button')
+            driver.wait_idle(frames=20)
+            driver.press(label='Open',role='button')
             driver.wait(label='Download size: ' + sizes['shovey-editor'], role='text')
             primary_download()
             assert server['requests'].count(by_name['shovey']['sha256']) == 1, 'Installed dependencies must not download again'
@@ -357,21 +353,22 @@ def main():
             driver.wait(label="New level", role="text")
             capture(child, "editor-open")
             driver.key("escape")
-            driver.wait(label="Play", role="button")
-            driver.wait(label='Editor', role='button')
-            assert not driver.find(label='Shovey', role='button'), 'Editor Back returns to the same game title'
-            driver.key("escape")
-            driver.wait(label="Shovey", role="button")
+            driver.wait(label='Open',role='button')
+            driver.press(label='Previous',role='button')
+            driver.wait(label='Play',role='button')
+            assert not driver.find(key=50400,visible=True), 'Editor Back returns to the game title'
+            driver.key(290)
+            driver.wait(key=50400,visible=True)
             window = subprocess.check_output(["xdotool", "search", "--onlyvisible", "--pid", str(child.pid)], text=True).splitlines()[0]
             subprocess.run(["xdotool", "windowsize", window, "900", "540"], check=True)
             grid(child, "apps-landscape")
             server['corrupt_wurm'] = True
             open_game('Apfelwurm')
-            primary_download()
-            driver.wait(label='Try again', role='button', timeout=60)
+            driver.wait(label='Download failed',role='text',timeout=60)
             assert not driver.find(label='Pause', role='button'), 'Unverified bytes must never run'
             server['corrupt_wurm'] = False
-            primary_download('Try again')
+            open_game('Apfelwurm')
+            finish_download('Apfelwurm')
             # Both the built-in editor and retained add-on open inside Wurm.
             driver.wait(label='Play', role='button', timeout=60)
             driver.press(label='Level editor', role='button')
@@ -396,7 +393,7 @@ def main():
             driver.key(290)
             driver.wait(label='Shovey', role='button')
             open_game('Choano')
-            primary_download()
+            finish_download('Choano')
             driver.wait(label='Play', role='button', timeout=60)
             assert not driver.find(label='Pause', role='button'), 'Choano keeps its own title screen'
             driver.press(label='Play', role='button')
@@ -433,7 +430,7 @@ def main():
         assert not (profile / "inbe.db").exists()
         refused = subprocess.run([str(args.binary.resolve()), "--app", "chess"], env=os.environ | {"ARCADE_DATA": str(profile)}, capture_output=True, timeout=10)
         assert refused.returncode == 1 and b"unknown game" in refused.stderr
-    print("Arcade: console covers, consent/cancel, digest failure/retry, all three game titles/play, in-game editors, Back, rotation, offline reopen and retained saves passed")
+    print("Arcade: console covers, selection and in-place downloads, digest failure/retry, all three game titles/play, in-game editors, Back, rotation, offline reopen and retained saves passed")
 
 
 if __name__ == "__main__":

@@ -20,29 +20,29 @@
     "shovey": {
       "id": "arcade.shovey",
       "title": "Shovey",
-      "version": "0.6.164",
-      "sequence": 171,
+      "version": "0.6.166",
+      "sequence": 172,
       "host_api": 42
     },
     "shovey-editor": {
       "id": "arcade.shovey-editor",
       "title": "Shovey Editor",
-      "version": "0.2.147",
-      "sequence": 149,
+      "version": "0.2.148",
+      "sequence": 150,
       "host_api": 41
     },
     "arcade": {
       "id": "inbe.arcade",
       "title": "Arcade",
-      "version": "0.7.119",
-      "sequence": 198,
+      "version": "0.7.120",
+      "sequence": 199,
       "host_api": 41
     },
     "wurm": {
       "id": "xyz.waozi.wurm",
       "title": "Apfelwurm",
-      "version": "0.2.29",
-      "sequence": 24,
+      "version": "0.2.31",
+      "sequence": 25,
       "host_api": 42
     },
     "wurm-editor": {
