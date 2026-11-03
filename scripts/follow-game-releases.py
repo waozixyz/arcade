@@ -150,8 +150,10 @@ def art():
     library = importlib.util.module_from_spec(spec)
     spec.loader.exec_module(library)
     recorded = json.loads((library.LIBRARY / 'sources.json').read_text())
-    current = {f'{name}-{key}': hashlib.sha256(data).hexdigest() for name, key, data in library.art()}
-    if {copy: item['source_sha256'] for copy, item in recorded.items()} != current:
+    # A changed source or cover crop rewrites the library copies.
+    current = {f'{name}-{key}': (hashlib.sha256(data).hexdigest(), crop_top)
+               for name, key, data, crop_top in library.art()}
+    if {copy: (item['source_sha256'], item.get('crop_top', 0)) for copy, item in recorded.items()} != current:
         library.main()
 
 
