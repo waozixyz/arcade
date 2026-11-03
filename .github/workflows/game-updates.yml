@@ -62,7 +62,7 @@ jobs:
       - name: Install build dependencies
         if: steps.updates.outputs.changed == 'true'
         working-directory: .
-        run: sh ziranlang/ziran/scripts/ci_packages.sh build-essential python3-pil python3-cryptography
+        run: sh ziranlang/ziran/scripts/ci_packages.sh build-essential python3-pil python3-numpy python3-cryptography
       - name: Build the locked toolchain and pin game dependencies
         id: pin
         if: steps.updates.outputs.changed == 'true'
@@ -103,6 +103,12 @@ jobs:
         if: steps.updates.outputs.changed == 'true'
         run: |
           make -C ../shovey levels landscape
+          # Arcade imports the games' own exports, built in Shovey's checkout
+          # at the pinned release with its locked compiler, as its owner does.
+          (cd ../shovey && ./scripts/ziran.sh fetch --locked &&
+            toolchain=$(./scripts/ziran.sh pkg path ziran --locked) &&
+            { [ -x "$toolchain/build/bin/ziran" ] || make -j2 -C "$toolchain" all; } &&
+            python3 scripts/player.py collection --web)
           make collection
           python3 tests/collection_test.py
           python3 tests/publisher_test.py
