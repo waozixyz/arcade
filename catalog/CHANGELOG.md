@@ -1,8 +1,11 @@
 # Arcade catalog changelog
 
-## [Unreleased]
+## 0.7.121
 
 - Keep Apfelwurm and its editor available when the game library updates.
+- Shovey 0.6.167: The level result, book, shop and item texts show again in every language.
+- Shovey 0.6.167: Your account's progress arrives quietly and quickly; the map no longer says it is loading.
+- Apfelwurm 0.2.32: Include Apfelwurm and its editor in Arcade's automatic game updates.
 
 ## 0.7.120
 

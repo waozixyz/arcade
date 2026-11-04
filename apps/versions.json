@@ -20,8 +20,8 @@
     "shovey": {
       "id": "arcade.shovey",
       "title": "Shovey",
-      "version": "0.6.166",
-      "sequence": 172,
+      "version": "0.6.167",
+      "sequence": 173,
       "host_api": 42
     },
     "shovey-editor": {
@@ -34,15 +34,15 @@
     "arcade": {
       "id": "inbe.arcade",
       "title": "Arcade",
-      "version": "0.7.120",
-      "sequence": 199,
+      "version": "0.7.121",
+      "sequence": 200,
       "host_api": 41
     },
     "wurm": {
       "id": "xyz.waozi.wurm",
       "title": "Apfelwurm",
-      "version": "0.2.31",
-      "sequence": 25,
+      "version": "0.2.32",
+      "sequence": 26,
       "host_api": 42
     },
     "wurm-editor": {
