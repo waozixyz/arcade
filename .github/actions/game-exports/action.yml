@@ -1,5 +1,5 @@
 name: Export locked games
-description: Build portable exports in their owning repositories before Arcade imports them.
+description: Prepare game-owned exports, downloading Wurm's compiled release unchanged.
 runs:
   using: composite
   steps:
@@ -34,10 +34,16 @@ runs:
       run: |
         python3 - <<'PY'
         from pathlib import Path
-        for name in ('shovey', 'wurm', 'choano'):
+        for name in ('shovey', 'choano'):
             (Path('..') / name / 'ziran.local.toml').write_text('[overrides]\nziran = "../../ziranlang/ziran"\n')
         Path('ziran.local.toml').write_text('[overrides]\nziran = "../../ziranlang/ziran"\nshovey = "../shovey"\nwurm = "../wurm"\nchoano = "../choano"\n')
         PY
         (cd ../shovey && make levels landscape && python3 scripts/player.py collection --web)
-        (cd ../wurm && python3 tools/build_portable.py)
         (cd ../choano && make portable)
+    - name: Download the pinned Wurm portable release
+      shell: bash
+      working-directory: waozixyz/arcade
+      env:
+        GH_TOKEN: ${{ github.token }}
+        WURM_COMMIT: ${{ steps.games.outputs.wurm }}
+      run: python3 scripts/fetch-wurm-export.py --source ../wurm --commit "$WURM_COMMIT"

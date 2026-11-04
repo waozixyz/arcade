@@ -36,6 +36,7 @@ jobs:
         run: |
           python3 tests/game_updates_test.py
           python3 tests/catalog_versions_test.py
+          python3 tests/wurm_export_test.py
       - name: Find newer game releases
         id: updates
         env:
@@ -99,16 +100,12 @@ jobs:
           python3 scripts/follow-game-releases.py art
           echo "version=$(cat catalog/VERSION)" >> "$GITHUB_OUTPUT"
           head -12 catalog/CHANGELOG.md
+      - name: Prepare game-owned exports
+        if: steps.updates.outputs.changed == 'true'
+        uses: ./waozixyz/arcade/.github/actions/game-exports
       - name: Build and check the collection
         if: steps.updates.outputs.changed == 'true'
         run: |
-          make -C ../shovey levels landscape
-          # Arcade imports the games' own exports, built in Shovey's checkout
-          # at the pinned release with its locked compiler, as its owner does.
-          (cd ../shovey && ./scripts/ziran.sh fetch --locked &&
-            toolchain=$(./scripts/ziran.sh pkg path ziran --locked) &&
-            { [ -x "$toolchain/build/bin/ziran" ] || make -j2 -C "$toolchain" all; } &&
-            python3 scripts/player.py collection --web)
           make collection
           python3 tests/collection_test.py
           python3 tests/publisher_test.py

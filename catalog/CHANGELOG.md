@@ -1,5 +1,9 @@
 # Arcade catalog changelog
 
+## [Unreleased]
+
+- Keep Apfelwurm and its editor available when the game library updates.
+
 ## 0.7.120
 
 - Show the original painted covers for Shovey, Apfelwurm and Choano.

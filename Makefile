@@ -38,6 +38,7 @@ collection: games $(APPS_BUNDLE)
 .PHONY: game-artifacts-test
 game-artifacts-test:
 	python3 tests/game_artifacts_test.py
+	python3 tests/wurm_export_test.py
 
 collection-test:
 	python3 tests/collection_test.py
@@ -67,6 +68,7 @@ run: all
 test: all
 	python3 tests/catalog_versions_test.py
 	python3 tests/game_artifacts_test.py
+	python3 tests/wurm_export_test.py
 	python3 tests/game_host_compatibility_test.py
 	python3 tests/collection_notifications_test.py
 	python3 tests/game_module_paths_test.py
