@@ -22,7 +22,6 @@ def load(name, path):
 
 
 exports = load('wurm_exports', 'scripts/fetch-wurm-export.py')
-importer = load('game_importer', 'scripts/build-games.py')
 
 
 class WurmExports(unittest.TestCase):
@@ -72,6 +71,7 @@ class WurmExports(unittest.TestCase):
 
     @unittest.skipUnless(os.environ.get('WURM_EXPORT_ARCHIVE'), 'set WURM_EXPORT_ARCHIVE and WURM_SOURCE for real bundle test')
     def test_real_release_passes_arcade_import_contract(self):
+        importer = load('game_importer', 'scripts/build-games.py')
         source = Path(os.environ['WURM_SOURCE'])
         archive = Path(os.environ['WURM_EXPORT_ARCHIVE'])
         exports.unpack(archive, self.root)
