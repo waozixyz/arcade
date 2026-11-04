@@ -1,5 +1,11 @@
 # Arcade catalog changelog
 
+## 0.7.122
+
+- Shovey 0.6.168: Play the first 30 Island levels with working downloads and a working Play button.
+- Shovey 0.6.168: Start Classic or Island levels of your own from the Editor.
+- Shovey 0.6.168: Follow Shovey in his map circle, with more water along the landscape coast and a secret on the beach.
+
 ## 0.7.121
 
 - Keep Apfelwurm and its editor available when the game library updates.
