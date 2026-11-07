@@ -1,5 +1,9 @@
 # Arcade catalog changelog
 
+## 0.7.125
+
+- Shovey 0.6.169: Runs in the latest Inner Breeze and Arcade.
+
 ## 0.7.124
 
 - Apfelwurm 0.2.33: Runs in the latest Inner Breeze and Arcade.
