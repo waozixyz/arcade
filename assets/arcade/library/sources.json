@@ -1,14 +1,14 @@
 {
   "choano-landscape": {
-    "source_sha256": "1ca6e31c1062a7cca41bace4cf1bb221291988aea4a1dd61271899c2f5f28307",
+    "source_sha256": "dfea1e328a0f386d0b5e323a59bbbc3cfa926f1dbdceaa09a9858a43b0949091",
     "crop_top": 0
   },
   "choano-portrait": {
-    "source_sha256": "47b07722c474a67ee4a06b7644a3aff211503674391e363c17eb06a34ce60d6c",
+    "source_sha256": "10be8a3d9251deeede9080c715a7a5dadc1b1641db16aa3a04b874a266302ea9",
     "crop_top": 0
   },
   "choano-preview": {
-    "source_sha256": "1ca6e31c1062a7cca41bace4cf1bb221291988aea4a1dd61271899c2f5f28307",
+    "source_sha256": "dfea1e328a0f386d0b5e323a59bbbc3cfa926f1dbdceaa09a9858a43b0949091",
     "crop_top": 0
   },
   "hud-dew": {

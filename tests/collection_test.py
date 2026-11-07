@@ -64,8 +64,8 @@ class CollectionTests(unittest.TestCase):
         # Fixed runtime references catch a doubled namespace in the real
         # compiled payload, independently of the packaging declaration.
         assets = bundle_asset_paths(ROOT / "build/games/choano.zx")
-        for path in ("assets/choano/background-inside.png", "assets/choano/organisms-hd.png",
-                     "assets/choano/title-landscape.jpg", "assets/choano/fish/sea.png"):
+        for path in ("assets/choano/background-inside.avif", "assets/choano/organisms-hd.avif",
+                     "assets/choano/title-landscape.avif", "assets/choano/fish/sea.avif"):
             self.assertTrue(path in assets, "Choano runtime image missing from its bundle: " + path)
 
     def setUp(self):

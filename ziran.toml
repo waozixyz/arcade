@@ -64,7 +64,7 @@ ref = "8b5a989dea686250078da2d209fde1cd2946fc77"
 
 [dependencies.choano]
 git = "https://github.com/waozixyz/choano.git"
-ref = "eada9baf35b45a7ebea4fb93728403dcca34cb41"
+ref = "3bf86a40f41ea38ff8d6f23c99298adba56eea8a"
 
 # Library art can advance independently of the tested game payload.
 [dependencies.wurm_art]
@@ -76,6 +76,6 @@ source = true
 git = "https://github.com/ziranlang/daochi-client.git"
 ref = "970d5e44b1702158cb16469892da6ff50f142427"
 
-[dependencies.kss]
-git = "https://github.com/kryonlabs/kss.git"
-ref = "e3536e6d056961d2ba7fa5f18af81f75c80e8f62"
+[dependencies.css]
+git = "https://github.com/kryonlabs/css.git"
+ref = "6aad71c34fffec40ec903cc8f9d5c95f02572d35"
