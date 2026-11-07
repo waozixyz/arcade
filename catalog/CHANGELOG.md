@@ -1,5 +1,17 @@
 # Arcade catalog changelog
 
+## 0.7.124
+
+- Apfelwurm 0.2.33: Runs in the latest Inner Breeze and Arcade.
+- Choano 0.1.9: Runs in the latest Inner Breeze and Arcade.
+- Choano 0.1.9: Supply genuine gameplay screenshots and a self-identifying portable bundle for Arcade’s console library.
+- Choano 0.1.9: Keep the Profile title bar clear of the camera and status bar on Android.
+- Choano 0.1.9: Let the Android app reach the network, so online sign-in, backups and Friends work.
+- Choano 0.1.9: Keep the account key out of Android system backups, which have no passphrase.
+- Choano 0.1.9: Use Entity's reviewed account authorization and the shared game navigation modules.
+- Choano 0.1.9: On Android, Continue as can use the account from another signed-in Waozi app, once you approve it there.
+- Choano 0.1.9: Continue as no longer crashes the other app when it was closed.
+
 ## 0.7.123
 
 - Arcade and its games run in the latest Inner Breeze: Shovey 0.6.169, Apfelwurm 0.2.33 and Choano 0.1.9.
