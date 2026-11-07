@@ -227,28 +227,36 @@ try {
       }
       throw new Error('The library did not reopen');
     };
-    // The covers' own pixels: art has far more colours than an empty tile.
+    // Sample only named game covers. The shelf also exposes a large unnamed
+    // input button whose bounds include decorations and all of the covers.
+    // Counting that whole shelf can mistake empty covers for painted art.
     const coverColours = async () => {
-      const covers = (await tree()).filter(node => node.kind === 'button' && node.visible &&
-        node.visible_width >= 100 && node.visible_height >= 100);
-      return evaluate(`(() => {
-        const canvas = document.getElementById('canvas'), context = canvas.getContext('2d');
-        const scale = canvas.width / canvas.clientWidth;
-        return ${JSON.stringify(covers)}.map(node => {
+      const colours = [];
+      // Neighbouring covers can be clipped or off screen. Select each title
+      // and sample its settled main cover so every game is checked.
+      for (const title of requiredTitles) {
+        const cover = button(await tree(), title);
+        if (!cover) throw new Error('Game cover missing: ' + title);
+        if (!cover.selected || cover.height <= 100) await click(cover);
+        const node = await waitButton(title, true, true);
+        colours.push(await evaluate(`(() => {
+          const canvas = document.getElementById('canvas'), context = canvas.getContext('2d');
+          const scale = canvas.width / canvas.clientWidth, node = ${JSON.stringify(node)};
           const pixels = context.getImageData(Math.round(node.visible_x * scale), Math.round(node.visible_y * scale),
             Math.round(node.visible_width * scale), Math.round(node.visible_height * scale)).data;
           const colours = new Set();
           for (let at = 0; at < pixels.length; at += 8) colours.add(pixels[at] << 16 | pixels[at + 1] << 8 | pixels[at + 2]);
           return colours.size;
-        });
-      })()`);
+        })()`));
+      }
+      return colours;
     };
     const DRAWN = 1500;
     const coversDrawn = async () => {
       let colours = [];
       for (const end = Date.now() + 15000; Date.now() < end;) {
         colours = await coverColours();
-        if (colours.length && colours.every(count => count >= DRAWN)) return colours;
+        if (colours.length === requiredTitles.length && colours.every(count => count >= DRAWN)) return colours;
         await delay(250);
       }
       throw new Error('The library covers did not draw: ' + JSON.stringify(colours));
@@ -396,7 +404,7 @@ try {
         await pageReady();
         await delay(3000);
         const empty = await coverColours();
-        if (!refusedArt.length || !empty.length || empty.some(count => count >= DRAWN))
+        if (!refusedArt.length || empty.length !== requiredTitles.length || empty.some(count => count >= DRAWN))
           throw new Error('The cover check did not tell empty covers apart: ' + JSON.stringify({ empty, refusedArt }));
         console.log(`Without the site's art the covers stayed empty (colours ${empty}) and the API art request was refused`);
         libraryMode = 'site';
