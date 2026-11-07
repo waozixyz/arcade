@@ -189,21 +189,36 @@ try {
       const position = { x: node.visible_x + node.visible_width / 2, y: node.visible_y + node.visible_height / 2 };
       await command('Input.dispatchMouseEvent', { type: 'mouseMoved', ...position });
       await command('Input.dispatchMouseEvent', { type: 'mousePressed', ...position, button: 'left', buttons: 1, clickCount: 1 });
-      await delay(80);
+      // Keep a canvas press down until the game has processed a frame.
+      if (node.kind === 'button') await tree();
+      else await delay(80);
       await command('Input.dispatchMouseEvent', { type: 'mouseReleased', ...position, button: 'left', buttons: 0, clickCount: 1 });
       await delay(250);
     };
     const button = (nodes, label) => nodes.find(node => node.kind === 'button' && node.label === label && node.visible);
-    const waitButton = async label => {
+    const waitButton = async (label, settled = false, selected = false) => {
       const labels = Array.isArray(label) ? label : [label];
-      let nodes;
+      let nodes, previous;
       for (const end = Date.now() + 60000; Date.now() < end;) {
         nodes = await tree();
-        const found = nodes.find(node => node.kind === 'button' && labels.includes(node.label) && node.visible);
-        if (found) return found;
+        const found = nodes.find(node => node.kind === 'button' && labels.includes(node.label) && node.visible && (!selected || (node.selected && node.height > 100)));
+        if (found && (!settled || (found.enabled &&
+            found.visible_width >= found.width - .5 && found.visible_height >= found.height - .5))) {
+          if (!settled || (previous?.key === found.key &&
+              Math.abs(previous.visible_x - found.visible_x) < .5 &&
+              Math.abs(previous.visible_y - found.visible_y) < .5)) return found;
+          previous = found;
+        } else previous = undefined;
         await delay(150);
       }
       throw new Error('Game did not show ' + labels.join(' or ') + ': ' + nodes.filter(node => node.kind === 'button').map(node => node.label).join(', '));
+    };
+    const openInstalled = async () => {
+      const cover = button(await tree(), game);
+      if (!cover) throw new Error('Installed cover missing');
+      // A neighbouring cover's first activation selects it; the focused cover opens it.
+      if (!cover.selected || cover.height <= 100) await click(cover);
+      await click(await waitButton(game, true, true));
     };
     const pageReady = async () => {
       for (const end = Date.now() + 60000; Date.now() < end;) {
@@ -282,14 +297,18 @@ try {
         await delay(700);
         await click(button(await tree(), game));
       }
-      const download = (await tree()).findLast(node => node.kind === 'button' && node.label === 'Download');
-      if (!download) throw new Error('The cover did not offer its download');
+      // Selecting a neighbouring cover animates its action into view. Sample
+      // stable geometry before sending real pointer events to that action.
+      const download = await waitButton('Download', true);
       await click(download);
-      await waitButton(game === 'Apfelwurm' ? 'Play' : ['Play', 'Back']);
+      // Downloads install in the background; opening requires a fresh cover activation.
+      await waitButton('App options', true);
+      await click(button(await tree(), game));
+      await waitButton(game === 'Apfelwurm' ? 'Play' : ['Play', 'Back'], true);
       const play = button(await tree(), 'Play');
       if (play) await click(play);
-      const swipe = button(await tree(), 'Swipe');
-      if (swipe) await click(swipe);
+      const swipe = play && game === 'Apfelwurm' ? await waitButton(['Swipe', 'Pause'], true) : button(await tree(), 'Swipe');
+      if (swipe?.label === 'Swipe') await click(swipe);
       if (play || game === 'Apfelwurm') await waitButton('Pause');
       // Flush the actual control record before a cold restart.
       await evaluate(`new Promise((resolve,reject) => FS.syncfs(false,error => error ? reject(error) : resolve(true)))`);
@@ -298,8 +317,8 @@ try {
       const reloaded = await tree();
       const installed = button(reloaded, game);
       if (!installed) throw new Error('Installed cover missing after reload');
-      await click(installed);
-      await waitButton(game === 'Apfelwurm' ? 'Play' : ['Play', 'Back']);
+      await openInstalled();
+      await waitButton(game === 'Apfelwurm' ? 'Play' : ['Play', 'Back'], true);
       console.log(game + ' downloaded, opened its game and reopened from its installed cover');
       if (game === 'Apfelwurm') {
         await command('Page.reload');
@@ -324,7 +343,7 @@ try {
             return original.call(this,path,...args);
           };
         })()`);
-        await click(installed);
+        await openInstalled();
         // Depending on the game version it first reads records on its title
         // or on Play. Either path must expose a usable recovery control.
         if (!await evaluate('!!Module.arcadeFailed')) {
@@ -358,8 +377,8 @@ try {
         await pageReady();
         if (await evaluate(`FS.readFile(${JSON.stringify(saved.path)},{encoding:'utf8'})`) !== saved.text)
           throw new Error('Recovering from a failed game changed its saved record');
-        await click(button(await tree(),game));
-        await waitButton('Play');
+        await openInstalled();
+        await waitButton('Play', true);
         console.log('The reported ReadLevel failure showed recovery; returning reopened the installed game and retained its saved record');
       }
       if (library) {

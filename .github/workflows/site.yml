@@ -45,7 +45,12 @@ jobs:
             -q '[.[] | select(.isDraft | not) | .tagName | select(startswith("node-arcade-"))][0]')
           test -n "$tag"
           git fetch --force origin "refs/tags/$tag:refs/tags/$tag"
+          # Keep the current smoke gate while building the release's exact host.
+          smoke_test=$(mktemp)
+          cp tests/web_site_test.mjs "$smoke_test"
           git checkout --detach "refs/tags/$tag"
+          cp "$smoke_test" tests/web_site_test.mjs
+          rm "$smoke_test"
           echo "tag=$tag" >> "$GITHUB_OUTPUT"
           echo "version=${tag#node-arcade-}" >> "$GITHUB_OUTPUT"
       - name: Read the locked toolchain
