@@ -3,8 +3,8 @@
 // that declares a newer one is refused. scripts/check-games.py fails while it
 // differs from the standard and the ledger.
 GAME_CONTRACT_VERSION :: 1
-GAME_OLDEST_HOST_API :: 41
-GAME_HOST_API :: 42
+GAME_OLDEST_HOST_API :: 43
+GAME_HOST_API :: 43
 // The older direct loader has no verified reminder dispatch. Products use
 // CollectionHost; do not advertise its API42 authority from the direct loader.
 GAME_DIRECT_HOST_API :: 41

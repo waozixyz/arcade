@@ -23,7 +23,7 @@ their whole board; locked puzzles keep their lock until earned.
 
 The published Arcade carries only its catalog, well under one megabyte. Its host supplies the shared Apps controller (Inner Breeze its own, standalone Arcade the `apps.zx` installed beside it), and the covers and previews download once as one separate art bundle. Library previews stay at 256 pixels. Real gameplay screenshots supply landscape heroes up to 1600 pixels and portrait covers up to 1080 pixels on the longest side, encoded as quality-80 WebP. The complete separate art bundle has a 2 MiB budget for the current games. Full-size originals stay in their game repositories. The verified art bundle stays cached across restarts and is replaced when its content changes. The art lives in `assets/arcade/library/` (`python3 scripts/library-art.py` refreshes it when a game's art changes; the build stops until it does). Inner Breeze needs host interface 35 for it. Each game
 downloads when opened, with its existing identity and saved progress. This
-catalog requires Inner Breeze host API 41. Downloaded games work offline;
+catalog requires Inner Breeze host API 43. Downloaded games work offline;
 standalone Shovey keeps its complete offline collection. Apfelwurm comes from
 its own package, with the same game identity and private editor records.
 

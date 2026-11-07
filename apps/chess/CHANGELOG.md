@@ -1,5 +1,9 @@
 # Chess changelog
 
+## [1.2.2] - 2026-11-07
+
+- Runs in the latest Inner Breeze and Arcade.
+
 ## [1.2.1] - 2026-10-29
 
 - Runs in Inner Breeze 2.1.61's smaller app format.

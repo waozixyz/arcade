@@ -47,7 +47,7 @@ class ArtifactTests(unittest.TestCase):
         self.apps = []
         for name, requires in [('base', []), ('base-editor', ['test.base'])]:
             descriptor = dict(id='test.' + name, name=name, title=name, kind='game',
-                              harnesses=['arcade'], entry='portable:Main', host_api=42,
+                              harnesses=['arcade'], entry='portable:Main', host_api=43,
                               contract_version=1, module_api=2, save_schema=1,
                               preview='preview.png', build_defines=['OWNER_ONLY'])
             self.apps.append(dict(descriptor=descriptor, requires=requires, enabled=True,

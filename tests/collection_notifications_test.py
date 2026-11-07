@@ -49,7 +49,7 @@ def main():
         assets = WORK / game / 'assets/notification'
         assets.mkdir(parents=True, exist_ok=True)
         (assets / 'catalog.json').write_text(json.dumps(dict(id=identifier, name='notification',
-            contract_version=1, module_api=2, host_api=42, save_schema=1)))
+            contract_version=1, module_api=2, host_api=43, save_schema=1)))
         for protocol in (1, 2):
             defines = ['--define', 'KRYON_HOSTED_UI']
             if protocol == 2:

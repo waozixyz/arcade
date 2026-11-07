@@ -1,5 +1,9 @@
 # Arcade changelog
 
+## [Unreleased]
+
+- Runs games built for the latest Inner Breeze.
+
 ## 0.7.120
 
 - Library covers show their original painted artwork again.

@@ -1,56 +1,56 @@
 {
-  "host_api": 42,
-  "oldest_host_api": 41,
+  "host_api": 43,
+  "oldest_host_api": 43,
   "module_api": 2,
   "node_apps": {
     "chess": {
       "id": "inbe.chess",
       "title": "Chess",
-      "version": "1.2.1",
-      "sequence": 6,
-      "host_api": 41
+      "version": "1.2.2",
+      "sequence": 7,
+      "host_api": 43
     },
     "choano": {
       "id": "xyz.waozi.choano",
       "title": "Choano",
-      "version": "0.1.8",
-      "sequence": 3,
-      "host_api": 41
+      "version": "0.1.9",
+      "sequence": 4,
+      "host_api": 43
     },
     "shovey": {
       "id": "arcade.shovey",
       "title": "Shovey",
-      "version": "0.6.168",
-      "sequence": 174,
-      "host_api": 42
+      "version": "0.6.169",
+      "sequence": 175,
+      "host_api": 43
     },
     "shovey-editor": {
       "id": "arcade.shovey-editor",
       "title": "Shovey Editor",
-      "version": "0.2.148",
-      "sequence": 150,
-      "host_api": 41
+      "version": "0.2.149",
+      "sequence": 151,
+      "host_api": 43
     },
     "arcade": {
       "id": "inbe.arcade",
       "title": "Arcade",
-      "version": "0.7.122",
-      "sequence": 201,
-      "host_api": 41
+      "version": "0.7.123",
+      "sequence": 202,
+      "host_api": 43
     },
     "wurm": {
       "id": "xyz.waozi.wurm",
       "title": "Apfelwurm",
-      "version": "0.2.32",
-      "sequence": 26,
-      "host_api": 42
+      "version": "0.2.33",
+      "sequence": 27,
+      "host_api": 43
     },
     "wurm-editor": {
       "id": "xyz.waozi.wurm-editor",
       "title": "Apfelwurm Editor",
-      "version": "0.1.1",
-      "sequence": 2,
-      "host_api": 41
+      "version": "0.1.2",
+      "sequence": 3,
+      "host_api": 43
     }
   }
 }

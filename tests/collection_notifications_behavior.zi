@@ -167,7 +167,7 @@ Check :: () -> s32 {
             if protocol == APPS_NODE_PROTOCOL {
                 if Open(key, protocol, true) { return 120 }
                 AppHostStop(*collection_host); AppHostCollect(*collection_host)
-                if Open(key, protocol, false, 41) { return 121 }
+                if Open(key, protocol, false, 42) { return 121 }
                 AppHostStop(*collection_host); AppHostCollect(*collection_host)
             }
         }

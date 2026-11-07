@@ -328,7 +328,7 @@ class CollectionTests(unittest.TestCase):
         }))
         (source / "editor/catalog.json").write_text(json.dumps({
             "id": "xyz.waozi.wurm-editor", "name": "wurm-editor", "title": "Apfelwurm Editor",
-            "kind": "game", "contract_version": 1, "module_api": 2, "host_api": 41,
+            "kind": "game", "contract_version": 1, "module_api": 2, "host_api": 43,
             "harnesses": ["arcade"], "preview": "assets/wurm-editor-preview.png",
         }))
         images = {
@@ -362,7 +362,7 @@ class CollectionTests(unittest.TestCase):
             self.add_library_copy(name, key, images[f"{name}-{key}"])
         ledger["node_apps"]["wurm-editor"] = {
             "id": "xyz.waozi.wurm-editor", "title": "Apfelwurm Editor", "version": "0.1.0",
-            "sequence": 1, "host_api": 41,
+            "sequence": 1, "host_api": 43,
         }
         ledger_path.write_text(json.dumps(ledger))
         resolver = self.root / "scripts/ziran.sh"

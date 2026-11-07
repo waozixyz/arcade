@@ -1,5 +1,9 @@
 # Arcade catalog changelog
 
+## 0.7.123
+
+- Arcade and its games run in the latest Inner Breeze: Shovey 0.6.169, Apfelwurm 0.2.33 and Choano 0.1.9.
+
 ## 0.7.122
 
 - Shovey 0.6.168: Play the first 30 Island levels with working downloads and a working Play button.
