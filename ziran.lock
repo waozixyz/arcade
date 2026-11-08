@@ -91,6 +91,24 @@
       "url": "https://github.com/waozixyz/choano.git"
     },
     {
+      "commit": "b0792f4a3b825736ef0d257c24527da10901dad0",
+      "dependencies": {"curl": "p8da229d15597ab5c", "daochi_client": "p6af0b5bd9fd0cd31", "kryon": "pfab16cbe8c10775b", "monocypher": "p002f6ed23e3a3576", "oqs": "p7098ac9cd92f7e5f", "qrcode": "p0dfa70137405b096", "zlib": "p82dbc05081cd4d96"},
+      "dependency_refs": {"curl": "19b299005fbe2d895f4ad525cfdae62a2220c3ea", "daochi_client": "970d5e44b1702158cb16469892da6ff50f142427", "kryon": "99c934a0fffc865c44d2bdc54104ea7aebb86405", "monocypher": "master", "oqs": "master", "qrcode": "master", "zlib": "51b7f2abdade71cd9bb0e7a373ef2610ec6f9daf"},
+      "id": "p1d9267064de62b2d",
+      "name": "Entity",
+      "ref": "b0792f4a3b825736ef0d257c24527da10901dad0",
+      "url": "https://github.com/waozixyz/entity.git"
+    },
+    {
+      "commit": "2989f06596b6cfb454b7e0e1b07b583fa0a24407",
+      "dependencies": {"apps": "pb91195370ac0cb93", "crypto": "pc23fbf455e97614d", "entity": "p6ab8e2a733002786", "game2d": "p7e2abf6e63acf588", "kryon": "pbb0d432304fad5c6", "mingcute": "pe1027b9d16704793"},
+      "dependency_refs": {"apps": "3c0a7d9e7f941381a7c07169f94240b9fe801bb8", "crypto": "master", "entity": "2c56268db0b270ad53e51af9cae5dc46876a65d9", "game2d": "a9c85df73fa1ed7af55da8a6ab3ca7d3cdf5e6a8", "kryon": "b5ac5d1a303326009012d68016c1d8859b6b3a13", "mingcute": "master"},
+      "id": "p23c24e28cd50c179",
+      "name": "Apfelwurm",
+      "ref": "2989f06596b6cfb454b7e0e1b07b583fa0a24407",
+      "url": "https://github.com/waozixyz/wurm.git"
+    },
+    {
       "commit": "cd72a242f8cdfd3ec3fc839fc11d9e7d7fc3b8fc",
       "dependencies": {"crypto": "pc23fbf455e97614d", "daochi_client": "p6af0b5bd9fd0cd31", "kryon": "pbb0d432304fad5c6"},
       "dependency_refs": {"crypto": "master", "daochi_client": "970d5e44b1702158cb16469892da6ff50f142427", "kryon": "b5ac5d1a303326009012d68016c1d8859b6b3a13"},
@@ -243,6 +261,15 @@
       "url": "https://github.com/madler/zlib.git"
     },
     {
+      "commit": "f84c162594e518cb306bfd0ce41783ad55b6c730",
+      "dependencies": {"av1": "p5d7d12505a42f7b3", "dav1d": "pb24767b9eb34d961", "image_codec": "p69c0e968ae5735d9", "libaom": "p74ab3cb6eb3b86fa", "libavif": "p57c0272208aae8db"},
+      "dependency_refs": {"av1": "bd278217e2bac754d868b3d6502eac4257658d4b", "dav1d": "54706fc6bc0cdecab7e9593974a4039cc038fca7", "image_codec": "360553150917f352e49e1beb78917370792ccaef", "libaom": "b141d9c45db236335351c8a4b2a14b3ade27c937", "libavif": "1aadfad932c98c069a1204261b1856f81f3bc199"},
+      "id": "p872d871f84f2284f",
+      "name": "avif",
+      "ref": "f84c162594e518cb306bfd0ce41783ad55b6c730",
+      "url": "https://github.com/ziranlang/avif.git"
+    },
+    {
       "commit": "256fe6ff049d48a25dfe2a8b0db7ad84477fd282",
       "dependencies": {"crypto": "pc23fbf455e97614d", "oqs": "p7098ac9cd92f7e5f"},
       "dependency_refs": {"crypto": "master", "oqs": "master"},
@@ -288,15 +315,6 @@
       "url": "https://github.com/kryonlabs/plot.git"
     },
     {
-      "commit": "3b7fbaf580d3c7e2a729a6f3d133737d8167f7b5",
-      "dependencies": {"apps": "pb91195370ac0cb93", "crypto": "pc23fbf455e97614d", "entity": "p6ab8e2a733002786", "game2d": "p7e2abf6e63acf588", "kryon": "pbb0d432304fad5c6", "mingcute": "pe1027b9d16704793"},
-      "dependency_refs": {"apps": "3c0a7d9e7f941381a7c07169f94240b9fe801bb8", "crypto": "master", "entity": "2c56268db0b270ad53e51af9cae5dc46876a65d9", "game2d": "a9c85df73fa1ed7af55da8a6ab3ca7d3cdf5e6a8", "kryon": "b5ac5d1a303326009012d68016c1d8859b6b3a13", "mingcute": "master"},
-      "id": "pb0ffd96a1a0f002c",
-      "name": "Apfelwurm",
-      "ref": "3b7fbaf580d3c7e2a729a6f3d133737d8167f7b5",
-      "url": "https://github.com/waozixyz/wurm.git"
-    },
-    {
       "commit": "02034376164f09bc342f875f135ef3311781bd3b",
       "dependencies": {"crypto": "pc23fbf455e97614d", "daochi_client": "p6af0b5bd9fd0cd31", "kryon": "p5d654550c4218378"},
       "dependency_refs": {"crypto": "master", "daochi_client": "970d5e44b1702158cb16469892da6ff50f142427", "kryon": "b9aed7589e9af2935a9cd9cb260e72944c195762"},
@@ -340,6 +358,15 @@
       "name": "kryon",
       "ref": "b5ac5d1a303326009012d68016c1d8859b6b3a13",
       "url": "https://github.com/kryonlabs/kryon.git"
+    },
+    {
+      "commit": "baaaad6717532bfcaf810cd1abbf6253c38853a3",
+      "dependencies": {"crypto": "pc23fbf455e97614d", "daochi_client": "p6af0b5bd9fd0cd31", "kryon": "pfab16cbe8c10775b"},
+      "dependency_refs": {"crypto": "master", "daochi_client": "970d5e44b1702158cb16469892da6ff50f142427", "kryon": "99c934a0fffc865c44d2bdc54104ea7aebb86405"},
+      "id": "pc1d7897161c5a7f0",
+      "name": "Apps",
+      "ref": "baaaad6717532bfcaf810cd1abbf6253c38853a3",
+      "url": "https://github.com/waozixyz/apps.git"
     },
     {
       "commit": "944826f70779a6b6cd53f6b06a75b36f4d8a2558",
@@ -430,6 +457,15 @@
       "url": "https://github.com/kryonlabs/game2d.git"
     },
     {
+      "commit": "99c934a0fffc865c44d2bdc54104ea7aebb86405",
+      "dependencies": {"audio": "pd258d453b63edc1f", "avif": "p872d871f84f2284f", "image_codec": "p69c0e968ae5735d9", "libaom": "p74ab3cb6eb3b86fa", "libavif": "p57c0272208aae8db", "libwebp": "p3b3c785a0e17e605", "raylib": "pcc7aa76725f2fb2f", "sdl3": "p16cd0434af3dff7b", "webp": "pa068bd09450b2a80"},
+      "dependency_refs": {"audio": "f5eed1e6c817997d51508f9c3c7b948a0bb4ad0b", "avif": "f84c162594e518cb306bfd0ce41783ad55b6c730", "image_codec": "360553150917f352e49e1beb78917370792ccaef", "libaom": "b141d9c45db236335351c8a4b2a14b3ade27c937", "libavif": "1aadfad932c98c069a1204261b1856f81f3bc199", "libwebp": "1844042d1ca751e62e61df7617dba19c98588339", "raylib": "fafa2cea97d0cb379d832086ba45a989fa6f9c8e", "sdl3": "829a65d769d935c4852f8159e964312c0957260a", "webp": "02145a00a1f0df2a111da04a75f3fef260883897"},
+      "id": "pfab16cbe8c10775b",
+      "name": "kryon",
+      "ref": "99c934a0fffc865c44d2bdc54104ea7aebb86405",
+      "url": "https://github.com/kryonlabs/kryon.git"
+    },
+    {
       "commit": "2f349f8c4a46c7476c6c02b87ec570e66d3a8f34",
       "dependencies": {"av1": "p5d7d12505a42f7b3", "dav1d": "pb24767b9eb34d961", "image_codec": "p69c0e968ae5735d9", "libaom": "p74ab3cb6eb3b86fa", "libavif": "p57c0272208aae8db"},
       "dependency_refs": {"av1": "bd278217e2bac754d868b3d6502eac4257658d4b", "dav1d": "54706fc6bc0cdecab7e9593974a4039cc038fca7", "image_codec": "360553150917f352e49e1beb78917370792ccaef", "libaom": "b141d9c45db236335351c8a4b2a14b3ade27c937", "libavif": "1aadfad932c98c069a1204261b1856f81f3bc199"},
@@ -440,8 +476,8 @@
     }
   ],
   "root": {
-    "dependencies": {"apps": "p2b1c0e80f47c3873", "choano": "p1b60dc331765371d", "css": "p744d4a2e75e9469b", "daochi_client": "p6af0b5bd9fd0cd31", "entity": "p6ab8e2a733002786", "game2d": "p0e63706817d43aba", "inbe": "p183b01bccc6424e7", "kryon": "pbb0d432304fad5c6", "mingcute": "pe1027b9d16704793", "shovey": "pd9a9fcafbe89bc38", "wurm": "pb0ffd96a1a0f002c", "wurm_art": "p02e33d091b212961"},
-    "dependency_refs": {"apps": "cd72a242f8cdfd3ec3fc839fc11d9e7d7fc3b8fc", "choano": "3bf86a40f41ea38ff8d6f23c99298adba56eea8a", "css": "6aad71c34fffec40ec903cc8f9d5c95f02572d35", "daochi_client": "970d5e44b1702158cb16469892da6ff50f142427", "entity": "2c56268db0b270ad53e51af9cae5dc46876a65d9", "game2d": "8b5a989dea686250078da2d209fde1cd2946fc77", "inbe": "master", "kryon": "b5ac5d1a303326009012d68016c1d8859b6b3a13", "mingcute": "master", "shovey": "af0365cc78d12cbb4bc13101edc3af3f90ecbe18", "wurm": "3b7fbaf580d3c7e2a729a6f3d133737d8167f7b5", "wurm_art": "5e609079d1e91699a627b5d938d1fffa4a31ac07"},
+    "dependencies": {"apps": "pc1d7897161c5a7f0", "choano": "p1b60dc331765371d", "css": "p744d4a2e75e9469b", "daochi_client": "p6af0b5bd9fd0cd31", "entity": "p1d9267064de62b2d", "game2d": "p0e63706817d43aba", "inbe": "p183b01bccc6424e7", "kryon": "pfab16cbe8c10775b", "mingcute": "pe1027b9d16704793", "shovey": "pd9a9fcafbe89bc38", "wurm": "p23c24e28cd50c179", "wurm_art": "p02e33d091b212961"},
+    "dependency_refs": {"apps": "baaaad6717532bfcaf810cd1abbf6253c38853a3", "choano": "3bf86a40f41ea38ff8d6f23c99298adba56eea8a", "css": "6aad71c34fffec40ec903cc8f9d5c95f02572d35", "daochi_client": "970d5e44b1702158cb16469892da6ff50f142427", "entity": "b0792f4a3b825736ef0d257c24527da10901dad0", "game2d": "8b5a989dea686250078da2d209fde1cd2946fc77", "inbe": "master", "kryon": "99c934a0fffc865c44d2bdc54104ea7aebb86405", "mingcute": "master", "shovey": "af0365cc78d12cbb4bc13101edc3af3f90ecbe18", "wurm": "2989f06596b6cfb454b7e0e1b07b583fa0a24407", "wurm_art": "5e609079d1e91699a627b5d938d1fffa4a31ac07"},
     "name": "Arcade"
   },
   "toolchain": {

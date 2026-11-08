@@ -2,6 +2,10 @@
 
 ## [Unreleased]
 
+- Close Profile directly from its X button while keeping Back navigation through account pages.
+- Use a neutral profile icon instead of the Shovey portrait.
+- Remember completed account backups when reopening Arcade or using the same desktop account in another app.
+
 - Runs games built for the latest Inner Breeze.
 
 ## 0.7.120

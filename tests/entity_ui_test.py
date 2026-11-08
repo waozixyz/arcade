@@ -13,7 +13,7 @@ def arcade_profile(binary, inbe_source, root):
     """Exercise the production Arcade entry without accounts or public services."""
     sys.path.insert(0, str(inbe_source / 'tests'))
     from ui_driver import UiDriver
-    out = root / 'work/entity-ui-test'
+    out = root / 'backup/entity-ui-test'
     out.mkdir(parents=True, exist_ok=True)
     with tempfile.TemporaryDirectory(dir=out) as temporary:
         data = Path(temporary)
@@ -84,8 +84,14 @@ def arcade_profile(binary, inbe_source, root):
                     keyboard('ctrl+a')
                     # Arcade forwards the physical SDL text/modifier path;
                     # its entry does not consume UiDriver's typed-text queue.
-                    subprocess.run(['xdotool', 'type', '--clearmodifiers', '--delay', '20', text],
-                                   env=env, check=True)
+                    if text.isascii():
+                        subprocess.run(['xdotool', 'type', '--clearmodifiers', '--delay', '20', text],
+                                       env=env, check=True)
+                    else:
+                        # Xvfb has no Unicode keyboard layout. Exercise native
+                        # clipboard paste rather than synthesizing unmapped keys.
+                        subprocess.run(['xclip', '-selection', 'clipboard'], input=text.encode(), env=env, check=True)
+                        keyboard('ctrl+v')
                     image = field_image(name)
                     groups = star_count(image)
                     assert groups == len(text), (name, groups, len(text))
@@ -101,14 +107,20 @@ def arcade_profile(binary, inbe_source, root):
                 driver.press(label='Password', role='text_field')
                 subprocess.run(['xdotool', 'type', '--clearmodifiers', 'Ab3-not-retained'], env=env, check=True)
                 driver.press(label='Back', role='button')
-                driver.press(label='Back', role='button')
                 driver.wait(label='Profile', role='button')
                 driver.press(label='Profile', role='button')
                 driver.press(label='Sign in', role='button')
                 assert driver.wait(label='Password', role='text_field')['cursor'] == 0
                 assert star_count(field_image('reopened')) == 0, 'Returning must not prefill the old password'
                 driver.press(label='Back', role='button')
-                driver.press(label='Back', role='button')
+                driver.wait(label='Profile', role='button')
+                # Escape goes back one page, then exits from the profile root.
+                driver.press(label='Profile', role='button')
+                driver.press(label='Sign in', role='button')
+                driver.key('escape')
+                driver.wait_gone(label='Password', role='text_field')
+                assert not driver.find(label='Profile', role='button'), 'Back must stay inside Profile first'
+                driver.key('escape')
                 driver.wait(label='Profile', role='button')
                 (out / 'result.json').write_text(json.dumps({'rendered_stars': counts,
                     'empty_initially': True, 'empty_after_clear': True,
@@ -117,7 +129,7 @@ def arcade_profile(binary, inbe_source, root):
                 if child.poll() is None:
                     child.terminate()
                 child.wait(timeout=10)
-    print('Arcade native Profile: empty password, 12/32/Unicode stars, editing and return navigation passed')
+    print('Arcade native Profile: empty password, 12/32/Unicode stars, editing and direct close from sign-in passed')
 
 parser = argparse.ArgumentParser()
 parser.add_argument('--binary', type=Path, required=True)

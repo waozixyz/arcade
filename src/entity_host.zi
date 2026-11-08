@@ -84,6 +84,15 @@ EntityBack :: () -> bool {
     return true
 }
 
+EntityDismiss :: () -> bool {
+    if !EntityHostSave() { return false }
+    // Clear secure fields and cancel any pending device-link/import route as
+    // ordinary Back would, after preserving the profile edits.
+    for depth: cast(s32)0..15 { if !EntityHostBack() { break } }
+    entity_visible = false
+    return true
+}
+
 EntityFrame :: (session: Session, viewport: Rectangle, key: s32, modifiers: s32,
     connection_label: string = "", connection: *bool = null) -> bool {
     unused WidgetPaletteUse(session, ifx entity_shovey then ShoveyHostPalette() else AppCoversPalette())
@@ -98,11 +107,14 @@ EntityFrame :: (session: Session, viewport: Rectangle, key: s32, modifiers: s32,
             .title = "Profile", .width = cast(s32)width, .height = cast(s32)height, .scale = 1.0,
             .has_left_action = connection != null, .left_label = connection_label,
             .has_right_action = true, .right_label = "Back"})
-    if modal.left_clicked && connection != null && EntityHostSave() {
-        entity_visible = false
+    if modal.left_clicked && connection != null && EntityDismiss() {
         connection.* = true
     }
-    if modal.dismissed || modal.right_clicked { unused EntityBack() }
+    // The frame's X/outside dismissal closes the whole profile. System Back
+    // still walks Entity's pages through EntityBack before leaving.
+    if modal.dismissed || modal.right_clicked {
+        unused EntityDismiss()
+    }
     if !modal.opened { return true }
     input := TextFieldInputFor(key, modifiers, TypedTextTake(session, entity_typed[:]))
     ok := EntityHostFrame(session, modal.layout.content, key, modifiers, input, true)

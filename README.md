@@ -34,7 +34,7 @@ add-on. Its named install dialog lists Shovey when needed and shows the total
 download size. The Island editor stays private. Once Shovey is installed, only
 the editor’s additions download. The editor reuses the original game’s art
 and sounds, and both remain available offline. The top-right HUD uses the shared
-painted Dew jewel and profile medallion in one frame. Its two icons ship with the
+painted Dew jewel and a neutral profile icon in one frame. Its two icons ship with the
 host independently of the remote library, so they also work offline.
 
 Chess’s retained implementation can choose a side and one of four computer
