@@ -14,12 +14,9 @@
 #import "kryon/geometry"
 #import "kryon/drawing_props"
 #import "kryon/control_props"
-#import "kryon/box_widget"
-#import "kryon/box_props"
-#import "kryon/text_widget"
-#import "kryon/text_props"
-#import "kryon/button_widget"
-#import "kryon/button_props"
+Box :: #import "kryon/box";
+Text :: #import "kryon/text";
+Button :: #import "kryon/button";
 #import "kryon/hosted_values"
 #import "kryon/hosted_app"
 #import "kryon/widget_host"
@@ -58,7 +55,7 @@ Codec :: #import "apps/node_codec";
 #if #defined(ANDROID_BUILD) {
     #import "kryon/app_asset"
 }
-#import "kryon/loading_indicator"
+LoadingIndicator :: #import "kryon/loading_indicator";
 #import, file "collection_loading.zi";
 #import "apps/connection"
 #import "apps/remote_catalog"
@@ -835,26 +832,26 @@ CollectionUpdatesSet :: (on: bool) -> bool {
 // input until it is answered.
 CollectionUpdatesQuestion :: (session: Session, viewport: Rectangle) {
     question := "Download new levels when they come out?"
-    Box(session, BoxProps.{.key = cast(u64)49300, .bounds = viewport, .fill = Color.{0, 0, 0, 160}})
-    unused Button(session, ButtonProps.{.key = cast(u64)49301, .id = 49301, .label = question,
+    unused Box.Draw(session, Box.Props.{.key = cast(u64)49300, .bounds = viewport, .fill = Color.{0, 0, 0, 160}})
+    unused Button.Draw(session, Button.Props.{.key = cast(u64)49301, .id = 49301, .label = question,
             .bounds = viewport, .invisible = true})
     width := ifx viewport.width - 24.0 < 480.0 then viewport.width - 24.0 else 480.0
     height: float32 = 200.0
     x := viewport.x + (viewport.width - width) / 2.0
     y := viewport.y + (viewport.height - height) / 2.0
-    Box(session, BoxProps.{.key = cast(u64)49302, .bounds = Rectangle.{x, y, width, height},
+    unused Box.Draw(session, Box.Props.{.key = cast(u64)49302, .bounds = Rectangle.{x, y, width, height},
             .fill = Color.{59, 64, 63, 255}, .border = Color.{93, 98, 97, 255}, .radius = 18.0})
-    Text(session, TextProps.{.key = cast(u64)49303, .text = question, .font = 20, .wrap = TextWrap.TextWrapAuto,
+    Text.Draw(session, Text.Props.{.key = cast(u64)49303, .text = question, .size = 20, .wrap = Text.Wrap.TextWrapAuto,
             .bounds = Rectangle.{x + 16.0, y + 16.0, width - 32.0, 60.0}})
-    Text(session, TextProps.{.key = cast(u64)49304, .text = "You can change this anytime in a game's Help.", .font = 14,
-            .wrap = TextWrap.TextWrapAuto, .bounds = Rectangle.{x + 16.0, y + 80.0, width - 32.0, 44.0}})
+    Text.Draw(session, Text.Props.{.key = cast(u64)49304, .text = "You can change this anytime in a game's Help.", .size = 14,
+            .wrap = Text.Wrap.TextWrapAuto, .bounds = Rectangle.{x + 16.0, y + 80.0, width - 32.0, 44.0}})
     button_width := (width - 48.0 - 12.0) / 2.0
-    if Button(session, ButtonProps.{.key = cast(u64)49305, .id = 49305, .label = "Not now",
+    if Button.Draw(session, Button.Props.{.key = cast(u64)49305, .id = 49305, .label = "Not now",
             .bounds = Rectangle.{x + 24.0, y + 136.0, button_width, 44.0},
             .tone = ButtonTone.ButtonToneNeutral, .emphasis = ButtonEmphasis.ButtonEmphasisSoft}) != 0 {
         unused CollectionUpdatesSet(false)
     }
-    if Button(session, ButtonProps.{.key = cast(u64)49306, .id = 49306, .label = "Download",
+    if Button.Draw(session, Button.Props.{.key = cast(u64)49306, .id = 49306, .label = "Download",
             .bounds = Rectangle.{x + 36.0 + button_width, y + 136.0, button_width, 44.0},
             .tone = ButtonTone.ButtonToneAccent}) != 0 {
         unused CollectionUpdatesSet(true)
@@ -893,7 +890,7 @@ CollectionFrame :: (session: Session, viewport: Rectangle, key: s32, modifiers: 
     // The guest paints only its bounds below this host-owned bar. Paint an
     // opaque base before its controls and any translucent navigation surface.
     if top > 0 {
-        Box(session, BoxProps.{.key = cast(u64)49190,
+        unused Box.Draw(session, Box.Props.{.key = cast(u64)49190,
                 .bounds = Rectangle.{viewport.x, viewport.y, viewport.width, cast(float32)top},
                 .fill = ColorFromPacked(ifx entity_shovey then ShoveyHostPalette().background else AppCoversPalette().background)})
     }
@@ -959,11 +956,11 @@ CollectionFrame :: (session: Session, viewport: Rectangle, key: s32, modifiers: 
         if CollectionNeedsCover(*collection_loading, collection_host.tree.active.slot,
             collection_host.tree.active.generation, pictures_ready) {
             collection_toolbar_visible = false
-            Box(session, BoxProps.{.key = cast(u64)49400, .bounds = viewport,
+            unused Box.Draw(session, Box.Props.{.key = cast(u64)49400, .bounds = viewport,
                     .fill = ColorFromPacked(ifx entity_shovey then ShoveyHostPalette().background else AppCoversPalette().background)})
-            unused Button(session, ButtonProps.{.key = cast(u64)49401, .id = 49401,
+            unused Button.Draw(session, Button.Props.{.key = cast(u64)49401, .id = 49401,
                     .bounds = viewport, .invisible = true})
-            LoadingIndicator(session, LoadingIndicatorProps.{.key = cast(u64)49402,
+            LoadingIndicator.Draw(session, LoadingIndicator.Props.{.key = cast(u64)49402,
                     .bounds = viewport, .now = now, .scale = 1.5})
             return true
         }
@@ -981,10 +978,10 @@ CollectionFrame :: (session: Session, viewport: Rectangle, key: s32, modifiers: 
         BuilderPrint(*title_bytes, "%", TextUntilNul(runtime.node.entry.title[:]))
         title := BuilderFinish(title_bytes)
         if !VecPush(collection_frame_paths, title) { AppFileFree(title); return false }
-        Box(session, BoxProps.{.key = cast(u64)6, .bounds = Rectangle.{viewport.x, viewport.y, viewport.width, 56.0},
+        unused Box.Draw(session, Box.Props.{.key = cast(u64)6, .bounds = Rectangle.{viewport.x, viewport.y, viewport.width, 56.0},
                 .fill = Color.{128, 140, 136, 40}})
-        Text(session, TextProps.{.key = cast(u64)8,
-                .text = title, .font = 20,
+        Text.Draw(session, Text.Props.{.key = cast(u64)8,
+                .text = title, .size = 20,
                 .bounds = Rectangle.{viewport.x + 150.0, viewport.y + 12.0, viewport.width - 166.0, 36.0}})
     }
     return true
@@ -1195,10 +1192,10 @@ CollectionNodeScreen :: (session: Session, viewport: Rectangle) -> bool {
         return true
     }
     if collection_node_initial && collection_node.stage != 0 {
-        Box(session, BoxProps.{.key = cast(u64)49510, .bounds = viewport, .fill = Color.{17, 18, 35, 255}})
-        Text(session, TextProps.{.key = cast(u64)49511, .text = Labels.AppsLabel(TextUntilNul(collection_node_locale[:]), "loading_library"),
-                .font = 20, .bounds = Rectangle.{viewport.x + 24.0, viewport.y + viewport.height / 2.0, viewport.width - 48.0, 64.0}})
-        if Button(session, ButtonProps.{.key = cast(u64)49512, .id = 49512,
+        unused Box.Draw(session, Box.Props.{.key = cast(u64)49510, .bounds = viewport, .fill = Color.{17, 18, 35, 255}})
+        Text.Draw(session, Text.Props.{.key = cast(u64)49511, .text = Labels.AppsLabel(TextUntilNul(collection_node_locale[:]), "loading_library"),
+                .size = 20, .bounds = Rectangle.{viewport.x + 24.0, viewport.y + viewport.height / 2.0, viewport.width - 48.0, 64.0}})
+        if Button.Draw(session, Button.Props.{.key = cast(u64)49512, .id = 49512,
                 .label = Labels.AppsLabel(TextUntilNul(collection_node_locale[:]), "stay_offline"),
                 .bounds = Rectangle.{viewport.x + 24.0, viewport.y + viewport.height / 2.0 + 72.0, viewport.width - 48.0, 44.0},
                 .tone = ButtonTone.ButtonToneNeutral, .emphasis = ButtonEmphasis.ButtonEmphasisSoft}) != 0 {

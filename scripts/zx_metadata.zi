@@ -1,0 +1,60 @@
+// Prints a game export's entry and asset index as JSON for
+// scripts/build-games.py:
+//     zx-metadata BUNDLE NAME
+// Opening verifies the whole bundle; none of its code runs. The texts of
+// assets/NAME/catalog.json and assets/NAME/requirements.json are included.
+#import "std/bundle_host"
+#import "std/byte_text_linux"
+#import "std/c_string"
+#import "std/json_quote"
+#import "std/stdio_linux"
+#import "std/text_buffer"
+#import "std/vec"
+
+METADATA_LIMIT :: 1048576
+
+AssetText :: (bundle: *void, index: u64) -> string {
+    return TextFromBytes(BytesFromPointer(BundleAssetBytes(bundle, index), BundleAssetLength(bundle, index)))
+}
+
+#program_export
+main :: (argc: s32, argv: **u8) -> s32 {
+    if argc != 3 {
+        unused PrintError("usage: zx-metadata BUNDLE NAME\n")
+        return 2
+    }
+    bundle := OpenBundle(argv[1])
+    if bundle == null {
+        unused PrintError("zx-metadata: not a valid bundle\n")
+        return 1
+    }
+    defer { CloseBundle(bundle) }
+    name := TextFromCString(argv[2])
+    catalog: Vec(u8)
+    BuilderPrint(*catalog, "assets/%/catalog.json", name)
+    catalog_path := BuilderFinish(catalog)
+    requirements: Vec(u8)
+    BuilderPrint(*requirements, "assets/%/requirements.json", name)
+    requirements_path := BuilderFinish(requirements)
+    entry: Vec(u8)
+    BuilderPrint(*entry, "%:%", TextFromCString(BundleEntryModule(bundle)),
+        TextFromCString(BundleEntryFunction(bundle)))
+    output: Vec(u8)
+    BuilderPrint(*output, "{\"entry\":%,\"assets\":[", JsonQuote(BuilderFinish(entry)))
+    metadata: Vec(u8)
+    count := BundleAssets(bundle)
+    index: u64 = 0
+    while index < count {
+        path := TextFromCString(BundleAssetPath(bundle, index))
+        length := BundleAssetLength(bundle, index)
+        if index > 0 { BuilderPrint(*output, ",") }
+        BuilderPrint(*output, "[%,%]", JsonQuote(path), length)
+        if (path == catalog_path || path == requirements_path) && length <= cast(u64)METADATA_LIMIT {
+            if metadata.count > 0 { BuilderPrint(*metadata, ",") }
+            BuilderPrint(*metadata, "%:%", JsonQuote(path[name.count + 8:]), JsonQuote(AssetText(bundle, index)))
+        }
+        index += 1
+    }
+    BuilderPrint(*output, "],\"metadata\":{%}}\n", BuilderFinish(metadata))
+    return ifx WriteOutput(BuilderFinish(output)) then 0 else 1
+}

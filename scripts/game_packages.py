@@ -9,7 +9,7 @@ import re
 from pathlib import Path
 import subprocess
 
-APP_KEYS = {'manifest', 'cover', 'enabled', 'requires', 'shared_code', 'library_entries', 'shared_records', 'external', 'standalone_bundle'}
+APP_KEYS = {'manifest', 'cover', 'enabled', 'requires', 'shared_records', 'external', 'standalone_bundle'}
 COVER_KEYS = {'portrait', 'landscape', 'logo', 'caption', 'action'}
 
 
@@ -59,20 +59,11 @@ def declared_packages(root, ziran=None, lock_flags=()):
                     any(not isinstance(item, str) or not item for item in requires) or \
                     len(set(requires)) != len(requires):
                 raise ValueError(f'{name}: invalid app dependencies')
-            shared_code = app.get('shared_code', False)
-            if type(shared_code) is not bool or (shared_code and not requires):
-                raise ValueError(f'{name}: shared code needs declared dependencies')
             shared_records = app.get('shared_records', [])
             if not isinstance(shared_records, list) or len(shared_records) > 8 or any(
                     not isinstance(item, str) or not re.fullmatch(r'[A-Za-z0-9_.-]{1,63}', item) or
                     item in ('.', '..') for item in shared_records) or len(set(shared_records)) != len(shared_records):
                 raise ValueError(f'{name}: invalid shared records')
-            library_entries = app.get('library_entries', [])
-            if not isinstance(library_entries, list) or len(library_entries) > 64 or \
-                    any(not isinstance(item, str) or len(item) > 253 or
-                        not re.fullmatch(r'[A-Za-z_][A-Za-z0-9_]*:[A-Za-z_][A-Za-z0-9_]*', item)
-                        for item in library_entries) or len(set(library_entries)) != len(library_entries):
-                raise ValueError(f'{name}: invalid portable library entries')
             app_art_source = art_source
             descriptor = json.loads(manifest.read_text())
             cover_crops = {}
@@ -84,9 +75,8 @@ def declared_packages(root, ziran=None, lock_flags=()):
                     cover['action'] = 'internal'
             apps.append(dict(package=name, source=source, art_source=app_art_source, manifest=manifest,
                              descriptor=descriptor,
-                             cover=cover, cover_crops=cover_crops, internal=internal, requires=requires, shared_code=shared_code,
-                             shared_records=shared_records,
-                             library_entries=library_entries, enabled=app.get('enabled', True)))
+                             cover=cover, cover_crops=cover_crops, internal=internal, requires=requires,
+                             shared_records=shared_records, enabled=app.get('enabled', True)))
         packages.append(dict(name=name, source=source, id=declaration['id'],
                              title=declaration['title'], apps=apps))
     return packages

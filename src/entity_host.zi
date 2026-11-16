@@ -9,19 +9,15 @@
 #import "kryon/session"
 #import "kryon/geometry"
 #import "kryon/key_input"
-#import "kryon/button_props"
-#import "kryon/button_widget"
+Button :: #import "kryon/button";
 #import "platform"
 #import "profile_palette"
 #import "kryon/widget_palette"
 #import "apps/appearance"
 #import "kryon/drawing_props"
-#import "kryon/box_widget"
-#import "kryon/box_props"
-#import "kryon/text_widget"
-#import "kryon/text_props"
-#import "kryon/modal_props"
-#import "kryon/modal_frame_widget"
+Box :: #import "kryon/box";
+Text :: #import "kryon/text";
+Modal :: #import "kryon/modal";
 #import "kryon/tree"
 
 entity_bundle: string;
@@ -97,13 +93,13 @@ EntityFrame :: (session: Session, viewport: Rectangle, key: s32, modifiers: s32,
     connection_label: string = "", connection: *bool = null) -> bool {
     unused WidgetPaletteUse(session, ifx entity_shovey then ShoveyHostPalette() else AppCoversPalette())
     defer { unused WidgetPaletteRestore(session) }
-    Box(session, BoxProps.{.key = cast(u64)49010, .bounds = viewport,
+    unused Box.Draw(session, Box.Props.{.key = cast(u64)49010, .bounds = viewport,
             .fill = StyleTokenColorOr("canvas", Color.{239, 246, 244, 255})})
     width := viewport.width - 32.0
     height := viewport.height - 32.0
     if width > 560.0 { width = 560.0 }
     if height > 720.0 { height = 720.0 }
-    modal := ModalFrame(session, ModalFrameProps.{.key = cast(u64)49000, .id = 49000,
+    modal := Modal.Draw(session, Modal.Props.{.key = cast(u64)49000, .id = 49000,
             .title = "Profile", .width = cast(s32)width, .height = cast(s32)height, .scale = 1.0,
             .has_left_action = connection != null, .left_label = connection_label,
             .has_right_action = true, .right_label = "Back"})

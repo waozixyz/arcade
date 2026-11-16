@@ -1,8 +1,13 @@
 #import "std/c_string"
 #import "std/byte_text_linux"
 #import "std/timer_linux"
-#import "kryon/Desktop"
-#import "kryon/Widgets"
+#import "kryon/desktop_runtime"
+#import "kryon/Cairo"
+#import "kryon/session"
+#import "kryon/geometry"
+#import "kryon/drawing_props"
+#import "kryon/tree"
+#import "kryon/tree_input"
 #import "kryon/Frame"
 #import "kryon/test_driver"
 #import "kryon/ScrollDevice"
@@ -11,10 +16,11 @@
 #import "collection_host"
 #import "entity_host"
 #import "entity/model"
-#import "kryon/carousel"
+Carousel :: #import "kryon/carousel";
 #import "apps/appearance"
 #import "kryon/widget_palette"
-#import "kryon/loading_indicator"
+Box :: #import "kryon/box";
+LoadingIndicator :: #import "kryon/loading_indicator";
 
 sdl :: #system_library "SDL2";
 SetTitle :: (window: *void, title: *u8) #foreign sdl "SDL_SetWindowTitle";
@@ -31,11 +37,11 @@ DrawStartup :: (session: Session, directory: string, standalone: bool = true) ->
     defer { EntityFree(art); EntityFree(logo) }
     if BeginFrame(session, cast(u64)1, viewport) != FrameStatus.FrameOk { return false }
     if standalone {
-        unused CarouselArtwork(session, viewport, cast(u64)48000, art, logo, "Shovey")
+        unused Carousel.CarouselArtwork(session, viewport, cast(u64)48000, art, logo, "Shovey")
     } else {
         unused WidgetPaletteUse(session, AppCoversPalette())
-        Box(session, BoxProps.{.key = cast(u64)48000, .bounds = viewport, .fill = Color.{17, 18, 35, 255}})
-        LoadingIndicator(session, LoadingIndicatorProps.{.key = cast(u64)48001,
+        unused Box.Draw(session, Box.Props.{.key = cast(u64)48000, .bounds = viewport, .fill = Color.{17, 18, 35, 255}})
+        LoadingIndicator.Draw(session, LoadingIndicator.Props.{.key = cast(u64)48001,
                 .bounds = viewport, .now = cast(float64)MonotonicMilliseconds() / 1000.0})
         unused WidgetPaletteRestore(session)
     }
@@ -47,19 +53,10 @@ DrawStartup :: (session: Session, directory: string, standalone: bool = true) ->
 
 Draw :: (session: Session) -> bool {
     BeginDesktopFrame()
-    KeyboardModifiersSend(session, DesktopModifiers())
-    key := DesktopPressedKey()
-    for candidate: cast(s32)0..511 {
-        if TestDriverKeyPressed(candidate) { key = candidate; break }
-    }
+    key, modifiers := DesktopInputTake(session)
+    KeyboardModifiersSend(session, modifiers)
     if key == 256 && CollectionBack() { key = 0 }
-    KeyboardSend(session, key)
-    // Text typed on the keyboard reaches the game's focused field.
-    codepoint := DesktopTypedCodepoint()
-    while codepoint != 0 {
-        unused TypedCodepointSend(session, codepoint)
-        codepoint = DesktopTypedCodepoint()
-    }
+    if key != 0 { KeyboardSend(session, key) }
     viewport := DesktopViewport()
     pointer := TestDriverPointer(session, PollPointer())
     TreePointerUpdate(session, pointer)
@@ -70,7 +67,7 @@ Draw :: (session: Session) -> bool {
         pointer.down, pointer.released, wheel,
         cast(float64)MonotonicMilliseconds() / 1000.0)
     if BeginFrame(session, cast(u64)1, viewport) != FrameStatus.FrameOk { return false }
-    collection := CollectionFrame(session, viewport, key, DesktopModifiers())
+    collection := CollectionFrame(session, viewport, key, modifiers)
     if !collection {
         TreeCancel(session)
         Report("collection frame returned false\n")

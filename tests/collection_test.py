@@ -261,12 +261,12 @@ class CollectionTests(unittest.TestCase):
             expected_children.append((
                 descriptor["id"], descriptor["title"], descriptor["name"],
                 ledger[descriptor["name"]]["version"], cover.get("caption", ""),
-                cover.get("action"), tuple(app["requires"]), app["shared_code"],
+                cover.get("action"), tuple(app["requires"]),
             ))
         self.assertEqual([(
             child["id"], child["title"], child["expected_id"], child["version"],
             child.get("cover", {}).get("caption", ""), child.get("cover", {}).get("action"),
-            tuple(child.get("dependencies", [])), child.get("shared_code", False),
+            tuple(child.get("dependencies", [])),
         ) for child in catalog["children"]], expected_children)
         self.assertEqual([(p["name"], p["id"], p["children"]) for p in packages],
                          [(package["name"], package["id"],
@@ -404,7 +404,7 @@ class CollectionTests(unittest.TestCase):
         self.assertEqual(children["xyz.waozi.wurm"]["cover"]["caption"], "Classic")
         self.assertEqual(children["xyz.waozi.wurm-editor"]["cover"]["caption"], "Editor")
         self.assertEqual(children["xyz.waozi.wurm-editor"]["dependencies"], ["xyz.waozi.wurm"])
-        self.assertFalse(children["xyz.waozi.wurm-editor"].get("shared_code", False))
+        self.assertNotIn("shared_code", children["xyz.waozi.wurm-editor"])
         self.assertEqual(children["xyz.waozi.wurm-editor"]["resources"], [{
             "dependency": "xyz.waozi.wurm", "path": "assets/wurm/classic/",
             "source": "assets/wurm-preview.png"}])

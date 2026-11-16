@@ -6,7 +6,7 @@ import json
 import os
 import re
 import shutil
-import struct
+import subprocess
 import tempfile
 from pathlib import Path
 from game_packages import declared_apps, portable_artifacts
@@ -16,6 +16,8 @@ ROOT = Path(__file__).resolve().parents[1]
 MAX_PAYLOAD_BYTES = 64 * 1024 * 1024
 MAX_ASSET_BYTES = 16 * 1024 * 1024
 METADATA_LIMIT = 1024 * 1024
+# Built by `make build/zx-metadata` from scripts/zx_metadata.zi.
+METADATA_TOOL = Path(__file__).resolve().parents[1] / 'build/zx-metadata'
 
 
 def digest(path):
@@ -27,72 +29,39 @@ def digest(path):
 
 
 def bundle_metadata(path, name):
-    """Read bounded metadata and the asset index of ZX 26/27; execute nothing."""
+    """Read a ZX 28 export's entry, asset index and bounded metadata.
+
+    build/zx-metadata opens and verifies the bundle with the Ziran runtime;
+    none of its code runs.
+    """
     size = path.stat().st_size
     if not 0 < size <= MAX_PAYLOAD_BYTES:
         raise ValueError(f'{path}: exceeds the host payload limit')
-    with path.open('rb') as source:
-        def skip(count):
-            if count > size - source.tell():
-                raise ValueError(f'{path}: truncated bundle')
-            source.seek(count, 1)
-
-        def take(count):
-            if count > size - source.tell():
-                raise ValueError(f'{path}: truncated bundle')
-            data = source.read(count)
-            if len(data) != count:
-                raise ValueError(f'{path}: truncated bundle')
-            return data
-
-        def number():
-            return struct.unpack('<I', take(4))[0]
-
-        def text():
-            length = number()
-            if length > METADATA_LIMIT:
-                raise ValueError(f'{path}: oversized metadata')
-            return take(length).decode('utf-8')
-
-        def count():
-            value = number()
-            if value > 100000:
-                raise ValueError(f'{path}: oversized bundle index')
-            return value
-
-        if take(8) not in (b'ZX\0\0\x1a\0\0\0', b'ZX\0\0\x1b\0\0\0'):
-            raise ValueError(f'{path}: unsupported bundle')
-        entry = text() + ':' + text()
-        for _ in range(count()):
-            text(); text()
-        for _ in range(count()):
-            for _ in range(7):
-                text()
-            skip(8); text(); skip(4)
-        for _ in range(count()):
-            text(); text(); text()
-        skip(number())
-        metadata, paths = {}, set()
-        wanted = {f'assets/{name}/catalog.json', f'assets/{name}/requirements.json'}
-        asset_count = count()
-        if not 1 <= asset_count <= 2048:
-            raise ValueError(f'{path}: invalid game asset count')
-        for _ in range(asset_count):
-            asset, length = text(), number()
-            if length > MAX_ASSET_BYTES:
-                raise ValueError(f'{path}: asset exceeds the host asset limit')
-            if asset in paths or asset.startswith('/') or '..' in Path(asset).parts:
-                raise ValueError(f'{path}: invalid or duplicate bundle asset {asset}')
-            paths.add(asset)
-            if asset in wanted:
-                if length > METADATA_LIMIT:
-                    raise ValueError(f'{path}: oversized metadata')
-                metadata[asset.rsplit('/', 1)[1]] = json.loads(take(length))
-            else:
-                skip(length)
-        if source.tell() != size:
-            raise ValueError(f'{path}: trailing bundle bytes')
-    return entry, metadata, paths
+    if not METADATA_TOOL.is_file():
+        raise ValueError(f'{METADATA_TOOL} is missing; run make build/zx-metadata')
+    result = subprocess.run([str(METADATA_TOOL), str(path), name], capture_output=True, text=True)
+    if result.returncode:
+        raise ValueError(f'{path}: truncated or invalid bundle')
+    report = json.loads(result.stdout)
+    assets = report['assets']
+    if not 1 <= len(assets) <= 2048:
+        raise ValueError(f'{path}: invalid game asset count')
+    paths = set()
+    for asset, length in assets:
+        if length > MAX_ASSET_BYTES:
+            raise ValueError(f'{path}: asset exceeds the host asset limit')
+        if asset in paths or asset.startswith('/') or '..' in Path(asset).parts:
+            raise ValueError(f'{path}: invalid or duplicate bundle asset {asset}')
+        paths.add(asset)
+    metadata = {}
+    for key in ('catalog.json', 'requirements.json'):
+        length = next((size for asset, size in assets if asset == f'assets/{name}/{key}'), None)
+        if length is None:
+            continue
+        if length > METADATA_LIMIT or key not in report['metadata']:
+            raise ValueError(f'{path}: oversized metadata')
+        metadata[key] = json.loads(report['metadata'][key])
+    return report['entry'], metadata, paths
 
 
 def validate_artifact(app, bundle, resources, imported):

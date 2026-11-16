@@ -21,7 +21,7 @@ DATA_DIR ?= $(if $(XDG_DATA_HOME),$(XDG_DATA_HOME),$(HOME)/.local/share)
 .PHONY: all build/arcade build/shovey standalone-ui-test collection-ui-test scroll-ui-test navigation-ui-test games collection collection-test run test chess-engine-test chess-app-test ui-test inbe-ui-test compatibility-test install
 all: collection build/entity.zx build/arcade build/shovey collection-check
 
-games:
+games: build/zx-metadata
 	python3 scripts/check-games.py --ziran '$(ZIRAN)' $(LOCK_FLAGS)
 	python3 scripts/build-games.py --ziran '$(ZIRAN)' $(LOCK_FLAGS) $(if $(GAME_ARTIFACT_MANIFEST),--artifact-manifest '$(GAME_ARTIFACT_MANIFEST)')
 
@@ -35,8 +35,16 @@ collection: games $(APPS_BUNDLE)
 	python3 scripts/build-collection.py --ziran '$(ZIRAN)' $(LOCK_FLAGS) \
 		--apps-bundle '$(APPS_BUNDLE)' --apps-sha256 '$(APPS_SHA256)'
 
+# Reads a game export's entry and assets for build-games.py; nothing runs.
+build/zx-metadata: scripts/zx_metadata.zi ziran.lock build/ziran/libziran.a
+	rm -rf build/zx-metadata-c
+	$(ZIRAN) build $(PROJECT) --target=c --root scripts --entry zx_metadata:main \
+		-o build/zx-metadata-c scripts/zx_metadata.zi
+	$(CC) -std=c11 -O1 -Wno-main -I'$(ZIRAN_ROOT)/include' -Ibuild/zx-metadata-c \
+		build/zx-metadata-c/*.c build/ziran/libziran.a -lm -lpthread -o $@
+
 .PHONY: game-artifacts-test
-game-artifacts-test:
+game-artifacts-test: build/zx-metadata
 	python3 tests/game_artifacts_test.py
 	python3 tests/wurm_export_test.py
 
@@ -78,7 +86,6 @@ test: all
 	python3 tests/wurm_export_test.py
 	python3 tests/game_host_compatibility_test.py
 	python3 tests/collection_notifications_test.py
-	python3 tests/game_module_paths_test.py
 	python3 tests/game_resource_packing_test.py
 	python3 tests/game_translation_keys_test.py
 	python3 tests/android_catalog_test.py

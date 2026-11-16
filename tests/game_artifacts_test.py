@@ -3,7 +3,8 @@ import hashlib
 import importlib.util
 import json
 from pathlib import Path
-import struct
+import shutil
+import subprocess
 import sys
 import tempfile
 import unittest
@@ -17,22 +18,32 @@ importer = importlib.util.module_from_spec(spec)
 spec.loader.exec_module(importer)
 
 
-def zx(descriptor, requirements=None, extra=(), version=27):
-    def number(value):
-        return struct.pack('<I', value)
+TOOLCHAIN = Path(subprocess.check_output([str(ROOT / 'scripts/ziran.sh'), 'pkg', 'path', 'ziran', '--locked'],
+                                        cwd=ROOT, text=True).strip().splitlines()[-1])
+EXPORTS = {}
 
-    def text(value):
-        value = value.encode() if isinstance(value, str) else value
-        return number(len(value)) + value
 
+def zx(descriptor, requirements=None, extra=(), catalog='catalog.json'):
+    """A real ZX 28 export, entry portable:Main, of the game's packed assets."""
     public = {k: v for k, v in descriptor.items() if k not in ('build_defines', 'prepare_assets')}
     name = descriptor['name']
-    assets = [(f'assets/{name}/catalog.json', json.dumps(public).encode()),
+    assets = [(f'assets/{name}/{catalog}', json.dumps(public).encode()),
               (f'assets/{name}/picture.png', b'unchanged resource'), *extra]
     if requirements is not None:
         assets.append((f'assets/{name}/requirements.json', json.dumps(requirements).encode()))
-    return (b'ZX\0\0' + number(version) + text('portable') + text('Main') + number(0) * 4
-            + number(len(assets)) + b''.join(text(k) + text(v) for k, v in assets))
+    key = hashlib.sha256(json.dumps([[path, data.hex()] for path, data in assets]).encode()).hexdigest()
+    if key not in EXPORTS:
+        work = ROOT / 'work/game-artifacts-test' / key
+        shutil.rmtree(work, ignore_errors=True)
+        for path, data in assets:
+            (work / path).parent.mkdir(parents=True, exist_ok=True)
+            (work / path).write_bytes(data)
+        (work / 'portable.zi').write_text('#program_export\nMain :: () -> s32 { return 0 }\n')
+        subprocess.run([str(TOOLCHAIN / 'build/bin/zi2zx'), '--root', str(work), '--asset-dir',
+                        'assets=' + str(work / 'assets'), '--entry', 'portable:Main',
+                        '-o', str(work / 'export.zx'), str(work / 'portable.zi')], check=True)
+        EXPORTS[key] = (work / 'export.zx').read_bytes()
+    return EXPORTS[key]
 
 
 class ArtifactTests(unittest.TestCase):
@@ -81,8 +92,15 @@ class ArtifactTests(unittest.TestCase):
                 for folder in ('src', 'build') for p in (self.root / folder).rglob('*') if p.is_file()}
 
     def run_import(self):
+        run = subprocess.run
+
+        def metadata_only(arguments, *rest, **options):
+            # Only the bundle verifier runs; no game is compiled or executed.
+            if Path(arguments[0]) != importer.METADATA_TOOL:
+                raise AssertionError('No game subprocess')
+            return run(arguments, *rest, **options)
         with patch.object(importer, 'ROOT', self.root), patch.object(importer, 'declared_apps', return_value=self.apps), \
-                patch('subprocess.run', side_effect=AssertionError('No game subprocess')), \
+                patch('subprocess.run', side_effect=metadata_only), \
                 patch('subprocess.check_output', side_effect=AssertionError('No compiler/resolver needed with fixtures')):
             importer.build('must-not-run', [], self.manifest)
 
@@ -130,8 +148,7 @@ class ArtifactTests(unittest.TestCase):
         self.reject('embedded catalog/entry mismatch')
 
     def test_missing_catalog(self):
-        data = zx(self.apps[1]['descriptor']).replace(b'catalog.json', b'ignored.json')
-        (self.source / 'base-editor.zx').write_bytes(data)
+        (self.source / 'base-editor.zx').write_bytes(zx(self.apps[1]['descriptor'], catalog='ignored.json'))
         self.reject('embedded catalog/entry mismatch')
 
     def test_wrong_dependency_id(self):
@@ -157,12 +174,9 @@ class ArtifactTests(unittest.TestCase):
         with patch.object(importer, 'MAX_PAYLOAD_BYTES', 32):
             self.reject('payload limit')
 
-    def test_truncated_and_duplicate_zx(self):
-        for data in (zx(self.apps[0]['descriptor'])[:-1],
-                     zx(self.apps[0]['descriptor'], extra=[('assets/base/picture.png', b'duplicate')])):
-            with self.subTest(length=len(data)):
-                (self.source / 'base.zx').write_bytes(data)
-                self.reject('truncated|duplicate')
+    def test_truncated_zx(self):
+        (self.source / 'base.zx').write_bytes(zx(self.apps[0]['descriptor'])[:-1])
+        self.reject('truncated or invalid bundle')
 
     def test_manifest_rejects_external_private_id(self):
         manifest = json.loads(self.manifest.read_text())
@@ -206,10 +220,12 @@ class ArtifactTests(unittest.TestCase):
             self.assertEqual(locations['bundle'], self.source / path)
             self.assertIn('build-queue --', guidance)
 
-    def test_zx26_supported_without_running_payload(self):
-        bundle = self.source / 'v26.zx'
-        bundle.write_bytes(zx(self.apps[0]['descriptor'], version=26))
-        self.assertEqual(importer.bundle_metadata(bundle, 'base')[0], 'portable:Main')
+    def test_zx28_read_and_older_formats_refused(self):
+        self.assertEqual(importer.bundle_metadata(self.source / 'base.zx', 'base')[0], 'portable:Main')
+        older = self.source / 'older.zx'
+        older.write_bytes(b'ZX\0\0\x1b\0\0\0' + bytes(64))
+        with self.assertRaisesRegex(ValueError, 'truncated or invalid bundle'):
+            importer.bundle_metadata(older, 'base')
 
     def test_base_app_can_omit_resource_sidecar(self):
         manifest = json.loads(self.manifest.read_text())

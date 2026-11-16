@@ -148,9 +148,6 @@ def stage(root, controller, expected_controller_digest, output):
                 bytes=len(bundle_bytes),
                 preview=f"assets/arcade/previews/{name}{preview_suffix}",
                 icon=f"assets/arcade/previews/{name}{preview_suffix}")
-            # A thin add-on links its required games' verified code as libraries.
-            if app.get('shared_code'):
-                child['shared_code'] = True
             if app.get('shared_records'):
                 child['shared_records'] = app['shared_records']
             if app.get('requires'):

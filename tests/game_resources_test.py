@@ -12,13 +12,12 @@ from game_packages import declared_apps
 
 
 class GameResourcesTest(unittest.TestCase):
-    def test_shared_code_requires_explicit_dependencies_and_valid_library_entries(self):
+    def test_dependencies_and_shared_records_are_validated(self):
         with tempfile.TemporaryDirectory() as directory:
             root = Path(directory)
             (root / 'games.json').write_text(json.dumps({'packages': []}))
             (root / 'catalog.json').write_text(json.dumps({'id': 'editor', 'name': 'editor'}))
-            app = {'manifest': 'catalog.json', 'requires': ['game'], 'shared_code': True,
-                   'library_entries': ['engine:Step'], 'shared_records': ['local.campaign']}
+            app = {'manifest': 'catalog.json', 'requires': ['game'], 'shared_records': ['local.campaign']}
 
             def declare(value):
                 (root / 'apps.json').write_text(json.dumps(
@@ -26,12 +25,11 @@ class GameResourcesTest(unittest.TestCase):
                 return declared_apps(root)[0]
 
             parsed = declare(app)
-            self.assertTrue(parsed['shared_code'])
-            self.assertEqual(parsed['library_entries'], ['engine:Step'])
+            self.assertEqual(parsed['requires'], ['game'])
             self.assertEqual(parsed['shared_records'], ['local.campaign'])
-            for invalid in [app | {'requires': []}, app | {'shared_code': 1},
-                            app | {'library_entries': ['engine:../Step']},
-                            app | {'library_entries': ['engine:Step', 'engine:Step']},
+            # Code is built into each add-on; the retired library fields are refused.
+            for invalid in [app | {'shared_code': True}, app | {'library_entries': ['engine:Step']},
+                            app | {'requires': ['game', 'game']},
                             app | {'shared_records': ['../campaign']},
                             app | {'shared_records': ['local.campaign', 'local.campaign']},
                             app | {'shared_records': ['..']}, app | {'shared_records': 'campaign'}]:
