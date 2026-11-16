@@ -19,7 +19,7 @@ LIB_DIR ?= $(HOME)/.local/lib/arcade
 DATA_DIR ?= $(if $(XDG_DATA_HOME),$(XDG_DATA_HOME),$(HOME)/.local/share)
 
 .PHONY: all build/arcade build/shovey standalone-ui-test collection-ui-test scroll-ui-test navigation-ui-test games collection collection-test run test chess-engine-test chess-app-test ui-test inbe-ui-test compatibility-test install
-all: collection build/entity.zx build/arcade build/shovey
+all: collection build/entity.zx build/arcade build/shovey collection-check
 
 games:
 	python3 scripts/check-games.py --ziran '$(ZIRAN)' $(LOCK_FLAGS)
@@ -47,6 +47,13 @@ collection-test:
 collection-notifications-test:
 	python3 tests/game_host_compatibility_test.py
 	python3 tests/collection_notifications_test.py
+
+# The desktop binary opens the collection beside it and refuses one that a
+# newer toolchain built (owner, 2026-11-15: Arcade closed right after opening
+# from Harmony's Apps). Build and check the pair together, with private data.
+.PHONY: collection-check
+collection-check: collection build/arcade
+	ARCADE_DATA='$(CURDIR)/build/collection-check' ./build/arcade --check
 
 src/catalog.zi: games
 
@@ -130,7 +137,7 @@ navigation-ui-test: all
 		--binary '$(CURDIR)/build/arcade' --binary '$(CURDIR)/build/shovey' --inbe-source '$(INBE_SOURCE)'
 
 .PHONY: install-arcade
-install-arcade: collection build/entity.zx build/arcade
+install-arcade: collection build/entity.zx build/arcade collection-check
 	mkdir -p '$(BIN_DIR)' '$(LIB_DIR)' '$(DATA_DIR)/applications'
 	install -m 0755 build/arcade '$(LIB_DIR)/arcade.new'
 	mv -f '$(LIB_DIR)/arcade.new' '$(LIB_DIR)/arcade'
@@ -140,6 +147,7 @@ install-arcade: collection build/entity.zx build/arcade
 	install -m 0644 build/assets/hud/profile.webp build/assets/hud/dew.webp '$(LIB_DIR)/assets/hud/'
 	ln -sfn '$(LIB_DIR)/arcade' '$(BIN_DIR)/arcade'
 	install -m 0644 packaging/xyz.waozi.arcade.desktop '$(DATA_DIR)/applications/'
+	ARCADE_DATA='$(CURDIR)/build/collection-check' '$(LIB_DIR)/arcade' --check
 
 install: all install-arcade
 	mkdir -p '$(BIN_DIR)' '$(LIB_DIR)/games' '$(DATA_DIR)/applications'

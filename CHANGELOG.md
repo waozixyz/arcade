@@ -2,6 +2,11 @@
 
 ## [Unreleased]
 
+- `arcade --check` opens the collection beside the binary without a window.
+  `make`, `make test` and the install run it, so a binary is never left next
+  to a collection it refuses; Arcade had closed right after opening from
+  Harmony's Apps when its build folder held a binary and a collection from
+  two different toolchains.
 - Close Profile directly from its X button while keeping Back navigation through account pages.
 - Use a neutral profile icon instead of the Shovey portrait.
 - Remember completed account backups when reopening Arcade or using the same desktop account in another app.

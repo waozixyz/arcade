@@ -115,10 +115,21 @@ main :: (argc: s32, argv: **u8) -> s32 {
         }
         return 0
     }
+    // --check opens the collection beside this binary without a window, so a
+    // build or install proves the two match: a binary cannot read a
+    // collection that a newer toolchain built.
+    if argc == 2 && TextFromCString(argv[1]) == "--check" {
+        data := DataDirectory()
+        opened := data != "" && (ifx standalone then CollectionOpenShovey(ExecutableDirectory(), data) else CollectionOpenFiles(ExecutableDirectory(), data))
+        unused CollectionClose()
+        Report(product)
+        Report(ifx opened then ": the collection opens with this binary\n" else ": this binary cannot open the collection beside it\n")
+        return ifx opened then 0 else 1
+    }
     first: s32 = -1
     if argc != 1 {
         if argc != 3 || TextFromCString(argv[1]) != "--app" {
-            Report(ifx standalone then "Usage: shovey [--list | --app GAME]\n" else "Usage: arcade [--list | --app GAME]\n")
+            Report(ifx standalone then "Usage: shovey [--list | --check | --app GAME]\n" else "Usage: arcade [--list | --check | --app GAME]\n")
             return 1
         }
         for index: cast(s32)0..GameCount - 1 {
