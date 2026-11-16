@@ -2,7 +2,7 @@
 
 ## [Unreleased]
 
-- Build on Ziran 0.5.0 and Kryon cc731751 with its namespaced widgets. Game
+- Build on Ziran 0.5.0 and Kryon b45cc524 with its namespaced widgets. Game
   exports are read as one-format ZX 28 through `build/zx-metadata`, which
   verifies a bundle without running it. Add-ons carry their game's code, so
   collections no longer mark `shared_code` and `apps.json` no longer accepts

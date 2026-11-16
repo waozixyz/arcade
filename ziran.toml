@@ -29,17 +29,17 @@ abis = "arm64-v8a,x86_64"
 
 [dependencies.kryon]
 git = "https://github.com/kryonlabs/kryon.git"
-ref = "cc731751acdc51aefc49280ab0bd9d22a686b4ab"
+ref = "b45cc52456775dac23062979888ee04c5537b078"
 
 [dependencies.apps]
 git = "https://github.com/waozixyz/apps.git"
 # Use the shared controller reviewed with the supported collection host.
-ref = "d48be1a9607926743a3625c8cb8eca4f3569bad0"
+ref = "352901ebf97ef3570971bf999367c82171cabf9a"
 
 # Shovey's editions and editor are available as separate downloads.
 [dependencies.shovey]
 git = "https://github.com/waozixyz/shovey.git"
-ref = "371acbaf1062c89aa700f4404ac7dda6fb059421"
+ref = "19b7937dcbf27ab078e98dc3ef36899c578354ef"
 
 # Compatibility tooling runs Inner Breeze's host checks; releases check its publisher pins.
 [dependencies.inbe]
@@ -48,7 +48,7 @@ ref = "master"
 
 [dependencies.entity]
 git = "https://github.com/waozixyz/entity.git"
-ref = "81a4a900f265f7d205e494b52ff53300a9667e21"
+ref = "b30dd4a427a8a864bccea0d157ab6c86828d25f5"
 
 [dependencies.mingcute]
 git = "https://github.com/kryonlabs/mingcute.git"
