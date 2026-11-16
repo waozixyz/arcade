@@ -2,12 +2,13 @@
 
 ## [Unreleased]
 
-- Build on Ziran 0.5.0 and Kryon 245605c3 with its namespaced widgets. Game
+- Build on Ziran 0.5.0 and Kryon cc731751 with its namespaced widgets. Game
   exports are read as one-format ZX 28 through `build/zx-metadata`, which
   verifies a bundle without running it. Add-ons carry their game's code, so
   collections no longer mark `shared_code` and `apps.json` no longer accepts
   `shared_code` or `library_entries`. The unused game module-path helper is
-  removed.
+  removed, and the Profile bundle comes from Entity's own `native-profile`
+  artifact.
 
 - `arcade --check` opens the collection beside the binary without a window.
   `make`, `make test` and the install run it, so a binary is never left next
