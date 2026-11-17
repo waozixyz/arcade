@@ -65,7 +65,7 @@ def main():
             ir = WORK / f'ir-{game}-{protocol}'
             run(ZIRAN, 'ir', *common, '-o', ir, source)
             saved = WORK / f'{game}-{protocol}-saved.zx'
-            run(zx, 'bundle', '--root', ir, '--module-path', ir,
+            run(zx, '--root', ir, '--module-path', ir,
                 '--entry', 'collection_notifications_guest:Main', '--asset-dir', 'assets=' + str(assets.parent),
                 '-o', saved, ir / 'collection_notifications_guest.zir')
             if path.read_bytes() != saved.read_bytes():

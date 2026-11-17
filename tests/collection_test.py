@@ -23,39 +23,21 @@ spec.loader.exec_module(builder)
 art_spec = importlib.util.spec_from_file_location("library_art", ROOT / "scripts/library-art.py")
 artist = importlib.util.module_from_spec(art_spec)
 art_spec.loader.exec_module(artist)
-spec = importlib.util.spec_from_file_location("published_games", ROOT / "scripts/wait-published-games.py")
-published_games = importlib.util.module_from_spec(spec)
-spec.loader.exec_module(published_games)
 
 
 def bundle_asset_paths(path):
-    """Read the actual bundle index without loading its images or executing it."""
-    with published_games.Reader(path) as reader:
-        if reader.take(8) not in (b"ZX\0\0\x1a\0\0\0", b"ZX\0\0\x1b\0\0\0"):
-            raise ValueError("Unsupported game bundle")
-        reader.text()
-        reader.text()
-        for _ in range(reader.number()):
-            reader.text()
-            reader.text()
-        for _ in range(reader.number()):
-            for _ in range(7):
-                reader.text()
-            reader.take(8)
-            reader.text()
-            reader.take(4)
-        for _ in range(reader.number()):
-            for _ in range(3):
-                reader.text()
-        reader.skip(reader.number())
-        paths = set()
-        for _ in range(reader.number()):
-            name = reader.text().decode()
-            if name in paths:
-                raise ValueError("Duplicate game asset: " + name)
-            paths.add(name)
-            reader.skip(reader.number())
-        reader.finish()
+    """Read the actual bundle index without loading its images or executing it.
+
+    build/zx-metadata opens and verifies the ZX 28 bundle with the Ziran
+    runtime; none of its code runs.
+    """
+    result = subprocess.run([str(ROOT / "build/zx-metadata"), str(path), path.stem],
+                            capture_output=True, text=True, check=True)
+    paths = set()
+    for name, _ in json.loads(result.stdout)["assets"]:
+        if name in paths:
+            raise ValueError("Duplicate game asset: " + name)
+        paths.add(name)
     return paths
 
 

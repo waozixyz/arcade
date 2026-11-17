@@ -1,5 +1,11 @@
 # Arcade catalog changelog
 
+## 0.7.126
+
+- Shovey 0.6.171: Runs in the latest Inner Breeze and Arcade.
+- Apfelwurm 0.2.34: Replace campaign levels 1–50 with authored gardens that teach route planning, growth, portals, keys, switches and readable patrols in a paced progression.
+- Choano, Shovey and Apfelwurm run as one-format ZX 28 on Ziran 0.6.0 in the current Inner Breeze.
+
 ## 0.7.125
 
 - Shovey 0.6.169: Runs in the latest Inner Breeze and Arcade.
