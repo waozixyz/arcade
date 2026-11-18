@@ -56,7 +56,7 @@ ref = "master"
 
 [dependencies.wurm]
 git = "https://github.com/waozixyz/wurm.git"
-ref = "b28057676bc84827ecf6fdad7a739079b1ec5e76"
+ref = "962baf5513df852df36d8637bed70331fa3ea19a"
 
 [dependencies.game2d]
 git = "https://github.com/kryonlabs/game2d.git"
