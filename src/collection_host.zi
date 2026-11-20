@@ -199,6 +199,19 @@ CollectionAllows :: (context: *void, node: *AppNode, name: string) -> bool {
     (name == COLLECTION_INPUT_DESKTOP && CollectionInputDesktop())
 }
 
+// The old Choano document shares this game's record directory. Only the
+// current linked account may read its original 64-hex key for migration.
+CollectionChoanoLegacyRecord :: (node: *AppNode, record: string, owner: string) -> bool {
+    if node == null || node.collection || TextUntilNul(node.identity.id[:]) != "xyz.waozi.choano" ||
+    record.count != 81 || record[:14] != "choano.earned." || record[78:] != ".v1" ||
+    owner.count != 64 || record[14:78] != owner { return false }
+    for byte: owner {
+        if !((byte >= #char "a" && byte <= #char "f") ||
+            (byte >= #char "0" && byte <= #char "9")) { return false }
+    }
+    return true
+}
+
 CollectionCall :: (context: *void, node: *AppNode, module: *u8, function: *u8,
     arguments: *HostValue, count: s32, result: *HostValue) -> s32 {
     name := TextFromCString(function)
@@ -232,8 +245,10 @@ CollectionCall :: (context: *void, node: *AppNode, module: *u8, function: *u8,
     if name == "AppRecordHost" && count == 1 &&
     HostScalarValid(arguments[0], "string", cast(s32)HostString) {
         record := AppArgumentText(arguments[0])
+        if record.count >= 64 && !CollectionChoanoLegacyRecord(node, record, RecordsOwnerNow()) { return 0 }
+        if !AppFileNameValid(record) { return 0 }
         saved := CollectionRecordsFor(TextUntilNul(node.identity.id[:]))
-        if saved == null || !AppFileNameValid(record) || record.count >= 64 { return 0 }
+        if saved == null { return 0 }
         AppFileFree(saved.text)
         saved.text = AppFileRead(*saved.files, record)
         if saved.files.status == -1 || saved.text.count >= 65536 { return 0 }

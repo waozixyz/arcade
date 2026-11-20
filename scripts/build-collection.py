@@ -333,7 +333,10 @@ def main():
     bundle(command, ROOT, "art.zi", "art:Main", art_assets / "assets", node_apps / "arcade-art.zx", env)
     art = add_art(catalog_assets, game_downloads, node_apps / "arcade-art.zx")
     archive_downloads(game_downloads, node_apps / "arcade.games.tar")
-    bundle(command, ROOT, "collection.zi", "collection:Main", catalog_assets / "assets", node_apps / "arcade.zx", env)
+    # The node catalog is hosted by the consumer's trusted Apps controller.
+    # Compile its bootstrap without Kryon's standalone UI implementation.
+    bundle([*command, "--define", "KRYON_HOSTED_UI"], ROOT, "collection.zi", "collection:Main",
+           catalog_assets / "assets", node_apps / "arcade.zx", env)
     shutil.copyfile(node_apps / "arcade.zx", ROOT / "build/arcade.zx")
     # The desktop host supplies its controller from beside the collection.
     shutil.copyfile(args.apps_bundle, ROOT / "build/apps.zx")

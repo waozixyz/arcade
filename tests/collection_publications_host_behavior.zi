@@ -1,4 +1,5 @@
 #import, file "../src/collection_host.zi";
+#import "apps/tree"
 #import "entity/publications"
 #import "entity/publications_read"
 #import "std/bundle_host"
@@ -23,8 +24,24 @@ BorrowedText :: (value: HostValue) -> string {
     return TextFromBytes(BytesFromPointer(value.data, cast(u64)value.length))
 }
 
+CheckChoanoLegacyRecord :: () -> bool {
+    owner := "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef"
+    record := "choano.earned.0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef.v1"
+    traversal := "choano.earned./123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef.v1"
+    node: AppNode
+    if !CopyText("xyz.waozi.choano", node.identity.id[:]) || !CollectionChoanoLegacyRecord(*node, record, owner) { return false }
+    if CollectionChoanoLegacyRecord(*node, record, "") || CollectionChoanoLegacyRecord(*node, traversal, traversal[14:78]) ||
+    CollectionChoanoLegacyRecord(*node, record, "1123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef") { return false }
+    node.collection = true
+    if CollectionChoanoLegacyRecord(*node, record, owner) { return false }
+    node.collection = false
+    if !CopyText("arcade.shovey", node.identity.id[:]) { return false }
+    return !CollectionChoanoLegacyRecord(*node, record, owner)
+}
+
 #program_export
 Check :: () -> s32 {
+    if !CheckChoanoLegacyRecord() { return 7 }
     if !CollectionAllows(null, null, PUBLICATIONS_SERVICE) { return 1 }
     if !CollectionAllows(null, null, PUBLICATIONS_READ_SERVICE) { return 2 }
     function: [32]u8

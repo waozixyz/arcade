@@ -2,6 +2,8 @@
 
 ## [Unreleased]
 
+- Open the full Arcade catalog in Breeze and keep Choano progress available in the hosted game.
+
 - Build on Ziran 0.5.0 and Kryon b45cc524 with its namespaced widgets. Game
   exports are read as one-format ZX 28 through `build/zx-metadata`, which
   verifies a bundle without running it. Add-ons carry their game's code, so

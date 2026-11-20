@@ -1,4 +1,4 @@
-"""Check that Arcade routes writable publications through Entity's account gate."""
+"""Check Arcade’s account-scoped publication and legacy record guards."""
 import fcntl
 import os
 from pathlib import Path
@@ -37,7 +37,10 @@ def main():
         "collection_publications_host_behavior:Check", "-o", str(generated),
         "tests/collection_publications_host_behavior.zi")
     main_c = generated / "main.c"
+    # The account checks link the collection dispatcher without a UI backend.
     main_c.write_text('#include "collection_publications_host_behavior.h"\n'
+                      'int32_t ImageWidth(String path) { (void)path; return 0; }\n'
+                      'int32_t ImageHeight(String path) { (void)path; return 0; }\n'
                       'int main(void) { return Check(); }\n')
     toolchain = Path(subprocess.check_output(
         [ziran, "pkg", "path", "ziran", *lock], cwd=ROOT, text=True,
@@ -83,7 +86,7 @@ def main():
     if result.returncode != 42:
         raise SystemExit(
             f"collection publications host check returned {result.returncode}")
-    print("Arcade publications host: writable service dispatches through Entity's account gate")
+    print("Arcade collection host: publication and Choano legacy record account guards passed")
 
 
 if __name__ == "__main__":
