@@ -2,6 +2,8 @@
 
 ## [Unreleased]
 
+- Download standalone Wurm from its own releases; Arcade keeps its catalog and game archive.
+
 - Open the full Arcade catalog in Breeze and keep Choano progress available in the hosted game.
 
 - Build on Ziran 0.5.0 and Kryon b45cc524 with its namespaced widgets. Game

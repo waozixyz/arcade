@@ -129,7 +129,7 @@ jobs:
           SHA: ${{ steps.commit.outputs.sha }}
         run: |
           set -eu
-          gh release create "node-arcade-$VERSION" build/node-apps/arcade.zx build/node-apps/arcade.games.tar build/games/wurm.zx \
+          gh release create "node-arcade-$VERSION" build/node-apps/arcade.zx build/node-apps/arcade.games.tar \
             --target "$SHA" --title "Arcade $VERSION" \
             --notes 'Arcade downloads the selected game separately and preserves earned progress.'
           echo "Arcade $VERSION is ready for the node: sha256 $(sha256sum build/node-apps/arcade.zx | cut -d' ' -f1)"

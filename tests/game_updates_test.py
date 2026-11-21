@@ -79,6 +79,15 @@ class GameUpdates(unittest.TestCase):
                 calls = run.call_count
             return json.loads((root / 'ziran.lock').read_text()), json.loads(updates.read_text()), old, new, calls
 
+    def test_catalog_releases_keep_game_downloads_with_their_owner(self):
+        for name in ('game-updates.yml', 'node-release.yml'):
+            workflow = (ROOT / '.github/workflows' / name).read_text()
+            self.assertNotIn('wurm.zx', workflow)
+            self.assertIn('build/node-apps/arcade.zx build/node-apps/arcade.games.tar', workflow)
+        # Wurm remains a library game: only its extra release attachment goes.
+        exports = (ROOT / '.github/actions/game-exports/action.yml').read_text()
+        self.assertIn('fetch-wurm-export.py', exports)
+
     def test_new_release_refreshes_transitive_graph(self):
         lock, updates, old, new, calls = self.follow('ahead')
         self.assertEqual(lock['packages'][0]['commit'], new)
